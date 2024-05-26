@@ -16,9 +16,13 @@ $(OBJ_DIR)main.o: main.cpp cpu.hpp
 $(OBJ_DIR)cpu.o: cpu.cpp cpu.hpp
 	$(CXX) -c $< -o $@
 
-.PHONY: clean run
+.PHONY: clean run debug
 
 clean:
 	rm -f $(EXENAME) $(OBJ_DIR)*.o
 run:
 	./$(EXENAME)
+
+debug:
+	rm -f out.txt
+	./${EXENAME} >> out.txt

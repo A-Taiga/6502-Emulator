@@ -58,7 +58,7 @@ struct _6502
     std::array<std::uint8_t, 65536> memory; // 256 pages of 256 bits each
 
     void load_rom(const char* filePath);
-    void decompiler();
+    void disassembler();
 };
 
 
