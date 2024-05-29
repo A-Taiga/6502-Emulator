@@ -3,7 +3,6 @@
 #include <cstdio>
 #include <iostream>
 #include <format>
-
 /*
 
 N	Negative
@@ -49,6 +48,14 @@ void _6502::load_rom(const char* filePath)
     fclose (file);
 }
 
+
+// void _6502::BRK(void * val)
+// {
+//     const char* str = (const char*) val;
+//     std::cout << str;
+// }
+
+
 /*
 addressing	assembler	opc	bytes	cycles
 immediate	ADC #oper	69	2	2  
@@ -69,7 +76,12 @@ absolute,Y	ADC oper,Y	79	3	4*
 
 void _6502::decompiler()
 {
+    opTable[0x00]((void*)"hello world!\n");
+
+    return;
+
     std::size_t i = 0;
+
     while (i < memory.size())
     {
         std::cout << std::format("0x{:04X} ", i);
