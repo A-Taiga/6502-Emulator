@@ -40,11 +40,11 @@ void _6502::load_rom(const char* filePath)
     std::size_t size;
 
     if (file == nullptr)                                    throw std::runtime_error(std::strerror(errno));
-    if (std::fseek (file, 0L, SEEK_END) == -1)              throw std::runtime_error(strerror(errno));
-    if ((size = std::ftell(file)) == -1UL)                  throw std::runtime_error(strerror(errno));
+    if (std::fseek (file, 0L, SEEK_END) == -1)              throw std::runtime_error(std::strerror(errno));
+    if ((size = std::ftell(file)) == -1UL)                  throw std::runtime_error(std::strerror(errno));
     if (size > memory.size())                               throw std::runtime_error("ROM > 64 kb");
-    if ((std::fseek(file, 0L, SEEK_SET)) == -1L)            throw std::runtime_error(strerror(errno));
-    if ((std::fread(memory.data(), size, 1, file)) == -1UL) throw std::runtime_error(strerror(errno));
+    if ((std::fseek(file, 0L, SEEK_SET)) == -1L)            throw std::runtime_error(std::strerror(errno));
+    if ((std::fread(memory.data(), size, 1, file)) == -1UL) throw std::runtime_error(std::strerror(errno));
     fclose (file);
 }
 
@@ -75,34 +75,7 @@ _6502::_6502()
 
 void _6502::decompiler()
 {
-    // (this->*opcodes[0x00].opcode)();
-    // return;
-
-    for (std::size_t i = 0; i < opcodes.size(); i++)
-    {
-        std::cout << std::format ("{:X} {:s}\n", i, opcodes[i].mnemonic);
-    }
-    return;
-
-    std::size_t i = 0;
-
-    while (i < memory.size())
-    {
-        std::cout << std::format("0x{:04X} ", i);
-
-        switch (memory[i])
-        {
-            case 0x69: std::cout << std::format ("ADC #${:04X}\n", memory[i+1]); i+=2; break; 
-            case 0x65: std::cout << std::format ("ADC ${:04X}\n", memory[i+1]); i+=3; break;
-            case 0x75: std::cout << std::format ("ADC ${:04X}\n", memory[i+1] + memory[i+2]); i+=3; break;
-            case 0x6D: std::cout << std::format ("ADC ${:04X}\n", memory[i+2] | memory[i+1]); i+=4; break;
-            case 0x7D:
-            
-            std::cout << std::format ("ADC ${:04X}\n", (memory[i+2] | memory[i+1]) + memory[i+3]);
-            break;
-            default: std::cout << std::endl;  i++;  break;
-        }
-    }
+    
 }
     void _6502::XXX(void){}
     void _6502::BRK(void){}

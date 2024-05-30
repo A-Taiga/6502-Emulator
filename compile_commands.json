@@ -1,23 +1,7 @@
 [
   {
     "arguments": [
-      "/opt/homebrew/opt/llvm/bin/clang++",
-      "-std=c++20",
-      "-Wall",
-      "-Wextra",
-      "-Werror",
-      "-c",
-      "-o",
-      "obj/main.o",
-      "src/main.cpp"
-    ],
-    "directory": "/Users/anthony/Workspace/6502",
-    "file": "/Users/anthony/Workspace/6502/src/main.cpp",
-    "output": "/Users/anthony/Workspace/6502/obj/main.o"
-  },
-  {
-    "arguments": [
-      "/opt/homebrew/opt/llvm/bin/clang++",
+      "/usr/bin/clang++",
       "-std=c++20",
       "-Wall",
       "-Wextra",
@@ -27,8 +11,8 @@
       "obj/cpu.o",
       "src/cpu.cpp"
     ],
-    "directory": "/Users/anthony/Workspace/6502",
-    "file": "/Users/anthony/Workspace/6502/src/cpu.cpp",
-    "output": "/Users/anthony/Workspace/6502/obj/cpu.o"
+    "directory": "/home/anthony/Workspace/6502-Emulator",
+    "file": "/home/anthony/Workspace/6502-Emulator/src/cpu.cpp",
+    "output": "/home/anthony/Workspace/6502-Emulator/obj/cpu.o"
   }
 ]
