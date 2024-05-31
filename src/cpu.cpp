@@ -1,4 +1,5 @@
 #include "cpu.hpp"
+#include <cstdint>
 #include <stdexcept>
 #include <cstdio>
 #include <iostream>
@@ -16,39 +17,60 @@ C	Carry
 
 */
 
+/*
+    65 kb total memory
+    32 kb ram
+    RAM = 0x0000 - 0x7FFF   
+        Zero page = 0x0000 - 0x00FF
+        Stack     = 0x0100 - 0x01FF
 
+    4 kb ROM
+    ROM = F000 - 0xFFFA
+
+    VECTORS = 0xFFFA - 0xFFFF
+
+    29kb = free
+*/
 
 
 
 namespace
 {
     /* flags */
-    [[maybe_unused]] constexpr std::uint8_t C = 1 << 0;
-    [[maybe_unused]] constexpr std::uint8_t Z = 1 << 1;
-    [[maybe_unused]] constexpr std::uint8_t I = 1 << 2;
-    [[maybe_unused]] constexpr std::uint8_t D = 1 << 3;
-    [[maybe_unused]] constexpr std::uint8_t B = 1 << 4;
-    [[maybe_unused]] constexpr std::uint8_t V = 1 << 6;
-    [[maybe_unused]] constexpr std::uint8_t N = 1 << 7;
+    [[maybe_unused]] constexpr byte C = 1 << 0;
+    [[maybe_unused]] constexpr byte Z = 1 << 1;
+    [[maybe_unused]] constexpr byte I = 1 << 2;
+    [[maybe_unused]] constexpr byte D = 1 << 3;
+    [[maybe_unused]] constexpr byte B = 1 << 4;
+    [[maybe_unused]] constexpr byte V = 1 << 6;
+    [[maybe_unused]] constexpr byte N = 1 << 7;
 
+
+    [[maybe_unused]] constexpr word ZRO_BEGIN  = 0x0000;
+    [[maybe_unused]] constexpr word STK_BEGIN  = 0x01FF;
+    [[maybe_unused]] constexpr word ROM_BEGIN  = 0xF000;
+    [[maybe_unused]] constexpr word ZRO_END    = 0x00FF;
+    [[maybe_unused]] constexpr word STK_END    = 0x01FF;
+    [[maybe_unused]] constexpr word ROM_END    = 0xFFFA;
+
+    template<std::size_t N>
+    std::size_t read_file (const char* path, std::array<std::uint8_t, N>& buffer, word offeset = 0)
+    {
+        FILE* file = fopen(path, "rb");
+        std::size_t size;
+
+        if (file == nullptr)                                    throw std::runtime_error(std::strerror(errno));
+        if (std::fseek (file, 0L, SEEK_END) == -1)              throw std::runtime_error(std::strerror(errno));
+        if ((size = std::ftell(file)) == -1UL)                  throw std::runtime_error(std::strerror(errno));
+        if (size > N)                                           throw std::runtime_error(std::format("file > {:d}", N));
+        if ((std::fseek(file, 0L, SEEK_SET)) == -1L)            throw std::runtime_error(std::strerror(errno));
+        if ((std::fread(&buffer[offeset], size, 1, file)) == -1UL) throw std::runtime_error(std::strerror(errno));
+        fclose (file);
+        return size;
+    }
 }
 
-
-void _6502::load_rom(const char* filePath)
-{
-    FILE* file = fopen(filePath, "rb");
-    std::size_t size;
-
-    if (file == nullptr)                                    throw std::runtime_error(std::strerror(errno));
-    if (std::fseek (file, 0L, SEEK_END) == -1)              throw std::runtime_error(std::strerror(errno));
-    if ((size = std::ftell(file)) == -1UL)                  throw std::runtime_error(std::strerror(errno));
-    if (size > memory.size())                               throw std::runtime_error("ROM > 64 kb");
-    if ((std::fseek(file, 0L, SEEK_SET)) == -1L)            throw std::runtime_error(std::strerror(errno));
-    if ((std::fread(memory.data(), size, 1, file)) == -1UL) throw std::runtime_error(std::strerror(errno));
-    fclose (file);
-}
-
-_6502::_6502()
+_6502::_6502(const char* filePath)
 {
     opcodes =
     {{
@@ -69,70 +91,159 @@ _6502::_6502()
         {"CPX", &_6502::CPX, MODE::IMM, 2}, {"SBC", &_6502::SBC, MODE::IZX, 6}, {"???", &_6502::XXX, MODE::IMM, 0}, {"???", &_6502::XXX, MODE::IMM, 0}, {"CPX", &_6502::CPX, MODE::ZPG, 3}, {"SBC", &_6502::SBC, MODE::ZPG, 3}, {"INC", &_6502::INC, MODE::ZPG, 5}, {"???", &_6502::XXX, MODE::IMM, 0}, {"INX", &_6502::INX, MODE::IMP, 2}, {"SBC", &_6502::SPC, MODE::IMM, 2}, {"NOP", &_6502::NOP, MODE::IMP, 2}, {"???", &_6502::XXX, MODE::IMM, 0}, {"CPX", &_6502::CPX, MODE::ABS, 4}, {"SBC", &_6502::SBC, MODE::ABS, 4}, {"INC", &_6502::INC, MODE::ABS, 6}, {"???", &_6502::XXX, MODE::IMM, 0},
         {"BEQ", &_6502::BEQ, MODE::REL, 2}, {"SBC", &_6502::SBC, MODE::IZY, 5}, {"???", &_6502::XXX, MODE::IMM, 0}, {"???", &_6502::XXX, MODE::IMM, 0}, {"???", &_6502::XXX, MODE::IMM, 0}, {"SBC", &_6502::SBC, MODE::ZPX, 4}, {"INC", &_6502::INC, MODE::ZPX, 6}, {"???", &_6502::XXX, MODE::IMM, 0}, {"SED", &_6502::SED, MODE::IMP, 2}, {"SBC", &_6502::SBC, MODE::ABY, 4}, {"???", &_6502::XXX, MODE::IMM, 0}, {"???", &_6502::XXX, MODE::IMM, 0}, {"???", &_6502::XXX, MODE::IMM, 0}, {"SBC", &_6502::SBC, MODE::ABX, 4}, {"INC", &_6502::INC, MODE::ABX, 7}, {"???", &_6502::XXX, MODE::IMM, 0}
     }};
-
+    reset();
+    read_file(filePath, memory.mem, ROM_BEGIN);
 }
 
+void _6502::reset()
+{
+    PC = ROM_BEGIN;
+    AC = 0;
+    X  = 0;
+    Y  = 0;
+    SR = 0;
+    SP = 0;
+    memory.mem = {0};
+}
 
 void _6502::decompiler()
 {
-    
+    for (std::size_t i = ROM_BEGIN; i < ROM_END;)
+    {
+        instruction& ins = opcodes[memory[i]];
+        std::cout << std::format ("0x{:04X} ", i);
+        switch (ins.addressMode)
+        {
+            case MODE::IMP:
+            std::cout << std::format ("{:02X} {:>9}\n", memory[i], ins.mnemonic);
+            i+=1;
+            break;
+            case MODE::IMM: 
+            case MODE::ZPG:
+            case MODE::ZPX:
+            case MODE::ZPY:
+            case MODE::IZX:
+            case MODE::IZY:
+            case MODE::REL:
+            std::cout << std::format ("{:02X} {:02X} {:>6}\n", memory[i], memory[i+1], ins.mnemonic);
+            i+=2;
+            break;
+            case MODE::ABS:
+            case MODE::ABX:
+            case MODE::ABY:
+            case MODE::IND:
+            std::cout << std::format ("{:02X} {:02X} {:02X} {:}\n", memory[i], memory[i+1], memory[i+1], ins.mnemonic);
+            i+=3;
+            break;
+        }
+    }
 }
-    void _6502::XXX(void){}
-    void _6502::BRK(void){}
-    void _6502::ORA(void){}
-    void _6502::ASL(void){}
-    void _6502::PHP(void){}
-    void _6502::BPL(void){}
-    void _6502::CLC(void){}
-    void _6502::JSR(void){}
-    void _6502::AND(void){}
-    void _6502::BIT(void){}
-    void _6502::ROL(void){}
-    void _6502::PLP(void){}
-    void _6502::BMI(void){}
-    void _6502::SEC(void){}
-    void _6502::RTI(void){}
-    void _6502::EOR(void){}
-    void _6502::LSR(void){}
-    void _6502::PHA(void){}
-    void _6502::JMP(void){}
-    void _6502::BVC(void){}
-    void _6502::CLI(void){}
-    void _6502::RTS(void){}
-    void _6502::PLA(void){}
-    void _6502::ADC(void){}
-    void _6502::ROR(void){}
-    void _6502::BVS(void){}
-    void _6502::SEI(void){}
-    void _6502::STA(void){}
-    void _6502::STY(void){}
-    void _6502::STX(void){}
-    void _6502::DEY(void){}
-    void _6502::TXA(void){}
-    void _6502::STZ(void){}
-    void _6502::BBC(void){}
-    void _6502::TYA(void){}
-    void _6502::TXS(void){}
-    void _6502::LDY(void){}
-    void _6502::LDA(void){}
-    void _6502::LDX(void){}
-    void _6502::TAY(void){}
-    void _6502::TAX(void){}
-    void _6502::BCS(void){}
-    void _6502::CLV(void){}
-    void _6502::TSX(void){}
-    void _6502::CPY(void){}
-    void _6502::CMP(void){}
-    void _6502::DEC(void){}
-    void _6502::INY(void){}
-    void _6502::DEX(void){}
-    void _6502::BNE(void){}
-    void _6502::CLD(void){}
-    void _6502::CPX(void){}
-    void _6502::SBC(void){}
-    void _6502::INC(void){}
-    void _6502::INX(void){}
-    void _6502::SPC(void){}
-    void _6502::NOP(void){}
-    void _6502::BEQ(void){}
-    void _6502::SED(void){}
+
+void _6502::run()
+{
+    while (PC < ROM_END)
+    {
+        instruction& ins = opcodes[memory[PC]];
+        addressMode = ins.addressMode;
+        (this->*ins.opcode)();
+        switch (addressMode)
+        {
+            case MODE::IMP:
+            PC+=1;
+            break;
+            case MODE::IMM: 
+            case MODE::ZPG:
+            case MODE::ZPX:
+            case MODE::ZPY:
+            case MODE::IZX:
+            case MODE::IZY:
+            case MODE::REL:
+            PC+=2;
+            break;
+            case MODE::ABS:
+            case MODE::ABX:
+            case MODE::ABY:
+            case MODE::IND:
+            PC+=3;
+            break;
+        }
+    }
+
+    // std::cout << (int)AC << std::endl;
+    for (std::uint16_t i = 0; i < ZRO_END; i++)
+    {
+        std::cout << std::format("{:}\n", (int)memory[i]);
+    }
+
+}
+
+void _6502::XXX(void){}
+void _6502::BRK(void){}
+void _6502::ORA(void){}
+void _6502::ASL(void){}
+void _6502::PHP(void){}
+void _6502::BPL(void){}
+void _6502::CLC(void){}
+void _6502::JSR(void){}
+void _6502::AND(void){}
+void _6502::BIT(void){}
+void _6502::ROL(void){}
+void _6502::PLP(void){}
+void _6502::BMI(void){}
+void _6502::SEC(void){}
+void _6502::RTI(void){}
+void _6502::EOR(void){}
+void _6502::LSR(void){}
+void _6502::PHA(void){}
+void _6502::JMP(void){}
+void _6502::BVC(void){}
+void _6502::CLI(void){}
+void _6502::RTS(void){}
+void _6502::PLA(void){}
+void _6502::ADC(void)
+{
+    if (addressMode == MODE::IMM)
+        AC = memory[PC+1];
+}
+void _6502::ROR(void){}
+void _6502::BVS(void){}
+void _6502::SEI(void){}
+void _6502::STA(void)
+{
+    if (addressMode == MODE::ZPG)
+    {
+        memory[memory[PC+1]] = (int)AC;
+    }
+
+}
+void _6502::STY(void){}
+void _6502::STX(void){}
+void _6502::DEY(void){}
+void _6502::TXA(void){}
+void _6502::STZ(void){}
+void _6502::BBC(void){}
+void _6502::TYA(void){}
+void _6502::TXS(void){}
+void _6502::LDY(void){}
+void _6502::LDA(void){}
+void _6502::LDX(void){}
+void _6502::TAY(void){}
+void _6502::TAX(void){}
+void _6502::BCS(void){}
+void _6502::CLV(void){}
+void _6502::TSX(void){}
+void _6502::CPY(void){}
+void _6502::CMP(void){}
+void _6502::DEC(void){}
+void _6502::INY(void){}
+void _6502::DEX(void){}
+void _6502::BNE(void){}
+void _6502::CLD(void){}
+void _6502::CPX(void){}
+void _6502::SBC(void){}
+void _6502::INC(void){}
+void _6502::INX(void){}
+void _6502::SPC(void){}
+void _6502::NOP(void){}
+void _6502::BEQ(void){}
+void _6502::SED(void){}

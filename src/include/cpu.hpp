@@ -44,10 +44,25 @@ enum class MODE : std::uint8_t
     IND, // Indirect Addressing
     IZX, // Indirect Zero-page X-indexed
     IZY, // Indirect Zero-page Y-indexed
-    PZX, // Pre-Indexed Indirect, "(Zero-Page,X)"
-    PZY, // Post-Indexed Indirect, "(Zero-Page),Y"
     REL, // Relative Addressing (Conditional Branching)
 };
+
+
+using byte = std::uint8_t;
+using word = std::uint16_t;
+
+
+
+
+struct RAM
+{
+    std::array<std::uint8_t, 65536> mem; // 65kb
+    byte& operator[](std::uint16_t index)
+    {
+        return mem[index];
+    }
+};
+
 
 struct _6502
 {
@@ -55,24 +70,25 @@ struct _6502
     /* main registers */
     std::uint16_t PC;   /* program counter */
     std::uint8_t  AC;   /* accumulator */
-    std::uint8_t  x;    /* x register */
-    std::uint8_t  y;    /* y register */
+    std::uint8_t  X;    /* x register */
+    std::uint8_t  Y;    /* y register */
     std::uint8_t  SR;   /* status register [NV-BDIZC] (aka flags) */
     std::uint8_t  SP;   /* stack pointer */
-    std::array<std::uint8_t, 65536> memory; /* 256 pages of 256 bits each */
+    MODE addressMode;
     struct instruction
     {
         const char* mnemonic;
         void (_6502::*opcode)(void) = nullptr;
         MODE addressMode;
         std::uint8_t cycles;
-
     };
-    std::array<instruction,256> opcodes;
-    void load_rom(const char* filePath);
-    void decompiler();
-    _6502();
 
+    RAM memory;
+    std::array<instruction,256> opcodes;
+    _6502(const char* filePath);
+    void reset();
+    void decompiler();
+    void run();
     void XXX(void); 
     void BRK(void);
     void ORA(void);
