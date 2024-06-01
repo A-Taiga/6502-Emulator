@@ -1,9 +1,9 @@
 #ifndef CPU_HPP
 #define CPU_HPP
 
-#include <cstdint>
+#include "macros.hpp"
 #include <array>
-#include "clock.hpp"
+
 
 /*
     https://www.masswerk.at/6502/6502_instruction_set.html#BVS
@@ -32,24 +32,6 @@
 */
 
 
-using byte = std::uint8_t;
-using word = std::uint16_t;
-
-
-[[maybe_unused]] constexpr byte C = 1 << 0;
-[[maybe_unused]] constexpr byte Z = 1 << 1;
-[[maybe_unused]] constexpr byte I = 1 << 2;
-[[maybe_unused]] constexpr byte D = 1 << 3;
-[[maybe_unused]] constexpr byte B = 1 << 4;
-[[maybe_unused]] constexpr byte V = 1 << 6;
-[[maybe_unused]] constexpr byte N = 1 << 7;
-[[maybe_unused]] constexpr word ZRO_BEGIN  = 0x0000;
-[[maybe_unused]] constexpr word STK_BEGIN  = 0x0100;
-[[maybe_unused]] constexpr word ROM_BEGIN  = 0xF000;
-[[maybe_unused]] constexpr word ZRO_END    = 0x00FF;
-[[maybe_unused]] constexpr word STK_END    = 0x01FF;
-[[maybe_unused]] constexpr word ROM_END    = 0xFFFA;
-
 enum class MODE : byte
 {
     IMP, // Implied Addressing
@@ -66,16 +48,6 @@ enum class MODE : byte
     REL, // Relative Addressing (Conditional Branching)
 };
 
-
-
-struct RAM
-{
-    std::array<std::uint8_t, 65536> mem; // 65kb
-    byte& operator[](word index)
-    {
-        return mem[index];
-    }
-};
 
 struct _6502;
 struct instruction
@@ -95,16 +67,18 @@ struct _6502
     byte Y;    /* y register */
     byte SR;   /* status register [NV-BDIZC] (aka flags) */
     byte SP;   /* stack pointer */
-    MODE addressMode;
-    RAM memory;
-    Clock& clock;
-    bool& running;
+    MODE         addressMode;
+    bool&        running;
+    word&        addressBus;
+    byte&        dataBus;
+    ACCESS_MODE& rw;
     std::array<instruction,256> opcodes;
-    std::uint8_t cycles;
-    _6502(const char* filePath, bool& _running, Clock& _clock);
+    _6502(bool& _running, word& aBus, byte& dbus, ACCESS_MODE& accessMode);
     void reset ();
     void decompiler ();
     void run ();
+    void IF ();
+
     void BRK (void); void ORA (void); void ASL (void); void PHP (void); void BPL (void);
     void CLC (void); void JSR (void); void AND (void); void BIT (void); void ROL (void); 
     void PLP (void); void BMI (void); void SEC (void); void RTI (void); void EOR (void);

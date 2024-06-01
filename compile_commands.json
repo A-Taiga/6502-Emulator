@@ -9,6 +9,40 @@
       "-Werror",
       "-c",
       "-o",
+      "obj/main.o",
+      "src/main.cpp"
+    ],
+    "directory": "/home/anthony/Workspace/6502-Emulator",
+    "file": "/home/anthony/Workspace/6502-Emulator/src/main.cpp",
+    "output": "/home/anthony/Workspace/6502-Emulator/obj/main.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang++",
+      "-std=c++20",
+      "-g",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-c",
+      "-o",
+      "obj/emulator.o",
+      "src/emulator.cpp"
+    ],
+    "directory": "/home/anthony/Workspace/6502-Emulator",
+    "file": "/home/anthony/Workspace/6502-Emulator/src/emulator.cpp",
+    "output": "/home/anthony/Workspace/6502-Emulator/obj/emulator.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang++",
+      "-std=c++20",
+      "-g",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-c",
+      "-o",
       "obj/cpu.o",
       "src/cpu.cpp"
     ],

@@ -1,13 +1,6 @@
 #include "cpu.hpp"
-#include <cstdint>
-#include <stdexcept>
-#include <cstdio>
-#include <iostream>
-#include <format>
-#include <ncurses.h>
-#include <thread>
-#include <chrono>
-#include <cstring>
+#include "macros.hpp"
+
 /*
 
 N	Negative
@@ -38,26 +31,15 @@ C	Carry
 
 namespace
 {
-    template<std::size_t N>
-    std::size_t read_file (const char* path, std::array<std::uint8_t, N>& buffer, word offeset = 0)
-    {
-        FILE* file = fopen(path, "rb");
-        std::size_t size;
-
-        if (file == nullptr)                                        throw std::runtime_error(std::strerror(errno));
-        if (std::fseek (file, 0L, SEEK_END) == -1)                  throw std::runtime_error(std::strerror(errno));
-        if ((size = std::ftell(file)) == -1UL)                      throw std::runtime_error(std::strerror(errno));
-        if (size > N)                                               throw std::runtime_error(std::format("file > {:d}", N));
-        if ((std::fseek(file, 0L, SEEK_SET)) == -1L)                throw std::runtime_error(std::strerror(errno));
-        if ((std::fread(&buffer[offeset], size, 1, file)) == -1UL)  throw std::runtime_error(std::strerror(errno));
-        fclose (file);
-        return size;
-    }
+    instruction* ins = nullptr;
 }
 
-_6502::_6502(const char* filePath, bool& _running, Clock& _clock)
-: clock(_clock)
-, running(_running)
+
+_6502::_6502(bool& _running, word& aBus, byte& dBus, ACCESS_MODE& accessMode)
+: running(_running)
+, addressBus(aBus)
+, dataBus(dBus)
+, rw(accessMode)
 {
     opcodes =
     {{
@@ -79,64 +61,61 @@ _6502::_6502(const char* filePath, bool& _running, Clock& _clock)
         {"BEQ", &_6502::BEQ, MODE::REL, 2}, {"SBC", &_6502::SBC, MODE::IZY, 5}, {"???", &_6502::XXX, MODE::IMM, 0}, {"???", &_6502::XXX, MODE::IMM, 0}, {"???", &_6502::XXX, MODE::IMM, 0}, {"SBC", &_6502::SBC, MODE::ZPX, 4}, {"INC", &_6502::INC, MODE::ZPX, 6}, {"???", &_6502::XXX, MODE::IMM, 0}, {"SED", &_6502::SED, MODE::IMP, 2}, {"SBC", &_6502::SBC, MODE::ABY, 4}, {"???", &_6502::XXX, MODE::IMM, 0}, {"???", &_6502::XXX, MODE::IMM, 0}, {"???", &_6502::XXX, MODE::IMM, 0}, {"SBC", &_6502::SBC, MODE::ABX, 4}, {"INC", &_6502::INC, MODE::ABX, 7}, {"???", &_6502::XXX, MODE::IMM, 0}
     }};
     reset();
-    read_file(filePath, memory.mem, ROM_BEGIN);
-
+    // read_file(filePath, memory.data(), ROM_BEGIN);
 }
 
 void _6502::reset()
 {
-    PC = ROM_BEGIN;
+    PC = ROM_BEGIN; // temp for now
     AC = 0;
     X  = 0;
     Y  = 0;
     SR = 0;
     SP = 0;
-    cycles = 0;
-    memory.mem = {0};
+
 }
 
 void _6502::decompiler()
 {
-    for (std::size_t i = ROM_BEGIN; i < ROM_END;)
-    {
-        instruction& ins = opcodes[memory[i]];
-        std::cout << std::format ("0x{:04X} ", i);
-        switch (ins.addressMode)
-        {
-            case MODE::IMP:
-            std::cout << std::format ("{:02X} {:>9}\n", memory[i], ins.mnemonic);
-            i+=1;
-            break;
-            case MODE::IMM: 
-            case MODE::ZPG:
-            case MODE::ZPX:
-            case MODE::ZPY:
-            case MODE::IZX:
-            case MODE::IZY:
-            case MODE::REL:
-            std::cout << std::format ("{:02X} {:02X} {:>6}\n", memory[i], memory[i+1], ins.mnemonic);
-            i+=2;
-            break;
-            case MODE::ABS:
-            case MODE::ABX:
-            case MODE::ABY:
-            case MODE::IND:
-            std::cout << std::format ("{:02X} {:02X} {:02X} {:}\n", memory[i], memory[i+1], memory[i+1], ins.mnemonic);
-            i+=3;
-            break;
-        }
-    }
+    // for (std::size_t i = ROM_BEGIN; i < ROM_END;)
+    // {
+    //     // instruction& ins = opcodes[memory[i]];
+    //     ins = &opcodes[memory[i]];
+    //     std::cout << std::format ("0x{:04X} ", i);
+    //     switch (ins->addressMode)
+    //     {
+    //         case MODE::IMP:
+    //         std::cout << std::format ("{:02X} {:>9}\n", memory[i], ins->mnemonic);
+    //         i+=1;
+    //         break;
+    //         case MODE::IMM: 
+    //         case MODE::ZPG:
+    //         case MODE::ZPX:
+    //         case MODE::ZPY:
+    //         case MODE::IZX:
+    //         case MODE::IZY:
+    //         case MODE::REL:
+    //         std::cout << std::format ("{:02X} {:02X} {:>6}\n", memory[i], memory[i+1], ins->mnemonic);
+    //         i+=2;
+    //         break;
+    //         case MODE::ABS:
+    //         case MODE::ABX:
+    //         case MODE::ABY:
+    //         case MODE::IND:
+    //         std::cout << std::format ("{:02X} {:02X} {:02X} {:}\n", memory[i], memory[i+1], memory[i+1], ins->mnemonic);
+    //         i+=3;
+    //         break;
+    //     }
+    // }
 }
 
 void _6502::run()
 {
-    initscr();
-    cbreak();
     while (PC < ROM_END && running)
     {
-        instruction& ins = opcodes[memory[PC]];
-        addressMode = ins.addressMode;
-        (this->*ins.opcode)();
+        // ins = &opcodes[memory[PC]];
+        addressMode = ins->addressMode;
+        (this->*ins->opcode)();
         switch (addressMode)
         {
             case MODE::IMP:
@@ -161,11 +140,18 @@ void _6502::run()
 
         // printf("PC = %04X AC = %02X  [0x0001] = %02X\r", PC, AC, memory[1]);
         // std::cout << std::flush;
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        // std::this_thread::sleep_for(std::chrono::milliseconds(100));
         
     }
-    endwin();
 }
+
+void _6502::IF()
+{
+
+    addressBus = PC;
+
+}
+
 
 void _6502::XXX(void){}
 void _6502::BRK(void){}
@@ -194,7 +180,9 @@ void _6502::PHA(void){}
 void _6502::JMP(void)
 {
     if (addressMode == MODE::ABS)
-        PC = (uint16_t)((memory[PC+2] << 8) | memory[PC+1]);
+    {
+        // PC = (uint16_t)((memory[PC+2] << 8) | memory[PC+1]);
+    }
 }
 void _6502::BVC(void){}
 void _6502::CLI(void)
@@ -207,8 +195,10 @@ void _6502::ADC(void)
 {
     if (addressMode == MODE::IMM)
     {
-        AC += memory[PC+1];
+        // AC += memory[PC+1];
+
     }
+
 }
 void _6502::ROR(void){}
 void _6502::BVS(void){}
@@ -220,9 +210,10 @@ void _6502::STA(void)
 {
     if (addressMode == MODE::ZPG)
     {
-        memory[memory[PC+1]] = AC;
+        // memory[memory[PC+1]] = AC;
+
+
     }
-    
 }
 void _6502::STY(void){}
 void _6502::STX(void){}

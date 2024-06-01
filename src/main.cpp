@@ -1,14 +1,12 @@
-#include "cpu.hpp"
-#include "clock.hpp"
 #include <ncurses.h>
 #include <thread>
 #include <signal.h>
-
+#include "emulator.hpp"
 
 #define BRIGHT_WHITE 15
 
 void signal_handler(int signum);
-void debug_memory([[maybe_unused]] _6502& emu);
+void debug_memory([[maybe_unused]] Emulator& emu);
 WINDOW* make_window(int w, int h, int x, int y, const char* label = nullptr);
 static bool running = true;
 
@@ -19,14 +17,11 @@ int main()
     cbreak();
     curs_set(0);
     refresh();
-    Clock clock(running);
-    _6502 cpu("loop.bin", running, clock);
-    std::thread db(debug_memory, std::ref(cpu));
-    // cpu.decompiler();
-    cpu.run();
-    db.join();
-    
 
+    Emulator emu("loop.bin", running);
+    std::thread db(debug_memory, std::ref(emu));
+    // cpu.decompiler();
+    db.join();
     endwin();
     return 0;
 }
@@ -48,7 +43,7 @@ WINDOW* make_window(int w, int h, int x, int y, const char* label)
     return local;
 }
 
-void debug_memory([[maybe_unused]] _6502& emu)
+void debug_memory([[maybe_unused]] Emulator& emu)
 {
     WINDOW* zero_window = make_window(56, 21, 0, 0, "Zero Page");
     WINDOW* stack_win = make_window(56, 21, 57, 0, "Stack");
@@ -87,7 +82,7 @@ void debug_memory([[maybe_unused]] _6502& emu)
             wmove(zero_window, row, col);
             if(row % 2 == 0)
                 wattron(zero_window,COLOR_PAIR(1));
-            wprintw(zero_window, "%02X%c", emu.memory[i], (i+1) % 16 == 0 ? 0 : ' ');
+            wprintw(zero_window, "%02X%c", emu.read_memory()[i], (i+1) % 16 == 0 ? 0 : ' ');
             wattroff(zero_window,COLOR_PAIR(1));
             col+=3;
         }
@@ -121,7 +116,7 @@ void debug_memory([[maybe_unused]] _6502& emu)
             wmove(stack_win, row, col);
             if(row % 2 == 0)
                 wattron(stack_win,COLOR_PAIR(1));
-            wprintw(stack_win, "%02X%c", emu.memory[i], (i+1) % 16 == 0 ? 0 : ' ');
+            wprintw(stack_win, "%02X%c", emu.read_memory()[i], (i+1) % 16 == 0 ? 0 : ' ');
             wattroff(stack_win,COLOR_PAIR(1));
             col+=3;
         }
