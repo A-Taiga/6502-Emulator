@@ -8,7 +8,7 @@ WINDOW* make_window(int w, int h, int x, int y, const char* label = nullptr)
     WINDOW* local = newwin(h, w, y, x);
     box (local, y, x);
     if (label)
-        mvwprintw(local, y, 1, label);
+        mvwprintw(local, y, 1, "%s", label);
     return local;
 
 }
@@ -28,7 +28,7 @@ void debug_memory([[maybe_unused]] _6502& emu)
         for (std::size_t i = 0; i < 16; i++)
         {
 	        wattroff(win, COLOR_PAIR(1));
-            wprintw(win, "%02X", i);
+            wprintw(win, "%02zX", i);
             col+=3;
             wmove(win, row, col);
         }
@@ -42,7 +42,7 @@ void debug_memory([[maybe_unused]] _6502& emu)
                 row++;
                 col = 1;
                 wmove(win, row, col);
-                wprintw(win, "%04X", i);
+                wprintw(win, "%04zX", i);
                 col+=7;
 
             }

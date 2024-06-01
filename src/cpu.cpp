@@ -1,6 +1,5 @@
 #include "cpu.hpp"
 #include <cstdint>
-#include <ostream>
 #include <stdexcept>
 #include <cstdio>
 #include <iostream>
@@ -8,6 +7,7 @@
 #include <ncurses.h>
 #include <thread>
 #include <chrono>
+#include <cstring>
 /*
 
 N	Negative
@@ -50,12 +50,12 @@ namespace
         FILE* file = fopen(path, "rb");
         std::size_t size;
 
-        if (file == nullptr)                                    throw std::runtime_error(std::strerror(errno));
-        if (std::fseek (file, 0L, SEEK_END) == -1)              throw std::runtime_error(std::strerror(errno));
-        if ((size = std::ftell(file)) == -1UL)                  throw std::runtime_error(std::strerror(errno));
-        if (size > N)                                           throw std::runtime_error(std::format("file > {:d}", N));
-        if ((std::fseek(file, 0L, SEEK_SET)) == -1L)            throw std::runtime_error(std::strerror(errno));
-        if ((std::fread(&buffer[offeset], size, 1, file)) == -1UL) throw std::runtime_error(std::strerror(errno));
+        if (file == nullptr)                                        throw std::runtime_error(std::strerror(errno));
+        if (std::fseek (file, 0L, SEEK_END) == -1)                  throw std::runtime_error(std::strerror(errno));
+        if ((size = std::ftell(file)) == -1UL)                      throw std::runtime_error(std::strerror(errno));
+        if (size > N)                                               throw std::runtime_error(std::format("file > {:d}", N));
+        if ((std::fseek(file, 0L, SEEK_SET)) == -1L)                throw std::runtime_error(std::strerror(errno));
+        if ((std::fread(&buffer[offeset], size, 1, file)) == -1UL)  throw std::runtime_error(std::strerror(errno));
         fclose (file);
         return size;
     }
