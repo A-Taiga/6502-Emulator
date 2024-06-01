@@ -57,7 +57,8 @@ namespace
     }
 }
 
-_6502::_6502(const char* filePath)
+_6502::_6502(const char* filePath, bool& _running)
+: running(_running)
 {
     opcodes =
     {{
@@ -91,6 +92,7 @@ void _6502::reset()
     Y  = 0;
     SR = 0;
     SP = 0;
+    cycles = 0;
     memory.mem = {0};
 }
 
@@ -131,7 +133,7 @@ void _6502::run()
 {
     initscr();
     cbreak();
-    while (PC < ROM_END)
+    while (PC < ROM_END && running)
     {
         instruction& ins = opcodes[memory[PC]];
         addressMode = ins.addressMode;
@@ -172,14 +174,20 @@ void _6502::ORA(void){}
 void _6502::ASL(void){}
 void _6502::PHP(void){}
 void _6502::BPL(void){}
-void _6502::CLC(void){}
+void _6502::CLC(void)
+{
+
+}
 void _6502::JSR(void){}
 void _6502::AND(void){}
 void _6502::BIT(void){}
 void _6502::ROL(void){}
 void _6502::PLP(void){}
 void _6502::BMI(void){}
-void _6502::SEC(void){}
+void _6502::SEC(void)
+{
+
+}
 void _6502::RTI(void){}
 void _6502::EOR(void){}
 void _6502::LSR(void){}
@@ -190,7 +198,10 @@ void _6502::JMP(void)
         PC = (uint16_t)((memory[PC+2] << 8) | memory[PC+1]);
 }
 void _6502::BVC(void){}
-void _6502::CLI(void){}
+void _6502::CLI(void)
+{
+
+}
 void _6502::RTS(void){}
 void _6502::PLA(void){}
 void _6502::ADC(void)
@@ -202,7 +213,10 @@ void _6502::ADC(void)
 }
 void _6502::ROR(void){}
 void _6502::BVS(void){}
-void _6502::SEI(void){}
+void _6502::SEI(void)
+{
+
+}
 void _6502::STA(void)
 {
     if (addressMode == MODE::ZPG)
@@ -225,7 +239,10 @@ void _6502::LDX(void){}
 void _6502::TAY(void){}
 void _6502::TAX(void){}
 void _6502::BCS(void){}
-void _6502::CLV(void){}
+void _6502::CLV(void)
+{
+
+}
 void _6502::TSX(void){}
 void _6502::CPY(void){}
 void _6502::CMP(void){}
@@ -233,7 +250,10 @@ void _6502::DEC(void){}
 void _6502::INY(void){}
 void _6502::DEX(void){}
 void _6502::BNE(void){}
-void _6502::CLD(void){}
+void _6502::CLD(void)
+{
+
+}
 void _6502::CPX(void){}
 void _6502::SBC(void){}
 void _6502::INC(void){}
@@ -241,4 +261,7 @@ void _6502::INX(void){}
 void _6502::SPC(void){}
 void _6502::NOP(void){}
 void _6502::BEQ(void){}
-void _6502::SED(void){}
+void _6502::SED(void)
+{
+
+}

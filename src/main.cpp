@@ -1,6 +1,7 @@
 #include "cpu.hpp"
 #include <ncurses.h>
 #include <thread>
+#include <signal.h>
 
 
 #define BRIGHT_WHITE 15
@@ -11,13 +12,25 @@ WINDOW* make_window(int w, int h, int x, int y, const char* label = nullptr);
 
 
 
+static bool running = true;
+
+
+void signal_handler(int signum)
+{
+    if (signum == 2)
+    {
+        running = false;
+    }
+}
+
 int main()
 {
+    signal(SIGINT, signal_handler);
     initscr();
     cbreak();
     curs_set(0);
     refresh();
-    _6502 cpu("loop.bin");
+    _6502 cpu("loop.bin", running);
     std::thread db(debug_memory, std::ref(cpu));
     // cpu.decompiler();
     cpu.run();
@@ -45,7 +58,7 @@ void debug_memory([[maybe_unused]] _6502& emu)
     init_pair(1, COLOR_BLACK, BRIGHT_WHITE);
     int row;
     int col;
-    while (true)
+    while (running)
     {
         row = 2;
         col = 8;

@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <array>
+
 /*
     https://www.masswerk.at/6502/6502_instruction_set.html#BVS
 
@@ -64,6 +65,8 @@ enum class MODE : byte
     REL, // Relative Addressing (Conditional Branching)
 };
 
+
+
 struct RAM
 {
     std::array<std::uint8_t, 65536> mem; // 65kb
@@ -93,8 +96,10 @@ struct _6502
     byte SP;   /* stack pointer */
     MODE addressMode;
     RAM memory;
+    bool& running;
     std::array<instruction,256> opcodes;
-    _6502(const char* filePath);
+    std::uint8_t cycles;
+    _6502(const char* filePath, bool& _running);
     void reset ();
     void decompiler ();
     void run ();

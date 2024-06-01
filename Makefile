@@ -1,7 +1,7 @@
 EXENAME = 6502
 OBJ_DIR = obj/
 CXX = clang++ -std=c++20 -g -Wall -Wextra -Werror
-SOURCES = main.cpp cpu.cpp
+SOURCES = main.cpp cpu.cpp clock.cpp
 OBJECTS = $(SOURCES:%.cpp=$(OBJ_DIR)%.o)
 VPATH = src:
 
@@ -14,6 +14,9 @@ $(OBJ_DIR)main.o: main.cpp cpu.hpp
 	$(CXX) -c $< -o $@
 
 $(OBJ_DIR)cpu.o: cpu.cpp cpu.hpp
+	$(CXX) -c $< -o $@
+
+$(OBJ_DIR)clock.o: clock.cpp clock.hpp
 	$(CXX) -c $< -o $@
 
 .PHONY: clean run debug
