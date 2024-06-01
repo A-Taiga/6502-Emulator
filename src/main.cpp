@@ -12,15 +12,14 @@ static bool running = true;
 
 int main()
 {
-    signal(SIGINT, signal_handler);
+
+    signal(SIGINT, signal_handler); // using ctrl-c to quit wihtout turning my terminal into an interdimensional one
     initscr();
     cbreak();
     curs_set(0);
     refresh();
-
     Emulator emu("loop.bin", running);
     std::thread db(debug_memory, std::ref(emu));
-    // cpu.decompiler();
     db.join();
     endwin();
     return 0;

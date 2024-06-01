@@ -77,7 +77,7 @@ struct _6502
     void reset ();
     void decompiler ();
     void run ();
-    void IF ();
+    const instruction& IF ();
 
     void BRK (void); void ORA (void); void ASL (void); void PHP (void); void BPL (void);
     void CLC (void); void JSR (void); void AND (void); void BIT (void); void ROL (void); 

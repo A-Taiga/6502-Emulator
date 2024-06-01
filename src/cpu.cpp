@@ -114,6 +114,7 @@ void _6502::run()
     while (PC < ROM_END && running)
     {
         // ins = &opcodes[memory[PC]];
+
         addressMode = ins->addressMode;
         (this->*ins->opcode)();
         switch (addressMode)
@@ -145,11 +146,11 @@ void _6502::run()
     }
 }
 
-void _6502::IF()
+const instruction& _6502::IF()
 {
-
+    rw = ACCESS_MODE::READ;
     addressBus = PC;
-
+    return opcodes[0];
 }
 
 

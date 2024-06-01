@@ -1,7 +1,6 @@
 #include "emulator.hpp"
 #include "macros.hpp"
 
-
 Emulator::Emulator(const char* filePath, bool& power)
 : rw (ACCESS_MODE::NONE)
 , mem(filePath, addressBus, dataBus, rw)

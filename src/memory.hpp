@@ -6,8 +6,6 @@
 
 #define RAM_SIZE 65536 // 65kb
 
-
-
 class RAM
 {
     public:

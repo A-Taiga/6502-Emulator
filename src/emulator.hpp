@@ -14,12 +14,12 @@ class Emulator
         ACCESS_MODE rw;
         RAM mem;
         _6502 cpu;
-        [[maybe_unused]] word addressBus;
-        [[maybe_unused]] byte dataBus;
+        word addressBus;
+        byte dataBus;
 
     public:
         Emulator (const char* filePath, bool& power);
-        const RAM& read_memory() const;
+        const RAM& read_memory() const; // for debug
 };
 
 #endif
