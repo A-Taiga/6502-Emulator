@@ -8,7 +8,7 @@ VPATH = src:
 all: $(EXENAME)
 
 $(EXENAME): $(OBJECTS)
-	$(CXX) $^ -o $@ -lncurses
+	$(CXX) $^ -o $@ -lncursesw
 
 $(OBJ_DIR)main.o: main.cpp cpu.hpp
 	$(CXX) -c $< -o $@

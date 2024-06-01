@@ -8,6 +8,7 @@
 #include <thread>
 #include <chrono>
 #include <cstring>
+
 /*
 
 N	Negative
@@ -35,11 +36,6 @@ C	Carry
 
     29kb = free
 */
-
-
-
-
-
 
 namespace
 {
@@ -87,9 +83,6 @@ _6502::_6502(const char* filePath)
 
 }
 
-
-
-
 void _6502::reset()
 {
     PC = ROM_BEGIN;
@@ -134,7 +127,6 @@ void _6502::decompiler()
     }
 }
 
-
 void _6502::run()
 {
     initscr();
@@ -173,7 +165,6 @@ void _6502::run()
     }
     endwin();
 }
-
 
 void _6502::XXX(void){}
 void _6502::BRK(void){}
