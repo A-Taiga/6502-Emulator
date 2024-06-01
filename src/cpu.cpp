@@ -1,9 +1,13 @@
 #include "cpu.hpp"
 #include <cstdint>
+#include <ostream>
 #include <stdexcept>
 #include <cstdio>
 #include <iostream>
 #include <format>
+#include <ncurses.h>
+#include <thread>
+#include <chrono>
 /*
 
 N	Negative
@@ -34,24 +38,11 @@ C	Carry
 
 
 
+
+
+
 namespace
 {
-    /* flags */
-    [[maybe_unused]] constexpr byte C = 1 << 0;
-    [[maybe_unused]] constexpr byte Z = 1 << 1;
-    [[maybe_unused]] constexpr byte I = 1 << 2;
-    [[maybe_unused]] constexpr byte D = 1 << 3;
-    [[maybe_unused]] constexpr byte B = 1 << 4;
-    [[maybe_unused]] constexpr byte V = 1 << 6;
-    [[maybe_unused]] constexpr byte N = 1 << 7;
-
-
-    [[maybe_unused]] constexpr word ZRO_BEGIN  = 0x0000;
-    [[maybe_unused]] constexpr word STK_BEGIN  = 0x01FF;
-    [[maybe_unused]] constexpr word ROM_BEGIN  = 0xF000;
-    [[maybe_unused]] constexpr word ZRO_END    = 0x00FF;
-    [[maybe_unused]] constexpr word STK_END    = 0x01FF;
-    [[maybe_unused]] constexpr word ROM_END    = 0xFFFA;
 
     template<std::size_t N>
     std::size_t read_file (const char* path, std::array<std::uint8_t, N>& buffer, word offeset = 0)
@@ -93,7 +84,11 @@ _6502::_6502(const char* filePath)
     }};
     reset();
     read_file(filePath, memory.mem, ROM_BEGIN);
+
 }
+
+
+
 
 void _6502::reset()
 {
@@ -139,8 +134,11 @@ void _6502::decompiler()
     }
 }
 
+
 void _6502::run()
 {
+    initscr();
+    cbreak();
     while (PC < ROM_END)
     {
         instruction& ins = opcodes[memory[PC]];
@@ -164,18 +162,18 @@ void _6502::run()
             case MODE::ABX:
             case MODE::ABY:
             case MODE::IND:
-            PC+=3;
+            // PC+=3;
             break;
         }
-    }
 
-    // std::cout << (int)AC << std::endl;
-    for (std::uint16_t i = 0; i < ZRO_END; i++)
-    {
-        std::cout << std::format("{:}\n", (int)memory[i]);
+        // printf("PC = %04X AC = %02X  [0x0001] = %02X\r", PC, AC, memory[1]);
+        // std::cout << std::flush;
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        
     }
-
+    endwin();
 }
+
 
 void _6502::XXX(void){}
 void _6502::BRK(void){}
@@ -195,7 +193,11 @@ void _6502::RTI(void){}
 void _6502::EOR(void){}
 void _6502::LSR(void){}
 void _6502::PHA(void){}
-void _6502::JMP(void){}
+void _6502::JMP(void)
+{
+    if (addressMode == MODE::ABS)
+        PC = (uint16_t)((memory[PC+2] << 8) | memory[PC+1]);
+}
 void _6502::BVC(void){}
 void _6502::CLI(void){}
 void _6502::RTS(void){}
@@ -203,7 +205,9 @@ void _6502::PLA(void){}
 void _6502::ADC(void)
 {
     if (addressMode == MODE::IMM)
-        AC = memory[PC+1];
+    {
+        AC += memory[PC+1];
+    }
 }
 void _6502::ROR(void){}
 void _6502::BVS(void){}
@@ -212,9 +216,9 @@ void _6502::STA(void)
 {
     if (addressMode == MODE::ZPG)
     {
-        memory[memory[PC+1]] = (int)AC;
+        memory[memory[PC+1]] = AC;
     }
-
+    
 }
 void _6502::STY(void){}
 void _6502::STX(void){}
