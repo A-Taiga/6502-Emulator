@@ -8,7 +8,6 @@
 #include <thread>
 #include <chrono>
 #include <cstring>
-
 /*
 
 N	Negative
@@ -39,7 +38,6 @@ C	Carry
 
 namespace
 {
-
     template<std::size_t N>
     std::size_t read_file (const char* path, std::array<std::uint8_t, N>& buffer, word offeset = 0)
     {
@@ -57,8 +55,9 @@ namespace
     }
 }
 
-_6502::_6502(const char* filePath, bool& _running)
-: running(_running)
+_6502::_6502(const char* filePath, bool& _running, Clock& _clock)
+: clock(_clock)
+, running(_running)
 {
     opcodes =
     {{

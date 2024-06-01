@@ -10,10 +10,10 @@ all: $(EXENAME)
 $(EXENAME): $(OBJECTS)
 	$(CXX) $^ -o $@ -lncursesw
 
-$(OBJ_DIR)main.o: main.cpp cpu.hpp
+$(OBJ_DIR)main.o: main.cpp cpu.hpp clock.hpp
 	$(CXX) -c $< -o $@
 
-$(OBJ_DIR)cpu.o: cpu.cpp cpu.hpp
+$(OBJ_DIR)cpu.o: cpu.cpp cpu.hpp clock.hpp
 	$(CXX) -c $< -o $@
 
 $(OBJ_DIR)clock.o: clock.cpp clock.hpp

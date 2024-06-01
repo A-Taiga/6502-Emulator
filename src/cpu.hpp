@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <array>
+#include "clock.hpp"
 
 /*
     https://www.masswerk.at/6502/6502_instruction_set.html#BVS
@@ -96,10 +97,11 @@ struct _6502
     byte SP;   /* stack pointer */
     MODE addressMode;
     RAM memory;
+    Clock& clock;
     bool& running;
     std::array<instruction,256> opcodes;
     std::uint8_t cycles;
-    _6502(const char* filePath, bool& _running);
+    _6502(const char* filePath, bool& _running, Clock& _clock);
     void reset ();
     void decompiler ();
     void run ();
