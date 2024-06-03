@@ -49,11 +49,48 @@ void debug_memory([[maybe_unused]] Emulator& emu)
     WINDOW* zero_window = make_window(56, 21, 0, 0, "Zero Page");
     WINDOW* stack_win = make_window(56, 21, 57, 0, "Stack");
     WINDOW* page_1_win = make_window(56, 21, 114, 0, "Page 1");
+    WINDOW* program = make_window(40, 21, 114+56, 0, "Program");
+    int row;
+    int col;
+   
+    wmove(program, 2, 2);
+    row = 2;
+    for (word i = ROM_BEGIN; i < ROM_BEGIN+emu.mem.programSize;)
+    {
+        auto& ins = emu.cpu.opcodes[emu.mem.data()[i]];
+        switch (ins.addressMode)
+        {
+            case MODE::IMP:
+            wprintw(program, "%04X %02X %9s", (word)i, emu.mem.data()[i], ins.mnemonic);
+            wmove(program, row++, 2);
+            i+=1;
+            break;
+            case MODE::IMM: 
+            case MODE::ZPG:
+            case MODE::ZPX:
+            case MODE::ZPY:
+            case MODE::IZX:
+            case MODE::IZY:
+            case MODE::REL:
+            wprintw(program, "%04X %02X %02X %s", (word)i, emu.mem.data()[i], emu.mem.data()[i+1], ins.mnemonic);
+            wmove(program, row++, 2);
+            i+=2;
+            break;
+            case MODE::ABS:
+            case MODE::ABX:
+            case MODE::ABY:
+            case MODE::IND:
+            wprintw(program, "%04X %02X %02X %02X %s", (word)i, emu.mem.data()[i], emu.mem.data()[i+1], emu.mem.data()[i+2], ins.mnemonic);
+            wmove(program, row++, 2);
+            i+=3;
+            break;
+        }
+    }
+    wrefresh(program);
 
     start_color();
     init_pair(1, COLOR_BLACK, BRIGHT_WHITE);
-    int row;
-    int col;
+    // int row;
     while (running)
     {
         row = 2;
@@ -157,41 +194,7 @@ void debug_memory([[maybe_unused]] Emulator& emu)
             col+=3;
         }
 
-        WINDOW* program = make_window(40, 21, 114+56, 0, "Program");
-        wmove(program, 2, 2);
-        row = 2;
-        for (word i = ROM_BEGIN; i < ROM_BEGIN+emu.mem.programSize;)
-        {
-            auto& ins = emu.cpu.opcodes[emu.mem.data()[i]];
-            switch (ins.addressMode)
-            {
-                case MODE::IMP:
-                wprintw(program, "%04X %02X %9s", (word)i, emu.mem.data()[i], ins.mnemonic);
-                wmove(program, row++, 2);
-                i+=1;
-                break;
-                case MODE::IMM: 
-                case MODE::ZPG:
-                case MODE::ZPX:
-                case MODE::ZPY:
-                case MODE::IZX:
-                case MODE::IZY:
-                case MODE::REL:
-                wprintw(program, "%04X %02X %02X %s", (word)i, emu.mem.data()[i], emu.mem.data()[i+1], ins.mnemonic);
-                wmove(program, row++, 2);
-                i+=2;
-                break;
-                case MODE::ABS:
-                case MODE::ABX:
-                case MODE::ABY:
-                case MODE::IND:
-                wprintw(program, "%04X %02X %02X %02X %s", (word)i, emu.mem.data()[i], emu.mem.data()[i+1], emu.mem.data()[i+2], ins.mnemonic);
-                wmove(program, row++, 2);
-                i+=3;
-                break;
-            }
-        }
-        wrefresh(program);
+        
 
         mvprintw(21, 0, 
         "AC = %d\nPC = %04X\nX  = %d\nop = %s\n", 
@@ -203,5 +206,6 @@ void debug_memory([[maybe_unused]] Emulator& emu)
         wrefresh(stack_win);
         wrefresh(zero_window);
         wrefresh(page_1_win);
+
     }
 }

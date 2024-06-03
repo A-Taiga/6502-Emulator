@@ -152,47 +152,14 @@ void _6502::run()
             break;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        // write(link, [&](){
-
-        //     ins = &opcodes[link.dataBus];
-        //     link.addressBus = 0;
-        //     link.dataBus = (*ins).code;
-        //     switch (ins->addressMode)
-        //     {
-        //         case MODE::IMP:
-        //         PC+=1;
-        //         break;
-        //         case MODE::IMM: 
-        //         case MODE::ZPG:
-        //         case MODE::ZPX:
-        //         case MODE::ZPY:
-        //         case MODE::IZX:
-        //         case MODE::IZY:
-        //         case MODE::REL:
-        //         PC+=2;
-        //         break;
-        //         case MODE::ABS:
-        //         case MODE::ABX:
-        //         case MODE::ABY:
-        //         case MODE::IND:
-        //         PC+=3;
-        //         break;
-        //     }
-        //     if (PC > ROM_BEGIN+8) PC = ROM_BEGIN;
-        // });
     }
 }
-
-
-
-
 
 const instruction& _6502::IF()
 {
 
     return opcodes[0];
 }
-
 
 void _6502::XXX(void){}
 void _6502::BRK(void){}
