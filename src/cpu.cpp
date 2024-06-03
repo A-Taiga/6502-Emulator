@@ -1,5 +1,9 @@
 #include "cpu.hpp"
-#include "macros.hpp"
+#include "common.hpp"
+#include <chrono>
+#include <thread>
+
+
 
 /*
 
@@ -31,15 +35,14 @@ C	Carry
 
 namespace
 {
-    instruction* ins = nullptr;
+
+
 }
 
 
-_6502::_6502(bool& _running, word& aBus, byte& dBus, ACCESS_MODE& accessMode)
-: running(_running)
-, addressBus(aBus)
-, dataBus(dBus)
-, rw(accessMode)
+_6502::_6502(Link& l)
+: link (l)
+, ins(opcodes[0])
 {
     opcodes =
     {{
@@ -61,7 +64,6 @@ _6502::_6502(bool& _running, word& aBus, byte& dBus, ACCESS_MODE& accessMode)
         {"BEQ", &_6502::BEQ, MODE::REL, 2}, {"SBC", &_6502::SBC, MODE::IZY, 5}, {"???", &_6502::XXX, MODE::IMM, 0}, {"???", &_6502::XXX, MODE::IMM, 0}, {"???", &_6502::XXX, MODE::IMM, 0}, {"SBC", &_6502::SBC, MODE::ZPX, 4}, {"INC", &_6502::INC, MODE::ZPX, 6}, {"???", &_6502::XXX, MODE::IMM, 0}, {"SED", &_6502::SED, MODE::IMP, 2}, {"SBC", &_6502::SBC, MODE::ABY, 4}, {"???", &_6502::XXX, MODE::IMM, 0}, {"???", &_6502::XXX, MODE::IMM, 0}, {"???", &_6502::XXX, MODE::IMM, 0}, {"SBC", &_6502::SBC, MODE::ABX, 4}, {"INC", &_6502::INC, MODE::ABX, 7}, {"???", &_6502::XXX, MODE::IMM, 0}
     }};
     reset();
-    // read_file(filePath, memory.data(), ROM_BEGIN);
 }
 
 void _6502::reset()
@@ -72,8 +74,18 @@ void _6502::reset()
     Y  = 0;
     SR = 0;
     SP = 0;
-
 }
+
+void _6502::start()
+{
+    run_thread = std::thread(&_6502::run, this);
+}
+
+void _6502::join ()
+{
+    run_thread.join();
+}
+
 
 void _6502::decompiler()
 {
@@ -109,14 +121,15 @@ void _6502::decompiler()
     // }
 }
 
+#include <ncurses.h>
 void _6502::run()
 {
-    while (PC < ROM_END && running)
-    {
-        // ins = &opcodes[memory[PC]];
 
-        addressMode = ins->addressMode;
-        (this->*ins->opcode)();
+    while (PC < ROM_END && link.running)
+    {
+        ins = opcodes[link.memory->data()[PC]];
+        addressMode = ins.addressMode;
+        (this->*ins.opcode)();
         switch (addressMode)
         {
             case MODE::IMP:
@@ -138,18 +151,45 @@ void _6502::run()
             // PC+=3;
             break;
         }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        // write(link, [&](){
 
-        // printf("PC = %04X AC = %02X  [0x0001] = %02X\r", PC, AC, memory[1]);
-        // std::cout << std::flush;
-        // std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        
+        //     ins = &opcodes[link.dataBus];
+        //     link.addressBus = 0;
+        //     link.dataBus = (*ins).code;
+        //     switch (ins->addressMode)
+        //     {
+        //         case MODE::IMP:
+        //         PC+=1;
+        //         break;
+        //         case MODE::IMM: 
+        //         case MODE::ZPG:
+        //         case MODE::ZPX:
+        //         case MODE::ZPY:
+        //         case MODE::IZX:
+        //         case MODE::IZY:
+        //         case MODE::REL:
+        //         PC+=2;
+        //         break;
+        //         case MODE::ABS:
+        //         case MODE::ABX:
+        //         case MODE::ABY:
+        //         case MODE::IND:
+        //         PC+=3;
+        //         break;
+        //     }
+        //     if (PC > ROM_BEGIN+8) PC = ROM_BEGIN;
+        // });
     }
 }
 
+
+
+
+
 const instruction& _6502::IF()
 {
-    rw = ACCESS_MODE::READ;
-    addressBus = PC;
+
     return opcodes[0];
 }
 
@@ -180,9 +220,14 @@ void _6502::LSR(void){}
 void _6502::PHA(void){}
 void _6502::JMP(void)
 {
+
     if (addressMode == MODE::ABS)
     {
-        // PC = (uint16_t)((memory[PC+2] << 8) | memory[PC+1]);
+
+        byte low = link.memory->data()[PC+1];
+        byte high = link.memory->data()[PC+2]; 
+        PC = (uint16_t)((high << 8) | low);
+
     }
 }
 void _6502::BVC(void){}
@@ -196,10 +241,8 @@ void _6502::ADC(void)
 {
     if (addressMode == MODE::IMM)
     {
-        // AC += memory[PC+1];
-
+        AC += link.memory->data()[PC+1];
     }
-
 }
 void _6502::ROR(void){}
 void _6502::BVS(void){}
@@ -211,9 +254,33 @@ void _6502::STA(void)
 {
     if (addressMode == MODE::ZPG)
     {
-        // memory[memory[PC+1]] = AC;
-
-
+        byte address = link.memory->data()[PC+1];
+        link.memory->data()[address] = AC;
+    }
+    else if (addressMode == MODE::ZPX)
+    {
+        link.memory->data()[X] = AC;
+    }
+    else if (addressMode == MODE::ABS)
+    {
+        byte low = link.memory->data()[PC+1];
+        byte high = link.memory->data()[PC+2];
+        word address = (high << 8) | low;
+        link.memory->data()[address] = AC;
+        PC += 3;
+    }
+    else if (addressMode == MODE::IZX)
+    {
+        byte address = link.memory->data()[PC+1] + X;
+        link.memory->data()[address] = AC;
+    }
+    else if (addressMode == MODE::ABX)
+    {
+        byte low = link.memory->data()[PC+1];
+        byte high = link.memory->data()[PC+2];
+        word address = ((high << 8) | low) + X;
+        link.memory->data()[address] = AC; 
+        PC+=3;
     }
 }
 void _6502::STY(void){}
@@ -248,7 +315,10 @@ void _6502::CLD(void)
 void _6502::CPX(void){}
 void _6502::SBC(void){}
 void _6502::INC(void){}
-void _6502::INX(void){}
+void _6502::INX(void)
+{
+    X+=1;
+}
 void _6502::SPC(void){}
 void _6502::NOP(void){}
 void _6502::BEQ(void){}

@@ -2,9 +2,13 @@
 #define MACROS_HPP
 
 #include <cstdint>
+#include <array>
+#define RAM_SIZE 65536 // 65kb
 
 using byte = std::uint8_t;
 using word = std::uint16_t;
+
+
 
 
 [[maybe_unused]] constexpr byte C = 1 << 0;
@@ -21,11 +25,14 @@ using word = std::uint16_t;
 [[maybe_unused]] constexpr word STK_END    = 0x01FF;
 [[maybe_unused]] constexpr word ROM_END    = 0xFFFA;
 
-enum class ACCESS_MODE
+
+
+struct Link
 {
-    READ,
-    WRITE,
-    NONE,
+    bool running;
+    std::array<byte, RAM_SIZE>* memory;
 };
+
+
 
 #endif

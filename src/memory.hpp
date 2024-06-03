@@ -1,24 +1,24 @@
 #ifndef MEMORY_HPP
 #define MEMORY_HPP
 
-#include "macros.hpp"
+#include "common.hpp"
 #include <array>
+#include <thread>
 
-#define RAM_SIZE 65536 // 65kb
 
 class RAM
 {
     public:
-        RAM (const char* fileName, word& aBus, byte& dbus, ACCESS_MODE& accessMode);
+        std::size_t programSize;
+        RAM (const char* fileName, Link& l);
         void reset();
-        std::array<byte, 65536>& data();
+        std::array<byte, RAM_SIZE>& data();
         byte& operator[](word index);
         const byte& operator[](word index) const;
     private:
-        word& addressBus;
-        byte& dataBus;
-        ACCESS_MODE& rw;
+        Link& link;
         std::array<byte, RAM_SIZE> mem;
+
 };
 
 

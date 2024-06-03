@@ -1,15 +1,21 @@
 #include "emulator.hpp"
-#include "macros.hpp"
 
 Emulator::Emulator(const char* filePath, bool& power)
-: rw (ACCESS_MODE::NONE)
-, mem(filePath, addressBus, dataBus, rw)
-, cpu(power, addressBus, dataBus, rw)
+: mem(filePath, link)
+, cpu(link)
+, running(power)
 {
-    cpu.run();
+    link = Link(power, &mem.data());
+    cpu.start();
+
 }
 
 const RAM& Emulator::read_memory() const
 {
     return mem;
+}
+
+Link& Emulator::get_link()
+{
+    return link;
 }

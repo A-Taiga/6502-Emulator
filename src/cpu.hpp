@@ -1,10 +1,9 @@
 #ifndef CPU_HPP
 #define CPU_HPP
 
-#include "macros.hpp"
+#include "common.hpp"
 #include <array>
-
-
+#include<thread>
 /*
     https://www.masswerk.at/6502/6502_instruction_set.html#BVS
 
@@ -53,9 +52,10 @@ struct _6502;
 struct instruction
 {
     const char* mnemonic;
-    void (_6502::*opcode)(void) = nullptr;
+    void (_6502::*opcode)(void);
     MODE addressMode;
     std::size_t cycles;
+    // byte code;
 };
 
 struct _6502
@@ -68,17 +68,18 @@ struct _6502
     byte SR;   /* status register [NV-BDIZC] (aka flags) */
     byte SP;   /* stack pointer */
     MODE         addressMode;
-    bool&        running;
-    word&        addressBus;
-    byte&        dataBus;
-    ACCESS_MODE& rw;
+    Link&        link;
+    std::thread  run_thread;
     std::array<instruction,256> opcodes;
-    _6502(bool& _running, word& aBus, byte& dbus, ACCESS_MODE& accessMode);
+    instruction& ins;
+    _6502 (Link& l);
     void reset ();
+    void start ();
+    void join ();
     void decompiler ();
     void run ();
-    const instruction& IF ();
 
+    const instruction& IF ();
     void BRK (void); void ORA (void); void ASL (void); void PHP (void); void BPL (void);
     void CLC (void); void JSR (void); void AND (void); void BIT (void); void ROL (void); 
     void PLP (void); void BMI (void); void SEC (void); void RTI (void); void EOR (void);
