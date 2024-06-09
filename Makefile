@@ -1,37 +1,35 @@
 EXENAME = 6502
+CXX = clang++
+CXXFLAGS = -std=c++20 -Wall -Wextra -Werror -Wformat -I imgui -I include
+UNAME_S := $(shell uname -s)
+VPATH = src: imgui: include:
 OBJ_DIR = obj/
-CXX = clang++ -std=c++20 -g -Wall -Wextra -Werror 
-SOURCES = main.cpp emulator.cpp cpu.cpp memory.cpp
+SOURCES =  main.cpp cpu.cpp memory.cpp emulator.cpp window.cpp debug.cpp imgui.cpp imgui_demo.cpp imgui_draw.cpp imgui_tables.cpp
+SOURCES += imgui_widgets.cpp imgui_impl_sdl2.cpp imgui_impl_sdlrenderer2.cpp
 OBJECTS = $(SOURCES:%.cpp=$(OBJ_DIR)%.o)
-VPATH = src:
+LIBS = 
+
+ifeq ($(UNAME_S), Darwin)
+	ECHO_MESSAGE = "OS X compiled"
+	LIBS += -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo `sdl2-config --libs`
+	LIBS += -L/usr/local/lib
+	CXXFLAGS += `sdl2-config --cflags`
+	CXXFLAGS += -I/usr/local/include -I/opt/local/include
+endif
 
 all: $(EXENAME)
+	@echo $(ECHO_MESSAGE)
 
 $(EXENAME): $(OBJECTS)
-	$(CXX) $^ -o $@ -lncursesw -lpthread
+	$(CXX) -o $@ $^ $(CXXFLAG) $(LIBS) -lncurses
 
-$(OBJ_DIR)main.o: main.cpp emulator.hpp
-	$(CXX) -c $< -o $@
+$(OBJECTS): $(OBJ_DIR)%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-$(OBJ_DIR)emulator.o: emulator.cpp emulator.hpp cpu.hpp memory.hpp common.hpp
-	$(CXX) -c $< -o $@
+.PHONY: clean run
 
-$(OBJ_DIR)cpu.o: cpu.cpp cpu.hpp common.hpp
-	$(CXX) -c $< -o $@
-
-$(OBJ_DIR)memory.o: memory.cpp memory.hpp common.hpp
-	$(CXX) -c $< -o $@
-
-
-
-.PHONY: clean run debug
-
-clean:
-	rm -f $(EXENAME) $(OBJ_DIR)*.o
 run:
 	./$(EXENAME)
 
-debug:
-	rm -f out.txt
-	./${EXENAME} >> out.txt
-
+clean:
+	rm -f $(EXENAME) $(OBJECTS)

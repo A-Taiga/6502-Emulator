@@ -1,12 +1,9 @@
 #include "memory.hpp"
 #include "common.hpp"
-#include <chrono>
 #include <cstdio>
 #include <cstring>
-#include <mutex>
 #include <stdexcept>
 #include <format>
-#include <thread>
 
 template<std::size_t N>
 std::size_t read_file (const char* path, std::array<byte, N>& buffer, [[maybe_unused]] word begin = 0, word end = 0)
@@ -24,30 +21,28 @@ std::size_t read_file (const char* path, std::array<byte, N>& buffer, [[maybe_un
     return size;
 }
 
-RAM::RAM(const char* fileName, Link& l)
-: link (l)
-, mem{0}
+_6502::RAM::RAM(const char* fileName)
+: mem{0}
 {
     programSize = read_file(fileName, mem, ROM_BEGIN, ROM_END);
-    link.running = true;
 }
 
-byte& RAM::operator[](word index)
+byte& _6502::RAM::operator[](word index)
 {
     return mem[index];
 }
 
-const byte& RAM::operator[](word index) const
+const byte& _6502::RAM::operator[](word index) const
 {
     return mem[index];
 }
 
-void RAM::reset()
+void _6502::RAM::reset()
 {
     mem = {0};
 }
 
-std::array<byte, RAM_SIZE>& RAM::data()
+std::array<byte, RAM_SIZE>& _6502::RAM::data()
 {
     return mem;
 }
