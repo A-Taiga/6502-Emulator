@@ -78,8 +78,13 @@ void debug::test_demo (Window& window,[[maybe_unused]]debug::Data& data)
     page_group("Zero Page", data);
     page_group("Page 1", data, STK_END+1, ImGui::GetItemRectMax().x,  -ImGui::GetItemRectMax().y + ImGui::CalcTextSize("").y - 6.5);
     ImGui::NewLine();
-    ImGui::Text("X  : $%02X", data.cpu.X);
     ImGui::Text("PC : $%04X", data.cpu.PC);
+    ImGui::Text("AC : $%02X\t%d", data.cpu.AC, data.cpu.AC);
+    ImGui::Text("X  : $%02X", data.cpu.X);
+    ImGui::Text("Y  : $%02X", data.cpu.Y);
+    ImGui::Text("SR : %s", std::format("{:08b}", data.cpu.SR).c_str());
+    ImGui::Text("SP : $%02X", data.cpu.SP);
+
 
     ImGui::End();
     debug::render (window);

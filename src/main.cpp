@@ -13,7 +13,7 @@ static bool running = true;
 int main()
 {
     signal(SIGINT, signal_handler); // using ctrl-c to quit wihtout turning my terminal into an interdimensional one
-    _6502::Emulator emu("loop5.bin", running);
+    _6502::Emulator emu("p1.bin", running);
     emu.run();
     return 0;
 }

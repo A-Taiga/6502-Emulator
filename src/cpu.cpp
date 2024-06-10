@@ -222,7 +222,10 @@ void _6502::CPU::ORA(void){}
 void _6502::CPU::ASL(void){}
 void _6502::CPU::PHP(void){}
 void _6502::CPU::BPL(void){}
-void _6502::CPU::CLC(void){}
+void _6502::CPU::CLC(void)
+{
+    SR &= ~C;
+}
 void _6502::CPU::JSR(void){}
 void _6502::CPU::AND(void){}
 void _6502::CPU::BIT(void){}
@@ -246,6 +249,14 @@ void _6502::CPU::ADC(void)
 {
     if (current_ins.opcode->mode != &_6502::CPU::IMP)
         AC += read (current_ins.data);
+
+    word temp = AC + read (current_ins.data) + (SR &= C);
+
+    if (temp > 0xFF)
+        SR |= C;
+
+    if (temp == 0)
+        SR |= Z;
 
 }
 void _6502::CPU::ROR(void){}
