@@ -29,6 +29,14 @@ C	Carry
     29kb = free
 */
 
+[[maybe_unused]] static constexpr word C = 1 << 0;
+[[maybe_unused]] static constexpr word Z = 1 << 1;
+[[maybe_unused]] static constexpr word I = 1 << 2;
+[[maybe_unused]] static constexpr word D = 1 << 3;
+[[maybe_unused]] static constexpr word B = 1 << 4;
+[[maybe_unused]] static constexpr word V = 1 << 6;
+[[maybe_unused]] static constexpr word N = 1 << 7;
+
 
 _6502::CPU::CPU(Bus& bus)
 : bus {bus}
@@ -227,14 +235,24 @@ void _6502::CPU::CLC(void)
     SR &= ~C;
 }
 void _6502::CPU::JSR(void){}
-void _6502::CPU::AND(void){}
+void _6502::CPU::AND(void)
+{
+
+}
 void _6502::CPU::BIT(void){}
 void _6502::CPU::ROL(void){}
 void _6502::CPU::PLP(void){}
 void _6502::CPU::BMI(void){}
 void _6502::CPU::SEC(void){}
 void _6502::CPU::RTI(void){}
-void _6502::CPU::EOR(void){}
+void _6502::CPU::EOR(void)
+{
+    AC = AC ^ read(current_ins.data);
+    if (AC == 0)
+        SR |= Z;
+    if (AC & 0x80)
+        SR |= N;
+}
 void _6502::CPU::LSR(void){}
 void _6502::CPU::PHA(void){}
 void _6502::CPU::JMP(void)
@@ -242,7 +260,10 @@ void _6502::CPU::JMP(void)
     PC = current_ins.data;
 }
 void _6502::CPU::BVC(void){}
-void _6502::CPU::CLI(void){}
+void _6502::CPU::CLI(void)
+{
+    SR &= ~I;
+}
 void _6502::CPU::RTS(void){}
 void _6502::CPU::PLA(void){}
 void _6502::CPU::ADC(void)
@@ -254,9 +275,10 @@ void _6502::CPU::ADC(void)
 
     if (temp > 0xFF)
         SR |= C;
-
     if (temp == 0)
         SR |= Z;
+    if (temp & 0x8000)
+        SR |= N;
 
 }
 void _6502::CPU::ROR(void){}
@@ -264,41 +286,7 @@ void _6502::CPU::BVS(void){}
 void _6502::CPU::SEI(void){}
 void _6502::CPU::STA(void)
 {
-
     write (current_ins.data, AC);
-    // std::cout << std::format("{:04X} {:}\n", current_ins.data, AC);
-
-
-    // if (addressMode == &_6502::CPU::ZPG)
-    // {
-    //     byte address = link.memory->data()[PC+1];
-    //     link.memory->data()[address] = AC;
-    // }
-    // else if (addressMode == &_6502::CPU::ZPX)
-    // {
-    //     link.memory->data()[X] = AC;
-    // }
-    // else if (addressMode == &_6502::CPU::ABS)
-    // {
-    //     byte low = link.memory->data()[PC+1];
-    //     byte high = link.memory->data()[PC+2];
-    //     word address = (high << 8) | low;
-    //     link.memory->data()[address] = AC;
-    //     PC += 3;
-    // }
-    // else if (addressMode == &_6502::CPU::IZX)
-    // {
-    //     byte address = link.memory->data()[PC+1] + X;
-    //     link.memory->data()[address] = AC;
-    // }
-    // else if (addressMode == &_6502::CPU::ABX)
-    // {
-    //     byte low = link.memory->data()[PC+1];
-    //     byte high = link.memory->data()[PC+2];
-    //     word address = ((high << 8) | low) + X;
-    //     link.memory->data()[address] = AC; 
-    //     PC+=3;
-    // }
 }
 void _6502::CPU::STY(void){}
 void _6502::CPU::STX(void){}
@@ -317,7 +305,10 @@ void _6502::CPU::LDX(void){}
 void _6502::CPU::TAY(void){}
 void _6502::CPU::TAX(void){}
 void _6502::CPU::BCS(void){}
-void _6502::CPU::CLV(void){}
+void _6502::CPU::CLV(void)
+{
+    SR &= ~V;
+}
 void _6502::CPU::TSX(void){}
 void _6502::CPU::CPY(void){}
 void _6502::CPU::CMP(void){}
@@ -325,7 +316,10 @@ void _6502::CPU::DEC(void){}
 void _6502::CPU::INY(void){}
 void _6502::CPU::DEX(void){}
 void _6502::CPU::BNE(void){}
-void _6502::CPU::CLD(void){}
+void _6502::CPU::CLD(void)
+{
+    SR &= ~D;
+}
 void _6502::CPU::CPX(void){}
 void _6502::CPU::SBC(void){}
 void _6502::CPU::INC(void){}

@@ -1,5 +1,7 @@
 #include "window.hpp"
 #include <SDL2/SDL.h>
+#include "SDL.h"
+#include "SDL2/SDL_error.h"
 #include "SDL2/SDL_events.h"
 #include "SDL2/SDL_render.h"
 #include "SDL2/SDL_video.h"
@@ -11,8 +13,11 @@
 Window::Window (int w, int h, const char* title)
 : width (w), height(h)
 {
+
+
 	if (SDL_INIT_EVERYTHING < 0)
 		throw std::runtime_error(SDL_GetError());
+
 
 	window = SDL_CreateWindow(title
 							, SDL_WINDOWPOS_CENTERED
@@ -20,8 +25,10 @@ Window::Window (int w, int h, const char* title)
 							, width
 							, height
 							, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
+	SDL_MaximizeWindow(window);
 	if (window == nullptr)
 		throw std::runtime_error(SDL_GetError());
+	
 
 	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	if (renderer == nullptr)

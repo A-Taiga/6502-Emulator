@@ -65,7 +65,7 @@ void _6502::Emulator::run()
             // std::cout << std::format("{:04X}", bus.cpu.get_pc()) << std::endl;
             // std::cout << bus.ram[0x0200] << std::endl;
             bus.cpu.run();
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
     });
 
