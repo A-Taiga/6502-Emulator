@@ -9,7 +9,6 @@
 #include <cstring>
 
 
-
 namespace
 {
     template<std::size_t N>
@@ -39,7 +38,6 @@ _6502::Emulator::Emulator(const char* filePath, bool& _running)
 
 void _6502::Emulator::run()
 {
-    static debug::Data data = {bus.cpu, bus.ram};
     static Window window(1000, 800, "Debugger");
 
     window.push_event_cb([&](void*, SDL_Event* event){
@@ -63,8 +61,6 @@ void _6502::Emulator::run()
     {
         while (running)
         {
-            // std::cout << std::format("{:04X}", bus.cpu.get_pc()) << std::endl;
-            // std::cout << bus.ram[0x0200] << std::endl;
             bus.cpu.run();
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
@@ -72,8 +68,7 @@ void _6502::Emulator::run()
 
     while (running)
     {
-        debug::test_demo(window, data);
+        debug::test_demo(window, bus);
         window.poll();
-        // bus.cpu.run();
     }
 }

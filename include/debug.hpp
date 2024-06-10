@@ -3,19 +3,12 @@
 
 #include "window.hpp"
 #include "cpu.hpp"
-#include "memory.hpp"
 
+class Bus;
 namespace debug
 {
-    struct Data
-    {
-        _6502::CPU& cpu;
-        _6502::RAM& memory;
-        Data(_6502::CPU& processor, _6502::RAM& ram);
-    };
-
     void init(Window& window);
-    void test_demo(Window& window, debug::Data& data);
+    void test_demo(Window& window, _6502::Bus data);
     void render (Window& window);
 }
 

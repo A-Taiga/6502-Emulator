@@ -6,11 +6,7 @@
 #include <cstdio>
 #include <cstring>
 #include <format>
-
-debug::Data::Data(_6502::CPU& processor, _6502::RAM& ram)
-: cpu(processor)
-, memory(ram)
-{}
+#include "bus.hpp"
 
 void debug::init (Window& window)
 {
@@ -45,18 +41,17 @@ void page_group (const char* text, std::function<void()> callback, float xPos = 
     drawList->AddRect(min, max, ImGui::GetColorU32({255,255,255,255}));
     splitter.Merge(drawList);
 };
-
-void debug::test_demo (Window& window,[[maybe_unused]]debug::Data& data)
+void debug::test_demo (Window& window, _6502::Bus data)
+// void debug::test_demo (Window& window,debug::Data& data)
 {
     static int current_page_index = 0;
-    static 
+    static char buffer[5] = {0};
     std::string SR = std::format("NV-BDIZC\n{:08b}", data.cpu.SR);
     std::string PC = std::format("PC : ${:04X} {:<5} {:08b} {:08b}", data.cpu.PC, data.cpu.PC, (data.cpu.PC & 0xFF00) >> 8, data.cpu.PC & 0x00FF);
     std::string AC = std::format("AC : ${:02X} {:<2}{:<5} {:08b}", data.cpu.AC, "", data.cpu.AC, data.cpu.AC);
     std::string SP = std::format("SP : ${:02X} {:<2}{:<5} {:08b}", data.cpu.SP, "", data.cpu.SP, data.cpu.SP);
     std::string X  = std::format("X  : ${:02X} {:<2}{:<5} {:08b}", data.cpu.X, "", data.cpu.X, data.cpu.X);
     std::string Y  = std::format("Y  : ${:02X} {:<2}{:<5} {:08b}", data.cpu.Y, "", data.cpu.Y, data.cpu.Y);
-
     ImGui_ImplSDLRenderer2_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
@@ -70,8 +65,6 @@ void debug::test_demo (Window& window,[[maybe_unused]]debug::Data& data)
     ImGui::BeginTable("test", 3, ImGuiTableFlags_Borders  | ImGuiTableFlags_SizingFixedFit);
     ImGui::TableNextRow();
     ImGui::TableSetColumnIndex(1);
-    char buffer[5];
-    std::memset(buffer, 0, sizeof(buffer));
     if(ImGui::InputText("##page input", buffer, sizeof(buffer), ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue))
     {  
         auto page = std::strtol(buffer, nullptr, 16);
@@ -80,7 +73,6 @@ void debug::test_demo (Window& window,[[maybe_unused]]debug::Data& data)
     }
     if (ImGui::Button("<<"))
     {
-        // (current_page_index-- ) % (0xF000 / 255)
         current_page_index--;
         if (current_page_index < 0)
             current_page_index = 255;
@@ -108,7 +100,7 @@ void debug::test_demo (Window& window,[[maybe_unused]]debug::Data& data)
             for (std::size_t i = 0; i < 16; i++)
             {
                 ImGui::SameLine();
-                ImGui::Text("%02X", data.memory[((row*16)+i)]);
+                ImGui::Text("%02X", data.ram[((row*16)+i)]);
             }
         }
     });
@@ -136,11 +128,7 @@ void debug::test_demo (Window& window,[[maybe_unused]]debug::Data& data)
             for (std::size_t i = 0; i < 16; i++)
             {
                 ImGui::SameLine();
-                // ImGui::Text("%02X", data.memory[((row*16)+i) + (current_page_index * 255)]);
-                // ImGui::Text("%02X", data.memory[((row*16)+i) + STK_END+1]);
-                ImGui::Text("%02X", data.memory[((row*16)+i) + (current_page_index * 256)]);
-
-
+                ImGui::Text("%02X", data.ram[((row*16)+i) + (current_page_index * 256)]);
             }
         }
     });
