@@ -4,14 +4,13 @@
 #include "common.hpp"
 #include <array>
 
-
 namespace _6502
 {
     class RAM
     {
         public:
             std::size_t programSize;
-            RAM (const char* fileName);
+            RAM ();
             void reset();
             std::array<byte, RAM_SIZE>& data();
             byte& operator[](word index);

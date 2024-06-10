@@ -4,18 +4,42 @@
 #include "imgui_impl_sdl2.h"
 #include "window.hpp"
 #include "debug.hpp"
+#include <format>
+#include <thread>
 
+
+
+namespace
+{
+    template<std::size_t N>
+    std::size_t load_rom (const char* path, std::array<byte, N>& buffer, [[maybe_unused]] word begin = 0, word end = 0)
+    {
+        FILE* file = fopen(path, "rb");
+        std::size_t size;
+
+        if (file == nullptr)                           throw std::runtime_error(std::strerror(errno));
+        if (std::fseek (file, 0L, SEEK_END) == -1)     throw std::runtime_error(std::strerror(errno));
+        if ((size = std::ftell(file)) == -1UL)         throw std::runtime_error(std::strerror(errno));
+        if (size > end)                                throw std::runtime_error(std::format("file > {:d}", N));
+        if ((std::fseek(file, 0L, SEEK_SET)) == -1L)   throw std::runtime_error(std::strerror(errno));
+        if ((std::fread(buffer.data() + ROM_BEGIN, size, 1, file)) == -1UL)  
+            throw std::runtime_error(std::strerror(errno));
+        fclose (file);
+        return size;
+    }
+}
 
 _6502::Emulator::Emulator(const char* filePath, bool& _running)
-: mem(filePath)
-, cpu()
+: bus ()
 , running(_running)
-{}
+{
+    load_rom (filePath, bus.ram.data(), ROM_BEGIN, ROM_END);
+}
 
 void _6502::Emulator::run()
 {
-    static debug::Data data = {cpu, mem};
-    static Window window(600, 600, "Debugger");
+    static debug::Data data = {bus.cpu, bus.ram};
+    static Window window(1000, 800, "Debugger");
 
     window.push_event_cb([&](void*, SDL_Event* event){
         if (event->type == SDL_QUIT)
@@ -34,10 +58,21 @@ void _6502::Emulator::run()
 
     debug::init(window);
 
-    // cpu.start();
+    std::thread emulator_thread = std::thread([&]()
+    {
+        while (running)
+        {
+            // std::cout << std::format("{:04X}", bus.cpu.get_pc()) << std::endl;
+            // std::cout << bus.ram[0x0200] << std::endl;
+            bus.cpu.run();
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+    });
+
     while (running)
     {
         debug::test_demo(window, data);
         window.poll();
+        // bus.cpu.run();
     }
 }

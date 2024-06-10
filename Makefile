@@ -1,10 +1,10 @@
 EXENAME = 6502
 CXX = clang++
-CXXFLAGS = -std=c++20 -Wall -Wextra -Werror -Wformat -I imgui -I include
+CXXFLAGS = -std=c++20 -g -Wall -Wextra -Werror -Wformat -I imgui -I include
 UNAME_S := $(shell uname -s)
 VPATH = src: imgui: include:
 OBJ_DIR = obj/
-SOURCES =  main.cpp cpu.cpp memory.cpp emulator.cpp window.cpp debug.cpp imgui.cpp imgui_demo.cpp imgui_draw.cpp imgui_tables.cpp
+SOURCES =  main.cpp cpu.cpp memory.cpp emulator.cpp bus.cpp window.cpp debug.cpp imgui.cpp imgui_demo.cpp imgui_draw.cpp imgui_tables.cpp
 SOURCES += imgui_widgets.cpp imgui_impl_sdl2.cpp imgui_impl_sdlrenderer2.cpp
 OBJECTS = $(SOURCES:%.cpp=$(OBJ_DIR)%.o)
 LIBS = 

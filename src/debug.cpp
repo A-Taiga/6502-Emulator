@@ -22,11 +22,46 @@ void debug::init (Window& window)
     ImGui::StyleColorsClassic();
     ImGui_ImplSDL2_InitForSDLRenderer(window.get_window(), window.get_renderer());
     ImGui_ImplSDLRenderer2_Init(window.get_renderer());
-    // fontSize.x = ImGui::CalcTextSize("F").x;
-    // fontSize.y = ImGui::GetTextLineHeightWithSpacing();
-    // windowSize = ImGui::GetIO().DisplaySize;
 }
 
+void page_group (const char* text, debug::Data& data, int offset = 0, float xPos = 0.0, float yPox = 0.0)
+{
+    static ImVec2 min;
+    static ImVec2 max;
+    static ImDrawList* drawList = ImGui::GetWindowDrawList();
+    static ImDrawListSplitter splitter;
+    auto t = ImGui::GetCursorScreenPos().y - ImGui::CalcTextSize("Zero Page").y;
+    splitter.Split(drawList, 3);
+    splitter.SetCurrentChannel(drawList, 2);
+    ImGui::SetCursorPos({ImGui::GetCursorScreenPos().x + xPos, t + yPox});
+    ImGui::Text("%s", text);
+    ImGui::SetCursorPos({ImGui::GetCursorScreenPos().x + xPos, t + yPox + ImGui::CalcTextSize(text).y + ImGui::CalcTextSize(text).y / 2});
+    splitter.SetCurrentChannel(drawList, 1);
+    drawList->AddRectFilled(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::GetColorU32({0,0,0,255}));
+    ImGui::BeginGroup();
+    ImGui::Text("%s", std::format("{:<5}","").c_str());
+    for (std::uint16_t i = 0; i < 16; i++)
+    {
+        ImGui::SameLine();
+        ImGui::Text("%02X", i);
+    }
+    ImGui::NewLine();
+    for (int row = 0; row < 16; row++)
+    {
+        ImGui::Text("%04X:", (row*16) + offset);
+        for (std::size_t i = 0; i < 16; i++)
+        {
+            ImGui::SameLine();
+            ImGui::Text("%02X", data.memory[((row*16)+i) + offset]);
+        }
+    }
+    ImGui::EndGroup();
+    splitter.SetCurrentChannel(drawList, 0);
+    min = {ImGui::GetItemRectMin().x - ImGui::CalcTextSize(" ").x, ImGui::GetItemRectMin().y - ImGui::CalcTextSize(" ").y};
+    max = {ImGui::GetItemRectMax().x + ImGui::CalcTextSize(" ").x, ImGui::GetItemRectMax().y + ImGui::CalcTextSize(" ").y};
+    drawList->AddRect(min, max, ImGui::GetColorU32({255,255,255,255}));
+    splitter.Merge(drawList);
+};
 
 void debug::test_demo (Window& window,[[maybe_unused]]debug::Data& data)
 {
@@ -34,44 +69,20 @@ void debug::test_demo (Window& window,[[maybe_unused]]debug::Data& data)
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
     static ImGuiStyle& style = ImGui::GetStyle();
-    style.WindowBorderSize = 0.0f;
-    // ImGui::SetNextWindowSize(ImVec2{static_cast<float>(window.get_w()) / 2, static_cast<float>(window.get_h())});
-    ImGui::SetNextWindowPos({0,0});
-    ImGui::Begin("test",nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar);
-    ImGui::Text("%s", std::format("{:<5}","").c_str());
-    for (std::uint16_t i = 0; i < 16; i++)
-    {
-        ImGui::SameLine();
-        ImGui::Text("%02X", i);
-    }
-    ImGui::End();
-    ImGui::SetNextWindowPos({0, 25});
-    if (ImGui::Begin("Zero Page", nullptr,  ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar))
-    {
- 
-        // ImGui::BeginChild("TEST", {ImGui::CalcTextSize("FF").x * 16 * 2,ImGui::CalcTextSize("FF").y * 22}, ImGuiWindowFlags_NoResize);
-        {
-            static ImGuiListClipper clipper;
-            clipper.Begin(RAM_SIZE / 16);
-            ImGui::SetWindowFontScale(1);
-            while (clipper.Step())
-            {
-                for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
-                {
-                    ImGui::Text("%04X:", row*16);
-                    for (std::size_t i = 0; i < 16; i++)
-                    {
-                        ImGui::SameLine();
-                        ImGui::Text("%02X", data.memory[(row*16)+i]);
-                    }
-                }
-            }
-        }
-    }
-    ImGui::End();
-
-    debug::render (window);
+    style.WindowPadding.x = ImGui::CalcTextSize("   ").x;
+    style.WindowPadding.y = ImGui::CalcTextSize("   ").y;
+    ImGui::SetNextWindowSize({(float)window.get_w(), (float)window.get_h()});
+    ImGui::Begin("main window", 0, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+    ImGui::SetWindowFontScale(1.2);
     
+    page_group("Zero Page", data);
+    page_group("Page 1", data, STK_END+1, ImGui::GetItemRectMax().x,  -ImGui::GetItemRectMax().y + ImGui::CalcTextSize("").y - 6.5);
+    ImGui::NewLine();
+    ImGui::Text("X  : $%02X", data.cpu.X);
+    ImGui::Text("PC : $%04X", data.cpu.PC);
+
+    ImGui::End();
+    debug::render (window);
 }
 
 void debug::render (Window& window)
@@ -83,4 +94,7 @@ void debug::render (Window& window)
     SDL_SetRenderDrawColor(window.get_renderer(), 0,0,0,0);
     SDL_RenderClear(window.get_renderer());
 }
+
+
+
 

@@ -21,10 +21,10 @@ std::size_t read_file (const char* path, std::array<byte, N>& buffer, [[maybe_un
     return size;
 }
 
-_6502::RAM::RAM(const char* fileName)
+_6502::RAM::RAM()
 : mem{0}
 {
-    programSize = read_file(fileName, mem, ROM_BEGIN, ROM_END);
+    // programSize = read_file(fileName, mem, ROM_BEGIN, ROM_END);
 }
 
 byte& _6502::RAM::operator[](word index)
