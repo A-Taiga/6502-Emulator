@@ -73,7 +73,6 @@ void _6502::CPU::reset()
     SP = 0;
 }
 
-
 void _6502::CPU::decompiler()
 {
     // for (std::size_t i = ROM_BEGIN; i < ROM_END;)

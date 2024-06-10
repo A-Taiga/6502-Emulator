@@ -6,6 +6,7 @@
 #include "debug.hpp"
 #include <format>
 #include <thread>
+#include <cstring>
 
 
 
