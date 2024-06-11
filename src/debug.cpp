@@ -223,7 +223,7 @@ void debug::test_demo (Window& window, _6502::Bus data)
                            )
                     {
                         if (data.cpu.PC == i) ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
-                        ImGui::TextUnformatted(std::format ("{:02X} {:02X} {:02X} {:}", data.ram[i], data.ram[i+1], data.ram[i+1], ins->mnemonic).c_str());
+                        ImGui::TextUnformatted(std::format ("{:02X} {:02X} {:02X} {:}", data.ram[i], data.ram[i+1], data.ram[i+2], ins->mnemonic).c_str());
                         if (data.cpu.PC == i) ImGui::PopStyleColor();
                         i+=3;
                     }
