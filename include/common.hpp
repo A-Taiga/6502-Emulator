@@ -17,6 +17,4 @@ static constexpr word STK_END    = 0x01FF;
 static constexpr word ROM_BEGIN  = 0xF000;
 static constexpr word ROM_END    = 0xFFFA;
 
-
-
 #endif

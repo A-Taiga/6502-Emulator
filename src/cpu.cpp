@@ -75,41 +75,9 @@ void _6502::CPU::reset()
 
 void _6502::CPU::decompiler()
 {
-    // for (std::size_t i = ROM_BEGIN; i < ROM_END;)
-    // {
-    //     // opcode& ins = opcodes[memory[i]];
-    //     ins = &opcodes[memory[i]];
-    //     std::cout << std::format ("0x{:04X} ", i);
-    //     switch (ins->addressMode)
-    //     {
-    //         case &_6502::CPU::IMP:
-    //         std::cout << std::format ("{:02X} {:>9}\n", memory[i], ins->mnemonic);
-    //         i+=1;
-    //         break;
-    //         case &_6502::CPU::IMM: 
-    //         case &_6502::CPU::ZPG:
-    //         case &_6502::CPU::ZPX:
-    //         case &_6502::CPU::ZPY:
-    //         case &_6502::CPU::IZX:
-    //         case &_6502::CPU::IZY:
-    //         case &_6502::CPU::REL:
-    //         std::cout << std::format ("{:02X} {:02X} {:>6}\n", memory[i], memory[i+1], ins->mnemonic);
-    //         i+=2;
-    //         break;
-    //         case &_6502::CPU::ABS:
-    //         case &_6502::CPU::ABX:
-    //         case &_6502::CPU::ABY:
-    //         case &_6502::CPU::IND:
-    //         std::cout << std::format ("{:02X} {:02X} {:02X} {:}\n", memory[i], memory[i+1], memory[i+1], ins->mnemonic);
-    //         i+=3;
-    //         break;
-    //     }
-    // }
+
 }
 
-
-
-// #include <ncurses.h>
 void _6502::CPU::run()
 {
     current_ins.opcode = &opcodes[read(PC++)];

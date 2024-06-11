@@ -31,26 +31,6 @@
 
 namespace _6502
 {
-
-
-
-
-    enum class MODE : byte
-    {
-        IMP, // Implied Addressing
-        IMM, // Immediate Addressing
-        ABS, // Absolute Addressing
-        ZPG, // Zero-Page Addressing
-        ABX, // Indexed Addressing: Absolute,X
-        ABY, // Indexed Addressing: Absolute,Y
-        ZPX, // Indexed Addressing: Zero-Page,X
-        ZPY, // Indexed Addressing: (Zero-Page,Y)
-        IND, // Indirect Addressing
-        IZX, // Indirect Zero-page X-indexed
-        IZY, // Indirect Zero-page Y-indexed
-        REL, // Relative Addressing (Conditional Branching)
-    };
-
     class CPU;
     struct opcode
     {

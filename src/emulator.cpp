@@ -62,7 +62,7 @@ void _6502::Emulator::run()
         while (running)
         {
             bus.cpu.run();
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }
     });
 
