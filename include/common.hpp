@@ -2,6 +2,7 @@
 #define MACROS_HPP
 
 #include <cstdint>
+#include <cstddef>
 
 using byte = std::uint8_t;
 using word = std::uint16_t;
