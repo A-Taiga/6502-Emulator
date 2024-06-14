@@ -1,10 +1,10 @@
 EXE = 6502
-VPATH = src: debug:
+VPATH = src: debug: imgui:
 IMGUI_DIR = imgui
 OBJ_DIR = .obj
-SOURCES = main.cpp cpu.cpp memory.cpp emulator.cpp bus.cpp debug/window.cpp
-SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
-SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdl2.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
+SOURCES = main.cpp cpu.cpp memory.cpp emulator.cpp bus.cpp debugger.cpp
+SOURCES += imgui.cpp imgui_demo.cpp imgui_draw.cpp imgui_tables.cpp imgui_widgets.cpp
+SOURCES += backends/imgui_impl_sdl2.cpp backends/imgui_impl_opengl3.cpp
 OBJS = $(addprefix $(OBJ_DIR)/, $(addsuffix .o, $(basename $(notdir $(SOURCES)))))
 UNAME_S := $(shell uname -s)
 LINUX_GL_LIBS = -lGL

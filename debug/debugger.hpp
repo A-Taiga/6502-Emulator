@@ -1,5 +1,5 @@
-#ifndef WINDOW_HPP
-#define WINDOW_HPP
+#ifndef DEBUGGER_HPP
+#define DEBUGGER_HPP
 
 #include <functional>
 #include <cstdint>
@@ -9,7 +9,7 @@ struct SDL_Window;
 typedef void *SDL_GLContext;
 typedef union SDL_Event SDL_Event;
 
-class OS_Window 
+struct OS_Window 
 {
     public:
     SDL_Window*     window;

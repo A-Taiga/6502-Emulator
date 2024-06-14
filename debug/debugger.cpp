@@ -1,4 +1,4 @@
-#include "window.hpp"
+#include "debugger.hpp"
 #include "SDL_events.h"
 #include "SDL_hints.h"
 #include "SDL_video.h"
@@ -83,9 +83,6 @@ SDL_GLContext OS_Window::get_glContext () { return glContext;}
 const char* OS_Window::get_glslVersion () { return glslVersion;}
 std::uint32_t OS_Window::get_windowID () { return SDL_GetWindowID (window);}
 
-
-
-
 namespace
 {
     ImFont* font;
@@ -141,9 +138,6 @@ void UI::end ()
     ImGui::DestroyContext();
 }
 
-
-
-
 void UI::debug(OS_Window& window, _6502::Bus& bus, bool& running)
 {
     static ImGuiIO& io = ImGui::GetIO(); (void)io;
@@ -197,9 +191,9 @@ void UI::debug(OS_Window& window, _6502::Bus& bus, bool& running)
         static ImGuiListClipper clipper;
         static char buffer[5] = {0};
         static int scroll_val = -1;
+
         bool input_address = false;
-
-
+        
         ImGui::SetNextWindowSize({0,0});
         // ImGui::SetNextWindowPos({0,menuBarSize.y});
         ImGui::Begin("Memory", nullptr, windowFlags);

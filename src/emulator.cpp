@@ -1,14 +1,9 @@
 #include "emulator.hpp"
 #include "common.hpp"
-#include "imgui.h"
 #include <format>
 #include <cstring>
-#include "imgui.h"
-#include "imgui_impl_sdl2.h"
-#include "imgui_impl_opengl3.h"
-#include "imgui_internal.h"
-#include "window.hpp"
-#include "SDL_events.h"
+#include "debugger.hpp"
+
 
 
 #define WINDOW_W 1920
