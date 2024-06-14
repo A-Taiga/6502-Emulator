@@ -6,7 +6,7 @@ static bool running = true;
 
 int main()
 {
-    _6502::Emulator emu("testBins/p2.bin", running);
+    _6502::Emulator emu("testBins/loop5.bin", running);
     emu.run();
     return 0;
 }
