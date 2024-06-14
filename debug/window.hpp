@@ -29,5 +29,19 @@ class OS_Window
         std::uint32_t   get_windowID ();
 };
 
+namespace _6502
+{
+class Bus;
+}
+namespace UI
+{
+    void init (OS_Window& window);
+    void debug (OS_Window& window, _6502::Bus& bus, bool& running);
+    void end ();
+}
+
+
+
+
 
 #endif 
