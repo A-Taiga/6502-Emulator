@@ -1,20 +1,14 @@
 #include "debugger.hpp"
-#include "SDL_events.h"
-#include "SDL_hints.h"
-#include "SDL_video.h"
-#include "common.hpp"
-#include "imgui_impl_opengl3.h"
-#include "imgui_impl_sdl2.h"
 #include <SDL.h>
 #include <SDL_opengl.h>
-#include <cfloat>
+#include <imgui.h>
+#include "imgui_impl_opengl3.h"
+#include "imgui_impl_sdl2.h"
+#include "imgui_internal.h"
 #include <cstddef>
 #include <stdexcept>
-#include <imgui.h>
-#include <functional>
+#include "common.hpp"
 #include "bus.hpp"
-#include "imgui_internal.h"
-#include <format>
 
 #define WINDOW_FLAGS SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
 
@@ -111,6 +105,11 @@ namespace
 
         struct
         {
+            bool showBoundingRects;
+        } db;
+
+        struct
+        {
             float glyphWidth;
             float glyphHeight;
             float addressTextWidth;
@@ -121,6 +120,7 @@ namespace
             float minWindowHeight;
             float scrollBarWidth = 20.f;
             float windowSize;
+            float lineHeight;
             int   addressPadding;
             int   rowWidth = 16;
         } sizes; 
@@ -161,16 +161,16 @@ namespace
             sizes.glyphHeight      = ImGui::CalcTextSize("F").y;
             sizes.addressTextWidth = (ImGui::CalcTextSize("0").x * sizes.addressPadding) + ImGui::CalcTextSize(":").x + sizes.glyphWidth;
             sizes.byteTextWidth    = ImGui::CalcTextSize("FF").x;
-            sizes.dataColWidth     = (sizes.byteTextWidth + sizes.glyphWidth ) * (sizes.rowWidth);
-            sizes.asciiColWidth    =  (sizes.glyphWidth * sizes.rowWidth);
-            sizes.minWindowWidth   =  sizes.windowSize = sizes.addressTextWidth +  sizes.dataColWidth  + sizes.asciiColWidth + sizes.scrollBarWidth;
+            sizes.dataColWidth     = (((sizes.byteTextWidth) + sizes.glyphWidth) * sizes.rowWidth) + (sizes.glyphWidth * (std::ceil(sizes.rowWidth / 8.f) - 1));
+            sizes.asciiColWidth    = (sizes.glyphWidth * sizes.rowWidth);
+            sizes.lineHeight       = ImGui::GetTextLineHeightWithSpacing();
+            sizes.minWindowWidth   =  sizes.windowSize = sizes.addressTextWidth +  sizes.dataColWidth  + sizes.asciiColWidth + (sizes.scrollBarWidth*3);
         }
         
         void draw ()
         {
             calc();
             ImGui::SetNextWindowSize({sizes.windowSize, 0});
-            // ImGui::SetNextWindowSizeConstraints({sizes.minWindowWidth, ImGui::GetTextLineHeightWithSpacing() * 19.5f}, {FLT_MAX, FLT_MAX});
             ImGui::Begin ("view", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
             draw_column_labels();
             draw_data();
@@ -187,25 +187,52 @@ namespace
                 lookup = true;
             }
             ImGui::End();
-
+            ImGui::SetNextWindowSize({0,0});
+            ImGui::Begin("d", NULL, ImGuiWindowFlags_AlwaysAutoResize);
+            ImGui::Text("GetTextLineHeightWithSpacing : %f", ImGui::GetTextLineHeightWithSpacing());
+            ImGui::Text("GetTextLineHeight            : %f", ImGui::GetTextLineHeight());
+            ImGui::Text("rowWidth                     : %i", sizes.rowWidth);
+            ImGui::Text("t                            : %f", (std::ceil((sizes.rowWidth / 8.0f) - 1)));
+            ImGui::Separator();
+            ImGui::Text ("glyphWidth        : %f", sizes.glyphWidth);
+            ImGui::Text ("glyphHeight       : %f", sizes.glyphHeight);
+            ImGui::Text ("addressTextWidth  : %f", sizes.addressTextWidth);
+            ImGui::Text ("byteTextWidth     : %f", sizes.byteTextWidth);
+            ImGui::Text ("dataColWidth      : %f", sizes.dataColWidth);
+            ImGui::Text ("asciiColWidth     : %f", sizes.asciiColWidth);
+            ImGui::Text ("minWindowWidth    : %f", sizes.minWindowWidth);
+            ImGui::Text ("minWindowHeight   : %f", sizes.minWindowHeight);
+            ImGui::Text ("scrollBarWidth    : %f", sizes.scrollBarWidth);
+            ImGui::Text ("windowSize        : %f", sizes.windowSize);
+            ImGui::Text ("lineHeight        : %f", sizes.lineHeight);
+            ImGui::Text ("addressPadding    : %d", sizes.addressPadding);
+            ImGui::Text ("rowWidth          : %d", sizes.rowWidth);
+            if (ImGui::Button("Show Bounding Rects"))
+            {
+                if (db.showBoundingRects) 
+                    db.showBoundingRects = false;
+                else
+                    db.showBoundingRects = true;
+            }
+            ImGui::End();
         }
 
         void draw_column_labels ()
         {
             ImGui::BeginGroup();
-            ImGui::Dummy({sizes.addressTextWidth, 0});
-            ImGui::SameLine(sizes.addressTextWidth);
+            ImGui::Dummy({sizes.addressTextWidth - sizes.glyphWidth, ImGui::GetTextLineHeightWithSpacing()});
             for (DATA_TYPE i = 0; i < sizes.rowWidth; i++)
             {
                 if (i != 0 && i % 8 == 0)
                 {
-                    ImGui::SameLine(0);
-                    ImGui::Text(" ");
-                    ImGui::SameLine(0);
+                    ImGui::SameLine(0, 0);
+                    ImGui::Dummy({sizes.glyphWidth, ImGui::GetTextLineHeight()});
                 }
+                ImGui::SameLine(0,sizes.glyphWidth);
                 ImGui::Text("%02X", i);
-                ImGui::SameLine();
             }
+            ImGui::SameLine(0,sizes.glyphWidth*2);
+            ImGui::TextUnformatted("ASCII");
             ImGui::EndGroup();
             ImGui::Separator();
         }
@@ -221,18 +248,27 @@ namespace
             ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, sizes.scrollBarWidth);
             ImGui::BeginChild ("list",{0, ImGui::GetTextLineHeightWithSpacing() * 16});
             ImGuiListClipper clipper;
-            
             clipper.Begin(SIZE / sizes.rowWidth, ImGui::GetTextLineHeightWithSpacing());
+
+
             if (lookup)
             {
                 int val = std::strtol (lookupBuffer, nullptr, 16);
-                ImGui::SetScrollY(((int)(val / sizes.rowWidth)) * (ImGui::GetTextLineHeightWithSpacing()));
+                ImGui::SetScrollY((std::floor(val / sizes.rowWidth)) * ImGui::GetTextLineHeightWithSpacing());
                 lookup = false;
             }
             while (clipper.Step())
             {
                 for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
                 {
+                    ImVec2 pos = ImGui::GetCursorScreenPos();
+                    if (db.showBoundingRects)
+                    {
+                        ImGui::GetWindowDrawList()->AddRect({pos.x, pos.y}, {pos.x + sizes.addressTextWidth, pos.y + sizes.lineHeight}, IM_COL32(255,0,0,255));
+                        ImGui::GetWindowDrawList()->AddRect({pos.x + sizes.addressTextWidth, pos.y}, {pos.x + sizes.addressTextWidth + sizes.dataColWidth, pos.y + sizes.lineHeight}, IM_COL32(0,255,0,255));
+                        ImGui::GetWindowDrawList()->AddRect({pos.x + sizes.addressTextWidth + sizes.dataColWidth + sizes.glyphWidth, pos.y}, {pos.x + sizes.addressTextWidth + sizes.dataColWidth + sizes.asciiColWidth + sizes.glyphWidth, pos.y + sizes.lineHeight}, IM_COL32(0,255,255,255));
+                    }
+                
                     ImGui::Text ("%.*X:", sizes.addressPadding, row*sizes.rowWidth);
                     ImGui::SameLine(sizes.addressTextWidth);
                     for (DATA_TYPE i = 0; i < sizes.rowWidth; i++)
@@ -240,28 +276,30 @@ namespace
                         DATA_TYPE value = (*buffer)[row * sizes.rowWidth + i];
                         if (i != 0 && i % 8 == 0)
                         {
-                            ImGui::SameLine(0);
-                            ImGui::Text(" ");
-                            ImGui::SameLine(0);
+                            ImGui::SameLine(0, 0);
+                            ImGui::Dummy({sizes.glyphWidth, ImGui::GetTextLineHeight()});
                         }
+                        ImGui::SameLine(0,sizes.glyphWidth);
                         ImGui::TextColored (value == 0 ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled) : ImVec4(255,255,255,255),"%02X", value);
-                        ImGui::SameLine();
                     }
-                    ImGui::Dummy({sizes.glyphWidth, ImGui::GetTextLineHeightWithSpacing()});
+                    ImGui::SameLine(0, sizes.glyphWidth*2);
                     for (DATA_TYPE i = 0; i < sizes.rowWidth; i++)
                     {
     
                         char value = (*buffer)[row * sizes.rowWidth + i];
-                        ImGui::SameLine(0,0);
                         if (value > 32)
                             ImGui::Text ("%c", value);
                         else
                             ImGui::Text (".");
+                        ImGui::SameLine(0,0);
                     }
+                    ImGui::NewLine();
                     scrollY = ImGui::GetScrollY();
                 }
             }
             ImGui::EndChild();
+           
+            //  ImGui::GetWindowDrawList()->AddRect({pos.x, pos.y}, {pos.x + sizes.addressTextWidth, pos.y + sizes.lineHeight}, IM_COL32(255,0,0,255));
             ImGui::PopStyleColor(4); // Pop the colors we pushed
             ImGui::PopStyleVar(2); // Pop the style variables we pushed
         }
@@ -292,7 +330,7 @@ void UI::init (OS_Window& window)
     ImGui_ImplOpenGL3_Init(window.get_glslVersion());
 
 
-    textSize = 25.0f;
+    textSize = 20.0f;
 
     font = io.Fonts->AddFontFromFileTTF("imgui/misc/fonts/ProggyClean.ttf", textSize, nullptr, io.Fonts->GetGlyphRangesDefault());
 
@@ -326,12 +364,9 @@ void UI::debug(OS_Window& window, _6502::Bus& bus, bool& running)
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
-
-
+        
         view.draw();
         
-        
-
         // Rendering
         ImGui::Render();
         window.render(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y, clear_color);

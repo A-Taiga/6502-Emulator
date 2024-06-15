@@ -98,8 +98,6 @@ namespace _6502
             void CPX (void); void SBC (void); void INC (void); void INX (void); void SPC (void);
             void NOP (void); void BEQ (void); void SED (void); void XXX (void);
 
-
-
         };
 }
 
