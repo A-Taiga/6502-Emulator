@@ -11,7 +11,6 @@ typedef union SDL_Event SDL_Event;
 
 struct OS_Window 
 {
-    public:
     SDL_Window*     window;
     SDL_GLContext   glContext;
     int             width;

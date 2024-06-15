@@ -2,10 +2,13 @@
 #include "SDL_events.h"
 #include "SDL_hints.h"
 #include "SDL_video.h"
+#include "common.hpp"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_sdl2.h"
 #include <SDL.h>
 #include <SDL_opengl.h>
+#include <cfloat>
+#include <cstddef>
 #include <stdexcept>
 #include <imgui.h>
 #include <functional>
@@ -83,22 +86,186 @@ SDL_GLContext OS_Window::get_glContext () { return glContext;}
 const char* OS_Window::get_glslVersion () { return glslVersion;}
 std::uint32_t OS_Window::get_windowID () { return SDL_GetWindowID (window);}
 
+
+template <class ADDRESS_TYPE>
+constexpr std::size_t array_size ()
+{
+    return sizeof(ADDRESS_TYPE) * 8 / 4;
+}
+
 namespace
 {
     ImFont* font;
     float textSize;
     ImVec4 clear_color;
-
-    void draw_text_rect(std::string_view str, ImU32 color) 
+    
+    template <class ADDRESS_TYPE, class DATA_TYPE, std::size_t SIZE>
+    struct Memory_view
     {
-        ImGuiWindow* window = ImGui::GetCurrentWindow();
-        assert (window != nullptr);
-        ImDrawList* drawList = window->DrawList;
-        ImVec2 max = ImGui::CalcTextSize(str.data());
-        ImVec2 min = ImGui::GetCursorScreenPos();
-        drawList->AddRectFilled(min, ImVec2(min.x + max.x, min.y + max.y), color);
-        ImGui::TextUnformatted(str.data());
-    }
+        using memoryBuffer = std::array <DATA_TYPE, SIZE>;
+        
+        memoryBuffer* buffer;
+        char lookupBuffer [array_size<ADDRESS_TYPE>()];
+        bool  lookup;
+        float scrollY;
+
+        struct
+        {
+            float glyphWidth;
+            float glyphHeight;
+            float addressTextWidth;
+            float byteTextWidth;
+            float dataColWidth;
+            float asciiColWidth;
+            float minWindowWidth;
+            float minWindowHeight;
+            float scrollBarWidth = 20.f;
+            float windowSize;
+            int   addressPadding;
+            int   rowWidth = 16;
+        } sizes; 
+
+        struct
+        {
+            ImVec4 scrollbar_backGroundColor {0.2f, 0.2f, 0.2f, 1.0f};
+            ImVec4 scrollbar_grabber         {0.4f, 0.4f, 0.4f, 1.0f};
+            ImVec4 scrollbar_grabberHover    {0.6f, 0.6f, 0.6f, 1.0f};
+            ImVec4 scrollbar_grabberActive   {0.8f, 0.0f, 0.0f, 1.0f};
+
+        } colors;
+
+
+        Memory_view (memoryBuffer* memoryBuffer)
+        : buffer {memoryBuffer}
+        {
+            assert (buffer != nullptr);
+            sizes.addressPadding = sizeof(ADDRESS_TYPE) * 8 / 4;
+            scrollY = 0.0f;
+            lookupBuffer[0] = '0';
+        }
+
+        void draw_text_rect(std::string_view str, ImU32 color) 
+        {
+            ImGuiWindow* window = ImGui::GetCurrentWindow();
+            assert (window != nullptr);
+            ImDrawList* drawList = window->DrawList;
+            ImVec2 max = ImGui::CalcTextSize(str.data());
+            ImVec2 min = ImGui::GetCursorScreenPos();
+            drawList->AddRectFilled(min, ImVec2(min.x + max.x, min.y + max.y), color);
+            ImGui::TextUnformatted(str.data());
+        }
+
+        void calc ()
+        {
+            sizes.glyphWidth       = ImGui::CalcTextSize("F").x;
+            sizes.glyphHeight      = ImGui::CalcTextSize("F").y;
+            sizes.addressTextWidth = (ImGui::CalcTextSize("0").x * sizes.addressPadding) + ImGui::CalcTextSize(":").x + sizes.glyphWidth;
+            sizes.byteTextWidth    = ImGui::CalcTextSize("FF").x;
+            sizes.dataColWidth     = (sizes.byteTextWidth + sizes.glyphWidth ) * (sizes.rowWidth);
+            sizes.asciiColWidth    =  (sizes.glyphWidth * sizes.rowWidth);
+            sizes.minWindowWidth   =  sizes.windowSize = sizes.addressTextWidth +  sizes.dataColWidth  + sizes.asciiColWidth + sizes.scrollBarWidth;
+        }
+        
+        void draw ()
+        {
+            calc();
+            ImGui::SetNextWindowSize({sizes.windowSize, 0});
+            // ImGui::SetNextWindowSizeConstraints({sizes.minWindowWidth, ImGui::GetTextLineHeightWithSpacing() * 19.5f}, {FLT_MAX, FLT_MAX});
+            ImGui::Begin ("view", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+            draw_column_labels();
+            draw_data();
+            ImGui::Separator();
+            ImGui::SetNextWindowSize({100,0});
+            ImGui::SetNextItemWidth(150);
+            ImGui::DragInt("###column dragger", &sizes.rowWidth, 0.1f, 8, 32, "%d columns");
+            if (sizes.rowWidth < 0) sizes.rowWidth = 1;
+            if (sizes.rowWidth > 32) sizes.rowWidth = 32;
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(150);
+            if (ImGui::InputText("##address lookup", lookupBuffer, array_size<ADDRESS_TYPE>() + 1, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue))
+            {
+                lookup = true;
+            }
+            ImGui::End();
+
+        }
+
+        void draw_column_labels ()
+        {
+            ImGui::BeginGroup();
+            ImGui::Dummy({sizes.addressTextWidth, 0});
+            ImGui::SameLine(sizes.addressTextWidth);
+            for (DATA_TYPE i = 0; i < sizes.rowWidth; i++)
+            {
+                if (i != 0 && i % 8 == 0)
+                {
+                    ImGui::SameLine(0);
+                    ImGui::Text(" ");
+                    ImGui::SameLine(0);
+                }
+                ImGui::Text("%02X", i);
+                ImGui::SameLine();
+            }
+            ImGui::EndGroup();
+            ImGui::Separator();
+        }
+
+        void draw_data ()
+        {
+            ImGuiStyle style;
+            ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, colors.scrollbar_backGroundColor);
+            ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, colors.scrollbar_grabber);
+            ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, colors.scrollbar_grabberHover);
+            ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, colors.scrollbar_grabberActive);
+            ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 0);
+            ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, sizes.scrollBarWidth);
+            ImGui::BeginChild ("list",{0, ImGui::GetTextLineHeightWithSpacing() * 16});
+            ImGuiListClipper clipper;
+            
+            clipper.Begin(SIZE / sizes.rowWidth, ImGui::GetTextLineHeightWithSpacing());
+            if (lookup)
+            {
+                int val = std::strtol (lookupBuffer, nullptr, 16);
+                ImGui::SetScrollY(((int)(val / sizes.rowWidth)) * (ImGui::GetTextLineHeightWithSpacing()));
+                lookup = false;
+            }
+            while (clipper.Step())
+            {
+                for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
+                {
+                    ImGui::Text ("%.*X:", sizes.addressPadding, row*sizes.rowWidth);
+                    ImGui::SameLine(sizes.addressTextWidth);
+                    for (DATA_TYPE i = 0; i < sizes.rowWidth; i++)
+                    {
+                        DATA_TYPE value = (*buffer)[row * sizes.rowWidth + i];
+                        if (i != 0 && i % 8 == 0)
+                        {
+                            ImGui::SameLine(0);
+                            ImGui::Text(" ");
+                            ImGui::SameLine(0);
+                        }
+                        ImGui::TextColored (value == 0 ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled) : ImVec4(255,255,255,255),"%02X", value);
+                        ImGui::SameLine();
+                    }
+                    ImGui::Dummy({sizes.glyphWidth, ImGui::GetTextLineHeightWithSpacing()});
+                    for (DATA_TYPE i = 0; i < sizes.rowWidth; i++)
+                    {
+    
+                        char value = (*buffer)[row * sizes.rowWidth + i];
+                        ImGui::SameLine(0,0);
+                        if (value > 32)
+                            ImGui::Text ("%c", value);
+                        else
+                            ImGui::Text (".");
+                    }
+                    scrollY = ImGui::GetScrollY();
+                }
+            }
+            ImGui::EndChild();
+            ImGui::PopStyleColor(4); // Pop the colors we pushed
+            ImGui::PopStyleVar(2); // Pop the style variables we pushed
+        }
+    };
 }
 
 void UI::init (OS_Window& window)
@@ -125,10 +292,12 @@ void UI::init (OS_Window& window)
     ImGui_ImplOpenGL3_Init(window.get_glslVersion());
 
 
-    textSize = 20.0f;
-    font = io.Fonts->AddFontFromFileTTF("imgui/misc/fonts/Cousine-Regular.ttf", textSize, nullptr, io.Fonts->GetGlyphRangesDefault());
-    clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    textSize = 25.0f;
 
+    font = io.Fonts->AddFontFromFileTTF("imgui/misc/fonts/ProggyClean.ttf", textSize, nullptr, io.Fonts->GetGlyphRangesDefault());
+
+
+    clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 }
 
 void UI::end ()
@@ -141,6 +310,7 @@ void UI::end ()
 void UI::debug(OS_Window& window, _6502::Bus& bus, bool& running)
 {
     static ImGuiIO& io = ImGui::GetIO(); (void)io;
+    static Memory_view <word, byte, RAM_SIZE> view {&bus.ram.data()};
 
 
     window.poll ([&](SDL_Event& event) {
@@ -156,139 +326,17 @@ void UI::debug(OS_Window& window, _6502::Bus& bus, bool& running)
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
-        bool popup = false;
-        static ImVec2 menuBarSize;
-        if (ImGui::BeginMainMenuBar())
-        {
-            menuBarSize = ImGui::GetWindowSize();
-            if (ImGui::BeginMenu("File"))
-            {
-                if (ImGui::MenuItem("Settings")) 
-                {
-                    popup = true;
-                }
-                ImGui::EndMenu();
-            }
-            ImGui::EndMainMenuBar();
-        }
-        if (popup) 
-            ImGui::OpenPopup("Settings");
 
-        if (ImGui::BeginPopupModal("Settings", NULL, ImGuiWindowFlags_AlwaysAutoResize))
-        {
-            if (ImGui::InputFloat("Text size", &textSize, .5, 0, "%.3f", ImGuiInputTextFlags_EnterReturnsTrue))
-            {
-                font->FontSize = textSize;
-            }
-            if (ImGui::Button("Close")) {ImGui::CloseCurrentPopup();}
-            ImGui::EndPopup();
-        }
+
+        view.draw();
         
-//////////////////////////////////////////////////////////////////////////////////////////////// memory window
-
-        static ImU32 highLightColor = IM_COL32(255,0,0,255);
-        static ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize;
-        static ImGuiListClipper clipper;
-        static char buffer[5] = {0};
-        static int scroll_val = -1;
-
-        bool input_address = false;
         
-        ImGui::SetNextWindowSize({0,0});
-        // ImGui::SetNextWindowPos({0,menuBarSize.y});
-        ImGui::Begin("Memory", nullptr, windowFlags);
-
-        if (ImGui::InputText("##page input", buffer, sizeof(buffer), ImGuiInputTextFlags_EnterReturnsTrue))
-            input_address = true;
-        ImGui::SameLine();
-        if (ImGui::Button("Go")) 
-            input_address = true;
-
-        ImGui::Dummy (ImGui::CalcTextSize("0000:"));
-        ImGui::SameLine();
-        for (std::uint8_t i = 0; i < 16; i++)
-        {
-            if (i != 0 && i % 8 == 0)
-            {
-                ImGui::TextUnformatted(" ");
-                ImGui::SameLine();
-            }
-            ImGui::Text ("%02X", i);
-            ImGui::SameLine();
-        }
-        ImGui::Dummy ({ImGui::CalcTextSize("  ").x, 0});
-        ImGui::SameLine();
-        ImGui::Dummy ({ImGui::CalcTextSize(" ").x * 16, 0});
-        ImGui::Separator();
-        ImGui::BeginChild ("list",{0, ImGui::GetTextLineHeightWithSpacing()* 16});
-        clipper.Begin(RAM_SIZE / 16, ImGui::GetTextLineHeightWithSpacing());
-        if (input_address)
-        {
-            int val = std::strtol(buffer, nullptr, 16);
-            ImGui::SetScrollY((int)(val / 16) * ImGui::GetTextLineHeightWithSpacing());
-            scroll_val = val;
-        }
-        while (clipper.Step())
-        {
-            for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
-            {
-
-                ImGui::Text("%04X:", (std::uint16_t)row*16);
-                for (std::size_t i = 0; i < 16; i++)
-                {
-                    std::size_t index = (row*16) + i;
-                    std::uint8_t value = bus.ram[index];
-                    
-                    if (i != 0 && i % 8 == 0)
-                    {
-                        ImGui::SameLine();
-                        ImGui::Text (" ");
-                    }
-                    ImGui::SameLine();
-                    if (index == (std::size_t)scroll_val)
-                        draw_text_rect(std::format("{:02X}", value), highLightColor);
-                    else
-                        ImGui::Text ("%02X", value);
-                }
-                ImGui::SameLine();
-                ImGui::Dummy(ImGui::CalcTextSize(" "));
-                ImGui::SameLine();
-                for (std::size_t i = 0; i < 16; i++)
-                {
-                    ImGui::SameLine(0,0);
-                    if ((row*16) + i == (std::size_t)scroll_val)
-                    {
-                        if (bus.ram[(row*16) + i] >= 32)
-                            draw_text_rect(std::format("{:}", (char)bus.ram[(row*16)+i]), highLightColor);
-                        else
-                            draw_text_rect(".", IM_COL32(255,0,0,255));
-                    }
-                    else
-                    {
-                        if (bus.ram[(row*16) + i] >= 32)
-                            ImGui::Text("%c", bus.ram[(row*16)+i]);
-                        else
-                            ImGui::Text(".");
-                    }
-                }
-            }
-        }
-        ImGui::EndChild();
-        ImGui::End();
-        /* window debugger */
-        ImGui::Begin("Debugger", nullptr);
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-        ImGui::Text ("clipper.DisplayStart : %d", clipper.DisplayStart);
-        ImGui::Text ("clipper.DisplayEnd   : %d", clipper.DisplayEnd);
-        ImGui::Text ("scroll_val : %d", scroll_val);
-        ImGui::Text ("ImGui::GetTextLineHeightWithSpacing() : %f", ImGui::GetTextLineHeightWithSpacing());
-        ImGui::End();
-        /* end window debugger */
 
         // Rendering
         ImGui::Render();
         window.render(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y, clear_color);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
 
         // Update and Render additional Platform Windows
         // (Platform functions may change the current OpenGL context, so we save/restore it to make it easier to paste this code elsewhere.
@@ -302,6 +350,5 @@ void UI::debug(OS_Window& window, _6502::Bus& bus, bool& running)
             ImGui::RenderPlatformWindowsDefault();
             SDL_GL_MakeCurrent(backup_current_window, backup_current_context);
         }
-        // window.swap_window();
         SDL_GL_SwapWindow(window.get_window());
 }

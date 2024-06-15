@@ -38,7 +38,7 @@ _6502::Emulator::Emulator(const char* filePath, bool& _running)
 
 void _6502::Emulator::run()
 {
-    OS_Window window ("test", WINDOW_W, WINDOW_H);
+    OS_Window window ("test", 500, 500);
     bool running = true;
     UI::init(window);
     while (running)
