@@ -1,6 +1,6 @@
 .DS_STORE
 .cache
 .vscode
-.obj
 6502
 imgui.ini
+*.o
