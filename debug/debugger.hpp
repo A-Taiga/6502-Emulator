@@ -1,7 +1,6 @@
 #ifndef DEBUGGER_HPP
 #define DEBUGGER_HPP
 
-#include <functional>
 #include <cstdint>
 
 struct ImVec4;
@@ -20,7 +19,7 @@ struct OS_Window
         OS_Window       (const char* title, int w = 0, int h = 0);
         ~OS_Window      ();
         void            render (int, int, int, int, const ImVec4& color);
-        void            poll (std::function<void(SDL_Event&)>);
+        void            poll (bool& running);
         SDL_Window*     get_window ();
         void            swap_window ();
         SDL_GLContext   get_glContext ();
@@ -35,7 +34,7 @@ class Bus;
 namespace UI
 {
     void init (OS_Window& window);
-    void debug (OS_Window& window, _6502::Bus& bus, bool& running);
+    void debug (OS_Window& window, _6502::Bus& bus);
     void end ();
 }
 

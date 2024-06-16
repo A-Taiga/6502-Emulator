@@ -1,12 +1,14 @@
 #include "debugger.hpp"
 #include <SDL.h>
 #include <SDL_opengl.h>
+#include <X11/X.h>
 #include <imgui.h>
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_internal.h"
 #include <cstddef>
 #include <stdexcept>
+#include <string>
 #include "common.hpp"
 #include "bus.hpp"
 
@@ -51,6 +53,7 @@ OS_Window::OS_Window (const char* title, int w, int h)
 
 OS_Window::~OS_Window ()
 {
+    puts ("~OS_Window");
     SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(window);
     SDL_Quit();
@@ -63,14 +66,20 @@ void OS_Window::render (int a, int b, int x, int y, const ImVec4& color)
     glClear(GL_COLOR_BUFFER_BIT);
 }
 
-void OS_Window::poll (std::function<void(SDL_Event&)> callback)
+void OS_Window::poll (bool& running)
 {
+
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
         if (event.window.event == SDL_WINDOWEVENT_RESIZED)
             SDL_GetWindowSize(window, &width, &height);
-        callback (event);
+        ImGui_ImplSDL2_ProcessEvent(&event);
+        if (event.type == SDL_QUIT)
+            running = false;
+        
+        if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID (window))
+            running = false;
     }
 }
 
@@ -94,7 +103,7 @@ namespace
     ImVec4 clear_color;
     
     template <class ADDRESS_TYPE, class DATA_TYPE, std::size_t SIZE>
-    struct Memory_view
+    struct Memory_window
     {
         using memoryBuffer = std::array <DATA_TYPE, SIZE>;
         
@@ -102,7 +111,7 @@ namespace
         char lookupBuffer [array_size<ADDRESS_TYPE>()];
         bool  lookup;
         float scrollY;
-
+        ImVec2 windowSize;
         struct
         {
             bool showBoundingRects;
@@ -135,7 +144,7 @@ namespace
         } colors;
 
 
-        Memory_view (memoryBuffer* memoryBuffer)
+        Memory_window (memoryBuffer* memoryBuffer)
         : buffer {memoryBuffer}
         {
             assert (buffer != nullptr);
@@ -171,7 +180,7 @@ namespace
         {
             calc();
             ImGui::SetNextWindowSize({sizes.windowSize, 0});
-            ImGui::Begin ("view", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+            ImGui::Begin ("Memory View", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
             draw_column_labels();
             draw_data();
             ImGui::Separator();
@@ -185,34 +194,6 @@ namespace
             if (ImGui::InputText("##address lookup", lookupBuffer, array_size<ADDRESS_TYPE>() + 1, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue))
             {
                 lookup = true;
-            }
-            ImGui::End();
-            ImGui::SetNextWindowSize({0,0});
-            ImGui::Begin("d", NULL, ImGuiWindowFlags_AlwaysAutoResize);
-            ImGui::Text("GetTextLineHeightWithSpacing : %f", ImGui::GetTextLineHeightWithSpacing());
-            ImGui::Text("GetTextLineHeight            : %f", ImGui::GetTextLineHeight());
-            ImGui::Text("rowWidth                     : %i", sizes.rowWidth);
-            ImGui::Text("t                            : %f", (std::ceil((sizes.rowWidth / 8.0f) - 1)));
-            ImGui::Separator();
-            ImGui::Text ("glyphWidth        : %f", sizes.glyphWidth);
-            ImGui::Text ("glyphHeight       : %f", sizes.glyphHeight);
-            ImGui::Text ("addressTextWidth  : %f", sizes.addressTextWidth);
-            ImGui::Text ("byteTextWidth     : %f", sizes.byteTextWidth);
-            ImGui::Text ("dataColWidth      : %f", sizes.dataColWidth);
-            ImGui::Text ("asciiColWidth     : %f", sizes.asciiColWidth);
-            ImGui::Text ("minWindowWidth    : %f", sizes.minWindowWidth);
-            ImGui::Text ("minWindowHeight   : %f", sizes.minWindowHeight);
-            ImGui::Text ("scrollBarWidth    : %f", sizes.scrollBarWidth);
-            ImGui::Text ("windowSize        : %f", sizes.windowSize);
-            ImGui::Text ("lineHeight        : %f", sizes.lineHeight);
-            ImGui::Text ("addressPadding    : %d", sizes.addressPadding);
-            ImGui::Text ("rowWidth          : %d", sizes.rowWidth);
-            if (ImGui::Button("Show Bounding Rects"))
-            {
-                if (db.showBoundingRects) 
-                    db.showBoundingRects = false;
-                else
-                    db.showBoundingRects = true;
             }
             ImGui::End();
         }
@@ -304,6 +285,55 @@ namespace
             ImGui::PopStyleVar(2); // Pop the style variables we pushed
         }
     };
+
+    template <class ADDRESS_TYPE>
+    struct Program_window
+    {
+        using programBuffer = std::vector<std::pair<ADDRESS_TYPE, std::string>>;
+        const programBuffer& buffer;
+        ADDRESS_TYPE& pc;
+
+        char findBuffer[array_size<ADDRESS_TYPE>()];
+        struct
+        {
+            int addressPadding;
+        } sizes;
+        struct
+        {
+            ADDRESS_TYPE current_row;
+        }db;
+
+        Program_window (const programBuffer& pb, ADDRESS_TYPE& programCounter)
+        : buffer {pb}
+        , pc (programCounter)
+        {
+            sizes.addressPadding = sizeof(ADDRESS_TYPE) * 8 / 4;
+        }
+    
+        void draw ()
+        {
+            ImGui::Begin("Program");
+            draw_data();
+            ImGui::End();
+        };
+
+        void draw_data ()
+        {
+            ImGui::BeginChild("programClipper", {0, ImGui::GetTextLineHeightWithSpacing() * 19});
+            ImGuiListClipper clipper;
+            clipper.Begin(buffer.size(), ImGui::GetTextLineHeightWithSpacing());
+            while (clipper.Step())
+            {
+                for (ADDRESS_TYPE row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
+                {
+                    db.current_row = row;
+                    ImGui::TextColored ( buffer[row].first != pc ? ImVec4(255,255,255,255): ImVec4(255,0,0,255),"%s ", buffer[row].second.c_str());
+                }
+            }
+            ImGui::EndChild();
+        }
+    };
+
 }
 
 void UI::init (OS_Window& window)
@@ -314,7 +344,7 @@ void UI::init (OS_Window& window)
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
+    // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
     ImGui::StyleColorsDark();
     // ImGui::StyleColorsLight();
 
@@ -340,32 +370,69 @@ void UI::init (OS_Window& window)
 
 void UI::end ()
 {
+    puts("UI::end()");
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 }
 
-void UI::debug(OS_Window& window, _6502::Bus& bus, bool& running)
+void UI::debug(OS_Window& window, _6502::Bus& bus)
 {
     static ImGuiIO& io = ImGui::GetIO(); (void)io;
-    static Memory_view <word, byte, RAM_SIZE> view {&bus.ram.data()};
+    static Memory_window <word, byte, RAM_SIZE> memoryWindow {&bus.ram.data()};
+    static Program_window<word> programWindow {bus.cpu.decompiledCode, bus.cpu.PC};
 
 
-    window.poll ([&](SDL_Event& event) {
-        ImGui_ImplSDL2_ProcessEvent(&event);
-        if (event.type == SDL_QUIT)
-            running = false;
-        
-        if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == window.get_windowID())
-            running = false;
-    });
-    if (!running) return;
+
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
         
-        view.draw();
+        // ImGui::SetNextWindowPos({0,0});
+        memoryWindow.draw();
+        // ImGui::SetNextWindowPos({memoryWindow.sizes.minWindowWidth, 0});
+        ImGui::SetNextWindowSize({300,0});
+        programWindow.draw();
+
+        ImGui::SetNextWindowSize({200,0});
+        ImGui::Begin ("Registers", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+        ImGui::Text ("PC :%04X", bus.cpu.PC);   
+        ImGui::Text ("AC :%d", bus.cpu.AC);   
+        ImGui::Text ("X  :%d", bus.cpu.X);    
+        ImGui::Text ("Y  :%d", bus.cpu.Y);   
+        ImGui::Text ("SR :%d", bus.cpu.SR);   
+        ImGui::Text ("SP :%d", bus.cpu.SP);
+        ImGui::End();
+
+        ImGui::SetNextWindowSize({0,0});
+        ImGui::Begin("memory window debugger", NULL, ImGuiWindowFlags_AlwaysAutoResize);
+        ImGui::Text("GetTextLineHeightWithSpacing : %f", ImGui::GetTextLineHeightWithSpacing());
+        ImGui::Text("GetTextLineHeight            : %f", ImGui::GetTextLineHeight());
+        ImGui::Text("rowWidth                     : %i", memoryWindow.sizes.rowWidth);
+        ImGui::Text("t                            : %f", (std::ceil((memoryWindow.sizes.rowWidth / 8.0f) - 1)));
+        ImGui::Separator();
+        ImGui::Text ("glyphWidth        : %f", memoryWindow.sizes.glyphWidth);
+        ImGui::Text ("glyphHeight       : %f", memoryWindow.sizes.glyphHeight);
+        ImGui::Text ("addressTextWidth  : %f", memoryWindow.sizes.addressTextWidth);
+        ImGui::Text ("byteTextWidth     : %f", memoryWindow.sizes.byteTextWidth);
+        ImGui::Text ("dataColWidth      : %f", memoryWindow.sizes.dataColWidth);
+        ImGui::Text ("asciiColWidth     : %f", memoryWindow.sizes.asciiColWidth);
+        ImGui::Text ("minWindowWidth    : %f", memoryWindow.sizes.minWindowWidth);
+        ImGui::Text ("minWindowHeight   : %f", memoryWindow.sizes.minWindowHeight);
+        ImGui::Text ("scrollBarWidth    : %f", memoryWindow.sizes.scrollBarWidth);
+        ImGui::Text ("windowSize        : %f", memoryWindow.sizes.windowSize);
+        ImGui::Text ("lineHeight        : %f", memoryWindow.sizes.lineHeight);
+        ImGui::Text ("addressPadding    : %d", memoryWindow.sizes.addressPadding);
+        ImGui::Text ("rowWidth          : %d", memoryWindow.sizes.rowWidth);
+        if (ImGui::Button("Show Bounding Rects"))
+        {
+            if (memoryWindow.db.showBoundingRects) 
+                memoryWindow.db.showBoundingRects = false;
+            else
+                memoryWindow.db.showBoundingRects = true;
+        }
+        ImGui::End();
         
         // Rendering
         ImGui::Render();

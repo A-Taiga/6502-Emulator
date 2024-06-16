@@ -3,6 +3,9 @@
 
 #include "common.hpp"
 #include <array>
+#include <string>
+#include <vector>
+
 /*
     https://www.masswerk.at/6502/6502_opcode_set.html#BVS
 
@@ -28,6 +31,7 @@
     Processor Stack
     LIFO, top-down, 8 bit range, 0x0100 - 0x01FF
 */
+
 
 namespace _6502
 {
@@ -66,7 +70,8 @@ namespace _6502
             byte SR;   /* status register [NV-BDIZC] (aka flags) */
             byte SP;   /* stack pointer */
             Bus& bus;
-            std::array<opcode,256> opcodes;
+            std::array <opcode,256> opcodes;
+            std::vector<std::pair<word, std::string>>  decompiledCode;
             instruction current_ins;
 
             byte read (const word& address);

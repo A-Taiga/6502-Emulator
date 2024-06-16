@@ -1,6 +1,7 @@
 #include "cpu.hpp"
 #include "common.hpp"
 #include "bus.hpp"
+#include <format>
 /*
 
 N	Negative
@@ -40,6 +41,7 @@ C	Carry
 
 _6502::CPU::CPU(Bus& bus)
 : bus {bus}
+, decompiledCode{}
 {
     opcodes = 
     {{
@@ -75,7 +77,35 @@ void _6502::CPU::reset()
 
 void _6502::CPU::decompiler()
 {
-
+    opcode* current;
+    for (word i = 0; i < 4096;)
+    {
+        word index = ROM_BEGIN + i;
+        current = &opcodes[read(i+ROM_BEGIN)];
+        if (current->mode == &_6502::CPU::IMP)
+        {
+            decompiledCode.emplace_back (index,std::format ("{:04X} {:02X} {:>9}", i, read(index), current->mnemonic));
+            i++;
+        }
+        else if (current->mode == &_6502::CPU::IMM
+              || current->mode == &_6502::CPU::ZPG
+              || current->mode == &_6502::CPU::ZPX
+              || current->mode == &_6502::CPU::IZX
+              || current->mode == &_6502::CPU::IZY
+              || current->mode == &_6502::CPU::REL)
+        {
+            decompiledCode.emplace_back (index,std::format ("{:04X} {:02X} {:02X} {:>6}", index, read(index), read(index+1), current->mnemonic));
+            i+=2;
+        }
+        else if (current->mode == &_6502::CPU::ABS
+              || current->mode == &_6502::CPU::ABX
+              || current->mode == &_6502::CPU::ABY
+              || current->mode == &_6502::CPU::IND)
+        {
+           decompiledCode.emplace_back (index, std::format ("{:04X} {:02X} {:02X} {:02X} {:}", index, read(index), read(index+1), read(index+2), current->mnemonic));
+            i+=3;
+        }
+    }
 }
 
 void _6502::CPU::run()

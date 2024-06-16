@@ -1,10 +1,11 @@
 #include "emulator.hpp"
 #include "common.hpp"
+#include <chrono>
 #include <format>
 #include <cstring>
 #include "debugger.hpp"
 
-
+#include <thread>
 
 #define WINDOW_W 1920
 #define WINDOW_H 1080
@@ -41,10 +42,22 @@ void _6502::Emulator::run()
     OS_Window window ("test", WINDOW_W, WINDOW_H);
     bool running = true;
     UI::init(window);
+    bus.cpu.decompiler();
+
+    static std::thread t ([&](){
+        while (running)
+        {
+            bus.cpu.run();
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+    });
+    
     while (running)
     {
-        UI::debug(window, bus, running);
-        bus.cpu.run();
+        window.poll(running);
+        UI::debug(window, bus);
     }
+
+    t.join();
     UI::end();
 }
