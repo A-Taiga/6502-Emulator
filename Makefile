@@ -9,7 +9,7 @@ OBJS = $(addprefix $(OBJ_DIR)/, $(addsuffix .o, $(basename $(notdir $(SOURCES)))
 UNAME_S := $(shell uname -s)
 LINUX_GL_LIBS = -lGL
 CXX = clang++
-CXXFLAGS = -std=c++20 -Wall -Wextra -g -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -Iinclude -Idebug
+CXXFLAGS = -std=c++20 -Wall -Wextra -Werror -g -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -Iinclude -Idebug
 LIBS = 
 
 ifeq ($(UNAME_S), Linux)
