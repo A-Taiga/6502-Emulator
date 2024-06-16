@@ -1,6 +1,6 @@
-.obj/*
-6502
 .DS_STORE
 .cache
-imgui.ini
 .vscode
+.obj
+6502
+imgui.ini
