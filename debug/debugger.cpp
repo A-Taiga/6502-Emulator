@@ -104,9 +104,9 @@ constexpr std::size_t array_size ()
 
 namespace
 {
-    [[maybe_unused]] ImFont* font;
-    [[maybe_unused]] float textSize;
-    [[maybe_unused]] ImVec4 clear_color;
+    ImFont* font;
+    float textSize;
+    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
     OS_Window window ("Debugger", WINDOW_W, WINDOW_H);
 
 
