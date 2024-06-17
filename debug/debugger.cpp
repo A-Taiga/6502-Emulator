@@ -15,6 +15,8 @@
 #include "bus.hpp"
 #include "IconsFontAwesome6.h"
 
+#define WINDOW_W 1920
+#define WINDOW_H 1080
 
 #define WINDOW_FLAGS SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
 
@@ -105,7 +107,7 @@ namespace
     [[maybe_unused]] ImFont* font;
     [[maybe_unused]] float textSize;
     [[maybe_unused]] ImVec4 clear_color;
-    OS_Window window ("Debugger", 1000, 1000);
+    OS_Window window ("Debugger", WINDOW_W, WINDOW_H);
 /*
     template <class ADDRESS_TYPE, class DATA_TYPE, std::size_t SIZE>
     struct Memory_Window
@@ -435,6 +437,12 @@ namespace
             int   rowWidth;
         } sizes;
 
+
+        struct
+        {
+            bool showBoundingRects;
+        } db;
+
         Memory_Window (const char* name, CONTAINER_TYPE container, ADDRESS_TYPE offset)
         : data {container.begin() + offset, SIZE}
         {
@@ -481,7 +489,7 @@ namespace
         Page_View (const char* name, CONTAINER_TYPE container, ADDRESS_TYPE offset = 0)
         : Memory_Window <CONTAINER_TYPE, ADDRESS_TYPE, DATA_TYPE, SIZE> {name, container, offset}
         {
-            this->sizes.scrollBarWidth = 20.f;
+
             this->sizes.rowWidth = 16;
             this->settings.isShowing = true;
             this->settings.windowFlags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
@@ -524,6 +532,115 @@ namespace
                 }
                 ImGui::End();
             }
+        }
+    };
+
+    template <class CONTAINER_TYPE, class ADDRESS_TYPE, class DATA_TYPE, std::size_t SIZE>
+    struct Hex_Editor : Memory_Window<CONTAINER_TYPE, ADDRESS_TYPE, DATA_TYPE, SIZE>
+    {
+
+        char lookupBuffer [array_size<ADDRESS_TYPE>()];
+        bool  lookup;
+        float scrollY;
+
+        struct
+        {
+            ImVec4 scrollbar_backGroundColor {0.2f, 0.2f, 0.2f, 1.0f};
+            ImVec4 scrollbar_grabber         {0.4f, 0.4f, 0.4f, 1.0f};
+            ImVec4 scrollbar_grabberHover    {0.6f, 0.6f, 0.6f, 1.0f};
+            ImVec4 scrollbar_grabberActive   {0.8f, 0.0f, 0.0f, 1.0f};
+
+        } colors;
+
+        Hex_Editor (CONTAINER_TYPE container, ADDRESS_TYPE offset = 0)
+        : Memory_Window <CONTAINER_TYPE, ADDRESS_TYPE, DATA_TYPE, SIZE> ("Hex Editor", container, offset)
+        {
+            this->sizes.rowWidth = 16;
+            this->sizes.scrollBarWidth = 20.f;
+            this->settings.isShowing = true;
+            this->settings.windowFlags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
+            lookupBuffer[0] = '0';
+            scrollY = 0.0f;
+
+        }
+
+        void draw ()
+        {
+            this->calc();
+            ImGui::SetNextWindowSize({this->sizes.minWindowWidth, 0});
+            ImGui::Begin("Hex Editor", nullptr, this->settings.windowFlags);
+            this->draw_column_labels();
+            ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, colors.scrollbar_backGroundColor);
+            ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, colors.scrollbar_grabber);
+            ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, colors.scrollbar_grabberHover);
+            ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, colors.scrollbar_grabberActive);
+            ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 0);
+            ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, this->sizes.scrollBarWidth);
+            ImGui::BeginChild ("list",{0, ImGui::GetTextLineHeightWithSpacing() * 16});
+            ImGuiListClipper clipper;
+            clipper.Begin(SIZE / this->sizes.rowWidth, ImGui::GetTextLineHeightWithSpacing());
+            if (lookup)
+            {
+                int val = std::strtol (lookupBuffer, nullptr, 16);
+                ImGui::SetScrollY((std::floor(val / this->sizes.rowWidth)) * ImGui::GetTextLineHeightWithSpacing());
+                lookup = false;
+            }
+            while (clipper.Step())
+            {
+                for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
+                {
+                    ImVec2 pos = ImGui::GetCursorScreenPos();
+                    if (this->db.showBoundingRects)
+                    {
+                        ImGui::GetWindowDrawList()->AddRect({pos.x, pos.y}, {pos.x + this->sizes.addressTextWidth, pos.y + this->sizes.lineHeight}, IM_COL32(255,0,0,255));
+                        ImGui::GetWindowDrawList()->AddRect({pos.x + this->sizes.addressTextWidth, pos.y}, {pos.x + this->sizes.addressTextWidth + this->sizes.dataColWidth, pos.y + this->sizes.lineHeight}, IM_COL32(0,255,0,255));
+                        ImGui::GetWindowDrawList()->AddRect({pos.x + this->sizes.addressTextWidth + this->sizes.dataColWidth + this->sizes.glyphWidth, pos.y}, {pos.x + this->sizes.addressTextWidth + this->sizes.dataColWidth + this->sizes.asciiColWidth + this->sizes.glyphWidth, pos.y + this->sizes.lineHeight}, IM_COL32(0,255,255,255));
+                    }
+                
+                    ImGui::Text ("%.*X:", this->sizes.addressPadding, row * this->sizes.rowWidth);
+                    ImGui::SameLine(this->sizes.addressTextWidth);
+                    for (ADDRESS_TYPE i = 0; i < this->sizes.rowWidth; i++)
+                    {
+                        DATA_TYPE value = this->data[row * this->sizes.rowWidth + i];
+                        if (i != 0 && i % 8 == 0)
+                        {
+                            ImGui::SameLine(0, 0);
+                            ImGui::Dummy({this->sizes.glyphWidth, ImGui::GetTextLineHeight()});
+                        }
+                        ImGui::SameLine(0, this->sizes.glyphWidth);
+                        ImGui::TextColored (value == 0 ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled) : ImVec4(255,255,255,255),"%02X", value);
+                    }
+                    ImGui::SameLine(0, this->sizes.glyphWidth*2);
+                    for (ADDRESS_TYPE i = 0; i < this->sizes.rowWidth; i++)
+                    {
+    
+                        char value = this->data[row * this->sizes.rowWidth + i];
+                        if (value > 32)
+                            ImGui::Text ("%c", value);
+                        else
+                            ImGui::Text (".");
+                        ImGui::SameLine(0,0);
+                    }
+                    ImGui::NewLine();
+                    scrollY = ImGui::GetScrollY();
+                }
+            }
+            ImGui::EndChild();
+            ImGui::PopStyleColor(4); // Pop the colors we pushed
+            ImGui::PopStyleVar(2); // Pop the style variables we pushed
+            ImGui::Separator();
+            ImGui::SetNextWindowSize({100,0});
+            ImGui::SetNextItemWidth(150);
+            ImGui::DragInt("###column dragger", &(this->sizes).rowWidth, 0.1f, 8, 32, "%d columns");
+            if (this->sizes.rowWidth < 0) this->sizes.rowWidth = 1;
+            if (this->sizes.rowWidth > 32) this->sizes.rowWidth = 32;
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(150);
+            if (ImGui::InputText("##address lookup", lookupBuffer, array_size<ADDRESS_TYPE>() + 1, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue))
+            {
+                lookup = true;
+            }
+            ImGui::End();
         }
     };
 }
@@ -577,12 +694,10 @@ void UI::debug(bool& running, _6502::Bus& bus, [[maybe_unused]] std::chrono::mil
 {
     window.poll(running);
     static ImGuiIO& io = ImGui::GetIO(); (void)io;
-    // static Memory_Window <word, byte, RAM_SIZE> memoryWindow {&bus.ram.data()};
     static Program_Window<word> programWindow {bus.cpu.decompiledCode, bus.cpu.PC};
-    // static Page_Window<word, byte, std::array<byte, RAM_SIZE>, 256> zeroPage ("Zero Page", 0x0, bus.ram.data().begin(), bus.ram.data().begin());
-    // static Page_Window<word, byte, std::array<byte, RAM_SIZE>, 256> Page1 ("Page 1", 0x200, bus.ram.data().begin(), bus.ram.data().begin());
     static Page_View<decltype(bus.ram.data()), word, byte, 256> zeroPage("Zero Page", bus.ram.data());
     static Page_View<decltype(bus.ram.data()), word, byte, 256> Page1("Page 1", bus.ram.data(), 0x0200);
+    static Hex_Editor<decltype(bus.ram.data()), word, byte, RAM_SIZE> HexEditor (bus.ram.data());
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
@@ -598,36 +713,40 @@ void UI::debug(bool& running, _6502::Bus& bus, [[maybe_unused]] std::chrono::mil
         ImGui::EndMainMenuBar();
     }
 
+
     zeroPage.draw();
     Page1.draw();
+    programWindow.draw();
+    HexEditor.draw();
 
 
-    // ImGui::SetNextWindowPos({0,0});
-    // ImGui::SetNextWindowSize({static_cast<float>(window.width),0});
-    // ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar);
-    // static int v = 100;
-    // if (ImGui::SliderInt("##milliseconds delay", &v, 1, 1000, "%d", ImGuiSliderFlags_AlwaysClamp))
-    // {
-    //     delay = std::chrono::milliseconds(v);
-    // }
-    // ImGui::SameLine();
-    // if (ImGui::Button(ICON_FA_BACKWARD))
-    // {
-    // }
-    // ImGui::SameLine();
-    // if (ImGui::Button((pause ? ICON_FA_PLAY: ICON_FA_PAUSE)))
-    // {
-    //     if (pause)
-    //         pause = false;
-    //     else
-    //         pause = true;
-    // }
-    // ImGui::SameLine();
-    // if (ImGui::Button(ICON_FA_FORWARD))
-    // {
-    // }
-    // ImVec2 s = ImGui::GetWindowSize();
-    // ImGui::End();
+    ImGuiWindowClass window_class;
+    window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
+    ImGui::SetNextWindowClass(&window_class);
+    ImGui::SetNextWindowSize({static_cast<float>(window.width),0});
+    ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar);
+    static int v = 100;
+    if (ImGui::DragInt("##milliseconds delay", &v, 1, 1, 1000, "%d", ImGuiSliderFlags_AlwaysClamp))
+    {
+        delay = std::chrono::milliseconds(v);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button(ICON_FA_BACKWARD))
+    {
+    }
+    ImGui::SameLine();
+    if (ImGui::Button((pause ? ICON_FA_PLAY: ICON_FA_PAUSE)))
+    {
+        if (pause)
+            pause = false;
+        else
+            pause = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button(ICON_FA_FORWARD))
+    {
+    }
+    ImGui::End();
     
 
     // ImGui::SetNextWindowPos({0, s.y});

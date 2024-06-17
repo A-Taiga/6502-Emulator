@@ -94,7 +94,14 @@ void _6502::CPU::decompiler()
               || current->mode == &_6502::CPU::IZY
               || current->mode == &_6502::CPU::REL)
         {
-            decompiledCode.emplace_back (index,std::format ("{:04X} {:02X} {:02X} {:>6}", index, read(index), read(index+1), current->mnemonic));
+            std::string formatted = std::format ("{:04X} {:02X} {:02X} {:>6}", index, read(index), read(index+1), current->mnemonic);
+            if (current->mode == &_6502::CPU::IMM)
+                formatted += std::format (" #${:02X}", read(index+1));
+            else
+                formatted += std::format ("  ${:02X}", read(index+1));
+
+            
+            decompiledCode.emplace_back (index, formatted);
             i+=2;
         }
         else if (current->mode == &_6502::CPU::ABS
@@ -102,7 +109,12 @@ void _6502::CPU::decompiler()
               || current->mode == &_6502::CPU::ABY
               || current->mode == &_6502::CPU::IND)
         {
-           decompiledCode.emplace_back (index, std::format ("{:04X} {:02X} {:02X} {:02X} {:}", index, read(index), read(index+1), read(index+2), current->mnemonic));
+            std::string formatted = std::format ("{:04X} {:02X} {:02X} {:02X} {:}", index, read(index), read(index+1), read(index+2), current->mnemonic);
+            if (current->mode == &_6502::CPU::ABS)
+                formatted += std::format ("  ${:02X}, X:${:02X}", read(index+1), read(index+2));
+            else if (current->mode == &_6502::CPU::ABX)
+                formatted += std::format ("  ${:02X}, X:${:02X}", read(index+1), read(index+2));
+            decompiledCode.emplace_back (index, formatted);
             i+=3;
         }
     }
