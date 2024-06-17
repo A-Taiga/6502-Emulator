@@ -6,7 +6,6 @@
 #include "debugger.hpp"
 
 #include <thread>
-
 #define WINDOW_W 1920
 #define WINDOW_H 1080
 
@@ -40,22 +39,27 @@ _6502::Emulator::Emulator(const char* filePath, bool& _running)
 void _6502::Emulator::run()
 {
     OS_Window window ("test", WINDOW_W, WINDOW_H);
+    std::chrono::milliseconds delay(100);
     bool running = true;
+    bool pause = true;
     UI::init(window);
     bus.cpu.decompiler();
 
     static std::thread t ([&](){
         while (running)
         {
-            bus.cpu.run();
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            if (!pause)
+            {
+                bus.cpu.run();
+                std::this_thread::sleep_for(delay);
+            }
         }
     });
     
     while (running)
     {
         window.poll(running);
-        UI::debug(window, bus);
+        UI::debug(window, bus, delay, pause);
     }
 
     t.join();

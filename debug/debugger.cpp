@@ -2,6 +2,8 @@
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include <X11/X.h>
+#include <chrono>
+#include <format>
 #include <imgui.h>
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_sdl2.h"
@@ -11,6 +13,8 @@
 #include <string>
 #include "common.hpp"
 #include "bus.hpp"
+#include "IconsFontAwesome6.h"
+
 
 #define WINDOW_FLAGS SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
 
@@ -98,12 +102,12 @@ constexpr std::size_t array_size ()
 
 namespace
 {
-    ImFont* font;
-    float textSize;
-    ImVec4 clear_color;
-    
+    [[maybe_unused]] ImFont* font;
+    [[maybe_unused]] float textSize;
+    [[maybe_unused]] ImVec4 clear_color;
+
     template <class ADDRESS_TYPE, class DATA_TYPE, std::size_t SIZE>
-    struct Memory_window
+    struct Memory_Window
     {
         using memoryBuffer = std::array <DATA_TYPE, SIZE>;
         
@@ -144,7 +148,7 @@ namespace
         } colors;
 
 
-        Memory_window (memoryBuffer* memoryBuffer)
+        Memory_Window (memoryBuffer* memoryBuffer)
         : buffer {memoryBuffer}
         {
             assert (buffer != nullptr);
@@ -152,6 +156,8 @@ namespace
             scrollY = 0.0f;
             lookupBuffer[0] = '0';
         }
+
+        Memory_Window() {sizes.addressPadding = sizeof(ADDRESS_TYPE) * 8 / 4;}
 
         void draw_text_rect(std::string_view str, ImU32 color) 
         {
@@ -164,23 +170,11 @@ namespace
             ImGui::TextUnformatted(str.data());
         }
 
-        void calc ()
-        {
-            sizes.glyphWidth       = ImGui::CalcTextSize("F").x;
-            sizes.glyphHeight      = ImGui::CalcTextSize("F").y;
-            sizes.addressTextWidth = (ImGui::CalcTextSize("0").x * sizes.addressPadding) + ImGui::CalcTextSize(":").x + sizes.glyphWidth;
-            sizes.byteTextWidth    = ImGui::CalcTextSize("FF").x;
-            sizes.dataColWidth     = (((sizes.byteTextWidth) + sizes.glyphWidth) * sizes.rowWidth) + (sizes.glyphWidth * (std::ceil(sizes.rowWidth / 8.f) - 1));
-            sizes.asciiColWidth    = (sizes.glyphWidth * sizes.rowWidth);
-            sizes.lineHeight       = ImGui::GetTextLineHeightWithSpacing();
-            sizes.minWindowWidth   =  sizes.windowSize = sizes.addressTextWidth +  sizes.dataColWidth  + sizes.asciiColWidth + (sizes.scrollBarWidth*3);
-        }
-        
         void draw ()
         {
             calc();
             ImGui::SetNextWindowSize({sizes.windowSize, 0});
-            ImGui::Begin ("Memory View", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+            ImGui::Begin ("Memory View", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse);
             draw_column_labels();
             draw_data();
             ImGui::Separator();
@@ -195,7 +189,20 @@ namespace
             {
                 lookup = true;
             }
+            windowSize = ImGui::GetWindowSize();
             ImGui::End();
+        }
+
+        void calc ()
+        {
+            sizes.glyphWidth       = ImGui::CalcTextSize("F").x;
+            sizes.glyphHeight      = ImGui::CalcTextSize("F").y;
+            sizes.addressTextWidth = (ImGui::CalcTextSize("0").x * sizes.addressPadding) + ImGui::CalcTextSize(":").x + sizes.glyphWidth;
+            sizes.byteTextWidth    = ImGui::CalcTextSize("FF").x;
+            sizes.dataColWidth     = (((sizes.byteTextWidth) + sizes.glyphWidth) * sizes.rowWidth) + (sizes.glyphWidth * (std::ceil(sizes.rowWidth / 8.f) - 1));
+            sizes.asciiColWidth    = (sizes.glyphWidth * sizes.rowWidth);
+            sizes.lineHeight       = ImGui::GetTextLineHeightWithSpacing();
+            sizes.minWindowWidth   =  sizes.windowSize = sizes.addressTextWidth +  sizes.dataColWidth  + sizes.asciiColWidth + (sizes.scrollBarWidth*3);
         }
 
         void draw_column_labels ()
@@ -252,7 +259,7 @@ namespace
                 
                     ImGui::Text ("%.*X:", sizes.addressPadding, row*sizes.rowWidth);
                     ImGui::SameLine(sizes.addressTextWidth);
-                    for (DATA_TYPE i = 0; i < sizes.rowWidth; i++)
+                    for (ADDRESS_TYPE i = 0; i < sizes.rowWidth; i++)
                     {
                         DATA_TYPE value = (*buffer)[row * sizes.rowWidth + i];
                         if (i != 0 && i % 8 == 0)
@@ -264,7 +271,7 @@ namespace
                         ImGui::TextColored (value == 0 ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled) : ImVec4(255,255,255,255),"%02X", value);
                     }
                     ImGui::SameLine(0, sizes.glyphWidth*2);
-                    for (DATA_TYPE i = 0; i < sizes.rowWidth; i++)
+                    for (ADDRESS_TYPE i = 0; i < sizes.rowWidth; i++)
                     {
     
                         char value = (*buffer)[row * sizes.rowWidth + i];
@@ -286,13 +293,14 @@ namespace
         }
     };
 
+
     template <class ADDRESS_TYPE>
-    struct Program_window
+    struct Program_Window
     {
         using programBuffer = std::vector<std::pair<ADDRESS_TYPE, std::string>>;
         const programBuffer& buffer;
         ADDRESS_TYPE& pc;
-
+        ImVec2 windowSize;
         char findBuffer[array_size<ADDRESS_TYPE>()];
         struct
         {
@@ -303,7 +311,7 @@ namespace
             ADDRESS_TYPE current_row;
         }db;
 
-        Program_window (const programBuffer& pb, ADDRESS_TYPE& programCounter)
+        Program_Window (const programBuffer& pb, ADDRESS_TYPE& programCounter)
         : buffer {pb}
         , pc (programCounter)
         {
@@ -312,14 +320,15 @@ namespace
     
         void draw ()
         {
-            ImGui::Begin("Program");
+            ImGui::Begin("Program", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse);
             draw_data();
+            ImGui::GetWindowSize();
             ImGui::End();
         };
 
         void draw_data ()
         {
-            ImGui::BeginChild("programClipper", {0, ImGui::GetTextLineHeightWithSpacing() * 19});
+            ImGui::BeginChild("programClipper", {0, ImGui::GetTextLineHeightWithSpacing() * 18});
             ImGuiListClipper clipper;
             clipper.Begin(buffer.size(), ImGui::GetTextLineHeightWithSpacing());
             while (clipper.Step())
@@ -334,6 +343,63 @@ namespace
         }
     };
 
+    template <class ADDRESS_TYPE, class DATA_TYPE, class CONTAINER, std::size_t SIZE>
+    struct Page_Window : Memory_Window<ADDRESS_TYPE, DATA_TYPE, SIZE>
+    {
+        using memoryPage = std::span<DATA_TYPE, SIZE>;
+        memoryPage page;
+        const char* windowName;
+        const ADDRESS_TYPE startingAddress;
+
+        Page_Window (const char* name, ADDRESS_TYPE startAddress, CONTAINER::iterator begin, CONTAINER::iterator end)
+        : Memory_Window <ADDRESS_TYPE, DATA_TYPE, SIZE> ()
+        , page {begin + startAddress, end + startAddress + SIZE}
+        , windowName (name)
+        , startingAddress (startAddress)
+        {
+            this->sizes.rowWidth = 16;
+        }
+        void draw ()
+        {
+            this->calc();
+            // ImGui::Begin (windowName, nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+            this->draw_column_labels();
+            draw_data();
+            // ImGui::End();
+        }
+        void draw_data ()
+        {
+            for (ADDRESS_TYPE row = 0; row < SIZE; row += this->sizes.rowWidth)
+            {
+                ImGui::Text ("%.*X:", this->sizes.addressPadding, startingAddress + row);
+                ImGui::SameLine(this->sizes.addressTextWidth);
+                for (ADDRESS_TYPE i = 0; i < this->sizes.rowWidth; i++)
+                {
+                    ADDRESS_TYPE index = row + i;
+                    if (i != 0 && i % 8 == 0)
+                    {
+                        ImGui::SameLine(0, 0);
+                        ImGui::Dummy({this->sizes.glyphWidth, ImGui::GetTextLineHeight()});
+                    }
+                    ImGui::SameLine(0, this->sizes.glyphWidth);
+                    ImGui::TextColored (page[index] == 0 ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled) : ImVec4(255,255,255,255),"%02X", page[index]);
+                }
+                ImGui::SameLine(0, this->sizes.glyphWidth*2);
+                for (ADDRESS_TYPE i = 0; i < this->sizes.rowWidth; i++)
+                {
+
+                    ADDRESS_TYPE index = row + i;
+                    if (page[index] > 32)
+                        ImGui::Text ("%c", page[index]);
+                    else
+                        ImGui::Text (".");
+                    ImGui::SameLine(0,0);
+                }
+                ImGui::NewLine();
+                // scrollY = ImGui::GetScrollY();
+            }
+        }
+    };
 }
 
 void UI::init (OS_Window& window)
@@ -355,17 +421,20 @@ void UI::init (OS_Window& window)
         style.WindowRounding = 0.0f;
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
-
     ImGui_ImplSDL2_InitForOpenGL(window.get_window(), window.get_glContext());
     ImGui_ImplOpenGL3_Init(window.get_glslVersion());
-
-
     textSize = 20.0f;
-
     font = io.Fonts->AddFontFromFileTTF("imgui/misc/fonts/ProggyClean.ttf", textSize, nullptr, io.Fonts->GetGlyphRangesDefault());
+    float iconFontSize = textSize * 2.0f / 3.0f; // FontAwesome fonts need to have their sizes reduced by 2.0f/3.0f in order to align correctly
+    // merge in icons from Font Awesome
+    static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_16_FA, 0 };
+    ImFontConfig icons_config; 
+    icons_config.MergeMode = true; 
+    icons_config.PixelSnapH = true; 
+    // icons_config.GlyphOffset.y = 1;
+    icons_config.GlyphMinAdvanceX = iconFontSize;
+    io.Fonts->AddFontFromFileTTF( FONT_ICON_FILE_NAME_FAS, iconFontSize, &icons_config, icons_ranges );
 
-
-    clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 }
 
 void UI::end ()
@@ -376,64 +445,133 @@ void UI::end ()
     ImGui::DestroyContext();
 }
 
-void UI::debug(OS_Window& window, _6502::Bus& bus)
+void UI::debug(OS_Window& window, _6502::Bus& bus, std::chrono::milliseconds& delay, bool& pause)
 {
     static ImGuiIO& io = ImGui::GetIO(); (void)io;
-    static Memory_window <word, byte, RAM_SIZE> memoryWindow {&bus.ram.data()};
-    static Program_window<word> programWindow {bus.cpu.decompiledCode, bus.cpu.PC};
+    static Memory_Window <word, byte, RAM_SIZE> memoryWindow {&bus.ram.data()};
+    static Program_Window<word> programWindow {bus.cpu.decompiledCode, bus.cpu.PC};
+    static Page_Window<word, byte, std::array<byte, RAM_SIZE>, 256> zeroPage ("Zero Page", 0x0, bus.ram.data().begin(), bus.ram.data().begin());
+    static Page_Window<word, byte, std::array<byte, RAM_SIZE>, 256> Page1 ("Page 1", 0x200, bus.ram.data().begin(), bus.ram.data().begin());
+    [[maybe_unused]] static bool showMetrics = true;
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
 
+    // ImGui::ShowMetricsWindow(&showMetrics);
 
+    ImGui::SetNextWindowPos({0,0});
+    ImGui::SetNextWindowSize({static_cast<float>(window.width),0});
+    ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar);
+    static int v = 100;
+    if (ImGui::SliderInt("##milliseconds delay", &v, 1, 1000, "%d", ImGuiSliderFlags_AlwaysClamp))
+    {
+        delay = std::chrono::milliseconds(v);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button(ICON_FA_BACKWARD))
+    {
+    }
+    ImGui::SameLine();
+    if (ImGui::Button((pause ? ICON_FA_PLAY: ICON_FA_PAUSE)))
+    {
+        if (pause)
+            pause = false;
+        else
+            pause = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button(ICON_FA_FORWARD))
+    {
+    }
+    ImVec2 s = ImGui::GetWindowSize();
+    ImGui::End();
+    
 
-
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplSDL2_NewFrame();
-        ImGui::NewFrame();
-        
-        // ImGui::SetNextWindowPos({0,0});
-        memoryWindow.draw();
-        // ImGui::SetNextWindowPos({memoryWindow.sizes.minWindowWidth, 0});
-        ImGui::SetNextWindowSize({300,0});
-        programWindow.draw();
-
-        ImGui::SetNextWindowSize({200,0});
-        ImGui::Begin ("Registers", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-        ImGui::Text ("PC :%04X", bus.cpu.PC);   
-        ImGui::Text ("AC :%d", bus.cpu.AC);   
-        ImGui::Text ("X  :%d", bus.cpu.X);    
-        ImGui::Text ("Y  :%d", bus.cpu.Y);   
-        ImGui::Text ("SR :%d", bus.cpu.SR);   
-        ImGui::Text ("SP :%d", bus.cpu.SP);
-        ImGui::End();
-
-        ImGui::SetNextWindowSize({0,0});
-        ImGui::Begin("memory window debugger", NULL, ImGuiWindowFlags_AlwaysAutoResize);
-        ImGui::Text("GetTextLineHeightWithSpacing : %f", ImGui::GetTextLineHeightWithSpacing());
-        ImGui::Text("GetTextLineHeight            : %f", ImGui::GetTextLineHeight());
-        ImGui::Text("rowWidth                     : %i", memoryWindow.sizes.rowWidth);
-        ImGui::Text("t                            : %f", (std::ceil((memoryWindow.sizes.rowWidth / 8.0f) - 1)));
-        ImGui::Separator();
-        ImGui::Text ("glyphWidth        : %f", memoryWindow.sizes.glyphWidth);
-        ImGui::Text ("glyphHeight       : %f", memoryWindow.sizes.glyphHeight);
-        ImGui::Text ("addressTextWidth  : %f", memoryWindow.sizes.addressTextWidth);
-        ImGui::Text ("byteTextWidth     : %f", memoryWindow.sizes.byteTextWidth);
-        ImGui::Text ("dataColWidth      : %f", memoryWindow.sizes.dataColWidth);
-        ImGui::Text ("asciiColWidth     : %f", memoryWindow.sizes.asciiColWidth);
-        ImGui::Text ("minWindowWidth    : %f", memoryWindow.sizes.minWindowWidth);
-        ImGui::Text ("minWindowHeight   : %f", memoryWindow.sizes.minWindowHeight);
-        ImGui::Text ("scrollBarWidth    : %f", memoryWindow.sizes.scrollBarWidth);
-        ImGui::Text ("windowSize        : %f", memoryWindow.sizes.windowSize);
-        ImGui::Text ("lineHeight        : %f", memoryWindow.sizes.lineHeight);
-        ImGui::Text ("addressPadding    : %d", memoryWindow.sizes.addressPadding);
-        ImGui::Text ("rowWidth          : %d", memoryWindow.sizes.rowWidth);
-        if (ImGui::Button("Show Bounding Rects"))
+    ImGui::SetNextWindowPos({0, s.y});
+    memoryWindow.draw();
+    ImGui::SetNextWindowPos({memoryWindow.sizes.minWindowWidth, s.y});
+    ImGui::SetNextWindowSize({0, memoryWindow.windowSize.y});
+    ImGui::Begin("tabs", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    if (ImGui::BeginTabBar("Tabs"))
+    {
+        if(ImGui::BeginTabItem("ZeroPage"))
         {
-            if (memoryWindow.db.showBoundingRects) 
-                memoryWindow.db.showBoundingRects = false;
-            else
-                memoryWindow.db.showBoundingRects = true;
+            zeroPage.draw();
+            ImGui::EndTabItem();
         }
+        if (ImGui::BeginTabItem("Page 1"))
+        {
+            Page1.draw();
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
+    }
+    ImVec2 s2 = ImGui::GetWindowSize();
+    ImGui::End();
+    ImGui::SetNextWindowPos({memoryWindow.sizes.minWindowWidth + s2.x, s.y});
+    ImGui::SetNextWindowSize({300,memoryWindow.windowSize.y});
+    programWindow.draw();
+
+
+
+
+    ImGui::SetNextWindowSize({200,0});
+    ImGui::Begin ("Registers", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::Text ("PC :%04X", bus.cpu.PC);   
+    ImGui::Text ("AC :%d", bus.cpu.AC);   
+    ImGui::Text ("X  :%d", bus.cpu.X);    
+    ImGui::Text ("Y  :%d", bus.cpu.Y);   
+    ImGui::Text ("SP :%d", bus.cpu.SP);
+    ImGui::BeginGroup();
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::SameLine();
+    ImGui::TextUnformatted (std::format ("{:08b}", bus.cpu.SR).c_str());
+    ImGui::SameLine();
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::SameLine();
+    ImGui::TextUnformatted("NV-BDIZC");
+    ImGui::Spacing();
+    ImGui::EndGroup();
+    ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 255, 255));
+    ImGui::End();
+
+        // ImGui::SetNextWindowSize({0,0});
+        // ImGui::Begin("memory window debugger", NULL, ImGuiWindowFlags_AlwaysAutoResize);
+        // ImGui::Text("GetTextLineHeightWithSpacing : %f", ImGui::GetTextLineHeightWithSpacing());
+        // ImGui::Text("GetTextLineHeight            : %f", ImGui::GetTextLineHeight());
+        // ImGui::Text("rowWidth                     : %i", memoryWindow.sizes.rowWidth);
+        // ImGui::Text("t                            : %f", (std::ceil((memoryWindow.sizes.rowWidth / 8.0f) - 1)));
+        // ImGui::Separator();
+        // ImGui::Text ("glyphWidth        : %f", memoryWindow.sizes.glyphWidth);
+        // ImGui::Text ("glyphHeight       : %f", memoryWindow.sizes.glyphHeight);
+        // ImGui::Text ("addressTextWidth  : %f", memoryWindow.sizes.addressTextWidth);
+        // ImGui::Text ("byteTextWidth     : %f", memoryWindow.sizes.byteTextWidth);
+        // ImGui::Text ("dataColWidth      : %f", memoryWindow.sizes.dataColWidth);
+        // ImGui::Text ("asciiColWidth     : %f", memoryWindow.sizes.asciiColWidth);
+        // ImGui::Text ("minWindowWidth    : %f", memoryWindow.sizes.minWindowWidth);
+        // ImGui::Text ("minWindowHeight   : %f", memoryWindow.sizes.minWindowHeight);
+        // ImGui::Text ("scrollBarWidth    : %f", memoryWindow.sizes.scrollBarWidth);
+        // ImGui::Text ("windowSize        : %f", memoryWindow.sizes.windowSize);
+        // ImGui::Text ("lineHeight        : %f", memoryWindow.sizes.lineHeight);
+        // ImGui::Text ("addressPadding    : %d", memoryWindow.sizes.addressPadding);
+        // ImGui::Text ("rowWidth          : %d", memoryWindow.sizes.rowWidth);
+        // if (ImGui::Button("Show Bounding Rects"))
+        // {
+        //     if (memoryWindow.db.showBoundingRects) 
+        //         memoryWindow.db.showBoundingRects = false;
+        //     else
+        //         memoryWindow.db.showBoundingRects = true;
+        // }
+        // ImGui::End();
+
+        ImGui::Begin("info", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
         ImGui::End();
-        
+
+     
+
         // Rendering
         ImGui::Render();
         window.render(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y, clear_color);
