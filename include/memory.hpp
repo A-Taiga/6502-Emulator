@@ -19,6 +19,4 @@ namespace _6502
             std::array<byte, RAM_SIZE> mem;
     };
 }
-
-
 #endif

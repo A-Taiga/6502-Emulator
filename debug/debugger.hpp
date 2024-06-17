@@ -34,8 +34,8 @@ class Bus;
 }
 namespace UI
 {
-    void init (OS_Window& window);
-    void debug (OS_Window& window, _6502::Bus& bus, std::chrono::milliseconds& delay, bool& pause);
+    void init ();
+    void debug (bool& running, _6502::Bus& bus, std::chrono::milliseconds& delay, bool& pause);
     void end ();
 }
 

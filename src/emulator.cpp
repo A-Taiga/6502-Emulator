@@ -38,11 +38,10 @@ _6502::Emulator::Emulator(const char* filePath, bool& _running)
 
 void _6502::Emulator::run()
 {
-    OS_Window window ("test", WINDOW_W, WINDOW_H);
     std::chrono::milliseconds delay(100);
     bool running = true;
     bool pause = true;
-    UI::init(window);
+    UI::init();
     bus.cpu.decompiler();
 
     static std::thread t ([&](){
@@ -58,8 +57,7 @@ void _6502::Emulator::run()
     
     while (running)
     {
-        window.poll(running);
-        UI::debug(window, bus, delay, pause);
+        UI::debug(running, bus, delay, pause);
     }
 
     t.join();

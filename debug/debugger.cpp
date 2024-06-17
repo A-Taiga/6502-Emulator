@@ -105,7 +105,8 @@ namespace
     [[maybe_unused]] ImFont* font;
     [[maybe_unused]] float textSize;
     [[maybe_unused]] ImVec4 clear_color;
-
+    OS_Window window ("Debugger", 1000, 1000);
+/*
     template <class ADDRESS_TYPE, class DATA_TYPE, std::size_t SIZE>
     struct Memory_Window
     {
@@ -292,7 +293,7 @@ namespace
             ImGui::PopStyleVar(2); // Pop the style variables we pushed
         }
     };
-
+*/
 
     template <class ADDRESS_TYPE>
     struct Program_Window
@@ -343,6 +344,7 @@ namespace
         }
     };
 
+/*
     template <class ADDRESS_TYPE, class DATA_TYPE, class CONTAINER, std::size_t SIZE>
     struct Page_Window : Memory_Window<ADDRESS_TYPE, DATA_TYPE, SIZE>
     {
@@ -400,9 +402,134 @@ namespace
             }
         }
     };
+*/
+    
+    template <class CONTAINER_TYPE, class ADDRESS_TYPE, class DATA_TYPE, std::size_t SIZE>
+    struct Memory_Window
+    {
+        using Memory_Span = std::span <DATA_TYPE, SIZE>;
+        Memory_Span data;
+        
+        struct
+        {
+            const char* windowName;
+            bool isShowing;
+            ADDRESS_TYPE startingAddress;
+            ImGuiWindowFlags windowFlags;
+        } settings;
+
+        struct  
+        {
+            float glyphWidth;
+            float glyphHeight;
+            float addressTextWidth;
+            float byteTextWidth;
+            float dataColWidth;
+            float asciiColWidth;
+            float minWindowWidth;
+            float minWindowHeight;
+            float scrollBarWidth;
+            float windowSize;
+            float lineHeight;
+            int   addressPadding;
+            int   rowWidth;
+        } sizes;
+
+        Memory_Window (const char* name, CONTAINER_TYPE container, ADDRESS_TYPE offset)
+        : data {container.begin() + offset, SIZE}
+        {
+            settings.windowName = name;
+            sizes.addressPadding = sizeof(ADDRESS_TYPE) * 8 / 4;
+        }
+
+        void calc ()
+        {
+            sizes.glyphWidth       = ImGui::CalcTextSize("F").x;
+            sizes.glyphHeight      = ImGui::CalcTextSize("F").y;
+            sizes.addressTextWidth = (ImGui::CalcTextSize("0").x * sizes.addressPadding) + ImGui::CalcTextSize(":").x + sizes.glyphWidth;
+            sizes.byteTextWidth    = ImGui::CalcTextSize("FF").x;
+            sizes.dataColWidth     = (((sizes.byteTextWidth) + sizes.glyphWidth) * sizes.rowWidth) + (sizes.glyphWidth * (std::ceil(sizes.rowWidth / 8.f) - 1));
+            sizes.asciiColWidth    = (sizes.glyphWidth * sizes.rowWidth);
+            sizes.lineHeight       = ImGui::GetTextLineHeightWithSpacing();
+            sizes.minWindowWidth   =  sizes.windowSize = sizes.addressTextWidth +  sizes.dataColWidth  + sizes.asciiColWidth + (sizes.scrollBarWidth*3);
+        }
+        
+        void draw_column_labels ()
+        {
+            ImGui::BeginGroup();
+            ImGui::Dummy({sizes.addressTextWidth - sizes.glyphWidth, ImGui::GetTextLineHeightWithSpacing()});
+            for (DATA_TYPE i = 0; i < sizes.rowWidth; i++)
+            {
+                if (i != 0 && i % 8 == 0)
+                {
+                    ImGui::SameLine(0, 0);
+                    ImGui::Dummy({sizes.glyphWidth, ImGui::GetTextLineHeight()});
+                }
+                ImGui::SameLine(0,sizes.glyphWidth);
+                ImGui::Text("%02X", i);
+            }
+            ImGui::SameLine(0,sizes.glyphWidth*2);
+            ImGui::TextUnformatted("ASCII");
+            ImGui::EndGroup();
+            ImGui::Separator();
+        }
+    };
+
+    template <class CONTAINER_TYPE, class ADDRESS_TYPE, class DATA_TYPE, std::size_t SIZE>
+    struct Page_View : Memory_Window <CONTAINER_TYPE, ADDRESS_TYPE, DATA_TYPE, SIZE>
+    {
+        Page_View (const char* name, CONTAINER_TYPE container, ADDRESS_TYPE offset = 0)
+        : Memory_Window <CONTAINER_TYPE, ADDRESS_TYPE, DATA_TYPE, SIZE> {name, container, offset}
+        {
+            this->sizes.scrollBarWidth = 20.f;
+            this->sizes.rowWidth = 16;
+            this->settings.isShowing = true;
+            this->settings.windowFlags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
+        }
+
+        void draw ()
+        {
+            this->calc();
+            if (this->settings.isShowing)
+            {
+                ImGui::Begin (this->settings.windowName, &this->settings.isShowing, this->settings.windowFlags);
+                this->draw_column_labels();
+                for (ADDRESS_TYPE row = 0; row < SIZE; row += this->sizes.rowWidth)
+                {
+                    ImGui::Text ("%.*X:", this->sizes.addressPadding, this->settings.startingAddress + row);
+                    ImGui::SameLine(this->sizes.addressTextWidth);
+                    for (ADDRESS_TYPE i = 0; i < this->sizes.rowWidth; i++)
+                    {
+                        ADDRESS_TYPE index = row + i;
+                        if (i != 0 && i % 8 == 0)
+                        {
+                            ImGui::SameLine(0, 0);
+                            ImGui::Dummy({this->sizes.glyphWidth, ImGui::GetTextLineHeight()});
+                        }
+                        ImGui::SameLine(0, this->sizes.glyphWidth);
+                        ImGui::TextColored (this->data[index] == 0 ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled) : ImVec4(255,255,255,255),"%02X", this->data[index]);
+                    }
+                    ImGui::SameLine(0, this->sizes.glyphWidth*2);
+                    for (ADDRESS_TYPE i = 0; i < this->sizes.rowWidth; i++)
+                    {
+
+                        ADDRESS_TYPE index = row + i;
+                        if (this->data[index] > 32)
+                            ImGui::Text ("%c", this->data[index]);
+                        else
+                            ImGui::Text (".");
+                        ImGui::SameLine(0,0);
+                    }
+                    ImGui::NewLine();
+                }
+                ImGui::End();
+            }
+        }
+    };
 }
 
-void UI::init (OS_Window& window)
+
+void UI::init ()
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -421,6 +548,7 @@ void UI::init (OS_Window& window)
         style.WindowRounding = 0.0f;
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
+
     ImGui_ImplSDL2_InitForOpenGL(window.get_window(), window.get_glContext());
     ImGui_ImplOpenGL3_Init(window.get_glslVersion());
     textSize = 20.0f;
@@ -431,7 +559,6 @@ void UI::init (OS_Window& window)
     ImFontConfig icons_config; 
     icons_config.MergeMode = true; 
     icons_config.PixelSnapH = true; 
-    // icons_config.GlyphOffset.y = 1;
     icons_config.GlyphMinAdvanceX = iconFontSize;
     io.Fonts->AddFontFromFileTTF( FONT_ICON_FILE_NAME_FAS, iconFontSize, &icons_config, icons_ranges );
 
@@ -445,72 +572,90 @@ void UI::end ()
     ImGui::DestroyContext();
 }
 
-void UI::debug(OS_Window& window, _6502::Bus& bus, std::chrono::milliseconds& delay, bool& pause)
+
+void UI::debug(bool& running, _6502::Bus& bus, [[maybe_unused]] std::chrono::milliseconds& delay, [[maybe_unused]] bool& pause)
 {
+    window.poll(running);
     static ImGuiIO& io = ImGui::GetIO(); (void)io;
-    static Memory_Window <word, byte, RAM_SIZE> memoryWindow {&bus.ram.data()};
+    // static Memory_Window <word, byte, RAM_SIZE> memoryWindow {&bus.ram.data()};
     static Program_Window<word> programWindow {bus.cpu.decompiledCode, bus.cpu.PC};
-    static Page_Window<word, byte, std::array<byte, RAM_SIZE>, 256> zeroPage ("Zero Page", 0x0, bus.ram.data().begin(), bus.ram.data().begin());
-    static Page_Window<word, byte, std::array<byte, RAM_SIZE>, 256> Page1 ("Page 1", 0x200, bus.ram.data().begin(), bus.ram.data().begin());
-    [[maybe_unused]] static bool showMetrics = true;
+    // static Page_Window<word, byte, std::array<byte, RAM_SIZE>, 256> zeroPage ("Zero Page", 0x0, bus.ram.data().begin(), bus.ram.data().begin());
+    // static Page_Window<word, byte, std::array<byte, RAM_SIZE>, 256> Page1 ("Page 1", 0x200, bus.ram.data().begin(), bus.ram.data().begin());
+    static Page_View<decltype(bus.ram.data()), word, byte, 256> zeroPage("Zero Page", bus.ram.data());
+    static Page_View<decltype(bus.ram.data()), word, byte, 256> Page1("Page 1", bus.ram.data(), 0x0200);
+
+    
+
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
+    ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ParentViewportId, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 
-    // ImGui::ShowMetricsWindow(&showMetrics);
+    if (ImGui::BeginMainMenuBar())
+    {
+        if (ImGui::BeginMenu("File"))
+        {
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
 
-    ImGui::SetNextWindowPos({0,0});
-    ImGui::SetNextWindowSize({static_cast<float>(window.width),0});
-    ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar);
-    static int v = 100;
-    if (ImGui::SliderInt("##milliseconds delay", &v, 1, 1000, "%d", ImGuiSliderFlags_AlwaysClamp))
-    {
-        delay = std::chrono::milliseconds(v);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button(ICON_FA_BACKWARD))
-    {
-    }
-    ImGui::SameLine();
-    if (ImGui::Button((pause ? ICON_FA_PLAY: ICON_FA_PAUSE)))
-    {
-        if (pause)
-            pause = false;
-        else
-            pause = true;
-    }
-    ImGui::SameLine();
-    if (ImGui::Button(ICON_FA_FORWARD))
-    {
-    }
-    ImVec2 s = ImGui::GetWindowSize();
-    ImGui::End();
+    zeroPage.draw();
+    Page1.draw();
+
+
+    // ImGui::SetNextWindowPos({0,0});
+    // ImGui::SetNextWindowSize({static_cast<float>(window.width),0});
+    // ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar);
+    // static int v = 100;
+    // if (ImGui::SliderInt("##milliseconds delay", &v, 1, 1000, "%d", ImGuiSliderFlags_AlwaysClamp))
+    // {
+    //     delay = std::chrono::milliseconds(v);
+    // }
+    // ImGui::SameLine();
+    // if (ImGui::Button(ICON_FA_BACKWARD))
+    // {
+    // }
+    // ImGui::SameLine();
+    // if (ImGui::Button((pause ? ICON_FA_PLAY: ICON_FA_PAUSE)))
+    // {
+    //     if (pause)
+    //         pause = false;
+    //     else
+    //         pause = true;
+    // }
+    // ImGui::SameLine();
+    // if (ImGui::Button(ICON_FA_FORWARD))
+    // {
+    // }
+    // ImVec2 s = ImGui::GetWindowSize();
+    // ImGui::End();
     
 
-    ImGui::SetNextWindowPos({0, s.y});
-    memoryWindow.draw();
-    ImGui::SetNextWindowPos({memoryWindow.sizes.minWindowWidth, s.y});
-    ImGui::SetNextWindowSize({0, memoryWindow.windowSize.y});
-    ImGui::Begin("tabs", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-    if (ImGui::BeginTabBar("Tabs"))
-    {
-        if(ImGui::BeginTabItem("ZeroPage"))
-        {
-            zeroPage.draw();
-            ImGui::EndTabItem();
-        }
-        if (ImGui::BeginTabItem("Page 1"))
-        {
-            Page1.draw();
-            ImGui::EndTabItem();
-        }
-        ImGui::EndTabBar();
-    }
-    ImVec2 s2 = ImGui::GetWindowSize();
-    ImGui::End();
-    ImGui::SetNextWindowPos({memoryWindow.sizes.minWindowWidth + s2.x, s.y});
-    ImGui::SetNextWindowSize({300,memoryWindow.windowSize.y});
-    programWindow.draw();
+    // ImGui::SetNextWindowPos({0, s.y});
+    // memoryWindow.draw();
+    // ImGui::SetNextWindowPos({memoryWindow.sizes.minWindowWidth, s.y});
+    // ImGui::SetNextWindowSize({0, memoryWindow.windowSize.y});
+    // ImGui::Begin("tabs", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    // if (ImGui::BeginTabBar("Tabs"))
+    // {
+    //     if(ImGui::BeginTabItem("ZeroPage"))
+    //     {
+    //         zeroPage.draw();
+    //         ImGui::EndTabItem();
+    //     }
+    //     if (ImGui::BeginTabItem("Page 1"))
+    //     {
+    //         Page1.draw();
+    //         ImGui::EndTabItem();
+    //     }
+    //     ImGui::EndTabBar();
+    // }
+    // ImVec2 s2 = ImGui::GetWindowSize();
+    // ImGui::End();
+    // ImGui::SetNextWindowPos({memoryWindow.sizes.minWindowWidth + s2.x, s.y});
+    // ImGui::SetNextWindowSize({300,memoryWindow.windowSize.y});
+    // programWindow.draw();
 
 
 
