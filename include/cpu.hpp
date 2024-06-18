@@ -2,7 +2,6 @@
 #define CPU_HPP
 
 #include "common.hpp"
-#include <array>
 #include <string>
 #include <vector>
 
@@ -35,12 +34,30 @@
 
 namespace _6502
 {
+
+    enum class Address_Type
+    {
+        IMP,
+        IMM,
+        ABS,
+        ZPG,
+        ABX,
+        ABY,
+        ZPX,
+        ZPY,
+        IND,
+        IZX,
+        IZY,
+        REL
+    };
+
     class CPU;
     struct opcode
     {
         const char* mnemonic;
-        void (CPU::*op)(void);
-        short (CPU::*mode)(void);
+        void (_6502::CPU::*op)(void);
+        short (_6502::CPU::*mode)(void);
+        Address_Type addrType;
         std::size_t cycles;
     };
 
@@ -77,17 +94,17 @@ namespace _6502
             byte read (const word& address);
             void write (const word& address, const byte& data);
             
-            short IMP ();
-            short IMM ();
-            short ABS ();
-            short ZPG ();
-            short ABX ();
+            short IMP (); 
+            short IMM (); 
+            short ABS (); 
+            short ZPG (); 
+            short ABX (); 
             short ABY ();
-            short ZPX ();
-            short ZPY ();
-            short IND ();
-            short IZX ();
-            short IZY ();
+            short ZPX (); 
+            short ZPY (); 
+            short IND (); 
+            short IZX (); 
+            short IZY (); 
             short REL ();
 
             void BRK (void); void ORA (void); void ASL (void); void PHP (void); void BPL (void);
