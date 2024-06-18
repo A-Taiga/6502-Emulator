@@ -569,10 +569,6 @@ void UI::debug(bool& running, _6502::Bus& bus, [[maybe_unused]] std::chrono::mil
         delay = std::chrono::milliseconds(v);
     }
     ImGui::SameLine();
-    if (ImGui::Button(ICON_FA_BACKWARD))
-    {
-    }
-    ImGui::SameLine();
     if (ImGui::Button((pause ? ICON_FA_PLAY: ICON_FA_PAUSE)))
     {
         if (pause)
