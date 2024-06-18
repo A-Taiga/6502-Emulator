@@ -2,7 +2,6 @@
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include <chrono>
-#include <concepts>
 #include <format>
 #include <imgui.h>
 #include "cpu.hpp"
@@ -16,8 +15,6 @@
 #include "bus.hpp"
 #include "IconsFontAwesome6.h"
 #include <span>
-#include <tuple>
-#include <type_traits>
 #include <utility>
 
 #define WINDOW_W 1920
