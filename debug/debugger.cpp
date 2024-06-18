@@ -402,78 +402,91 @@ namespace
         }
     };
 
-    template <class...T>
+
     struct Registers_Window
     {
-        std::tuple < std::pair<const char*, T&>...> items;
-        Registers_Window(std::pair<const char*, T&>... args)
-        : items (std::forward_as_tuple(args...))
+        const word &PC;
+        const byte &AC;
+        const byte &X;
+        const byte &Y;
+        const byte SP;
+        
+        Registers_Window (const _6502::CPU& cpu)
+        : PC (cpu.PC)
+        , AC (cpu.AC)
+        , X (cpu.X)
+        , Y (cpu.Y)
+        , SP (cpu.SP)
         {}
+
         void draw ()
         {
-            ImGui::Begin("Registers");
-            if (ImGui::BeginTable("##table##Registers", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit))
-            {
-                std::apply ([&](auto&...args)
-                {
-                        ImGui::TableNextRow();
-                        ImGui::TableNextColumn();
-                        ImGui::TableNextColumn();
-                        ImGui::TextUnformatted ("Hex"); ImGui::TableNextColumn();
-                        ImGui::TextUnformatted ("Dec"); ImGui::TableNextColumn();
-                        ImGui::TextUnformatted ("Bin"); ImGui::TableNextColumn();
-                        (ImGui::TextUnformatted(std::format("{:}", args.first).c_str()),...);     ImGui::TableNextColumn();
-                        (ImGui::TextUnformatted(std::format("{:04X}", args.second).c_str()),...); ImGui::TableNextColumn();
-                        (ImGui::TextUnformatted(std::format("{:0d}", args.second).c_str()),...);  ImGui::TableNextColumn();
-                        (ImGui::TextUnformatted(std::format("{:016b}", args.second).c_str()),...);
 
-                }, items);
-                ImGui::EndTable();
+            ImGui::Begin ("Registers");
+            if (ImGui::BeginTable("Regesters Table", 4, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders))
+            {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TableNextColumn();
+
+                ImGui::TextUnformatted("Hex");
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted("Dec");
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted("Bin");
+
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted("PC"); 
+                ImGui::TableNextColumn(); 
+                ImGui::TextUnformatted(std::format ("{:04X}", PC).c_str());
+                ImGui::TableNextColumn(); 
+                ImGui::TextUnformatted(std::format ("{:d}", PC).c_str()); 
+                ImGui::TableNextColumn(); 
+                ImGui::TextUnformatted(std::format ("{:08b} {:08b}", PC >> 8, PC & 0xFF).c_str()); 
+
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted("AC"); 
+                ImGui::TableNextColumn(); 
+                ImGui::TextUnformatted(std::format ("{:{}}{:02X}"," ",2,AC).c_str());
+                ImGui::TableNextColumn(); 
+                ImGui::TextUnformatted(std::format ("{:>5d}",AC).c_str()); 
+                ImGui::TableNextColumn(); 
+                ImGui::TextUnformatted(std::format ("{:{}} {:08b}", " ", 8, AC).c_str()); 
+            
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted("X"); 
+                ImGui::TableNextColumn(); 
+                ImGui::TextUnformatted(std::format ("{:{}}{:02X}"," ",2,X).c_str());
+                ImGui::TableNextColumn(); 
+                ImGui::TextUnformatted(std::format ("{:>5d}",X).c_str()); 
+                ImGui::TableNextColumn(); 
+                ImGui::TextUnformatted(std::format ("{:{}} {:08b}", " ", 8, X).c_str()); 
+
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted("Y"); 
+                ImGui::TableNextColumn(); 
+                ImGui::TextUnformatted(std::format ("{:{}}{:02X}"," ",2,Y).c_str());
+                ImGui::TableNextColumn(); 
+                ImGui::TextUnformatted(std::format ("{:>5d}",Y).c_str()); 
+                ImGui::TableNextColumn(); 
+                ImGui::TextUnformatted(std::format ("{:{}} {:08b}", " ", 8, Y).c_str()); 
+
+
+
+            ImGui::EndTable();
             }
             ImGui::End();
         }
     };
-    // void registers (_6502::Bus& bus)
-    // {
 
-        // static Register_Text pc {"PC", bus.cpu.PC};
-        // static Register_Text ac {"AC", bus.cpu.AC};
-        // static Register_Text x {"X", bus.cpu.X};
-        // static Register_Text y {"Y", bus.cpu.Y};
-        // static Register_Text sp {"SP", bus.cpu.SP};
+    struct Flags_Window
+    {
 
-
-        // ImGui::SetNextWindowSize({200,0});
-        // ImGui::Begin ("Registers", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-        // // ImGui::Text ("PC :%04X", bus.cpu.PC);
-        // // pc.draw();
-        // // ac.draw();
-        // // x.draw();
-        // // y.draw();
-        // // sp.draw();
-        // ImGui::BeginTable("Registers table", 3);
-        // ImGui::TableNextRow();
-        // ImGui::TableNextColumn();
-        // ImGui::Text ("PC :%04X", bus.cpu.PC);
-        // ImGui::TableNextRow();
-
-        // ImGui::EndTable();
-
-        // ImGui::BeginGroup();
-        // ImGui::Spacing();
-        // ImGui::Spacing();
-        // ImGui::SameLine();
-        // ImGui::TextUnformatted (std::format ("{:08b}", bus.cpu.SR).c_str());
-        // ImGui::SameLine();
-        // ImGui::Spacing();
-        // ImGui::Spacing();
-        // ImGui::SameLine();
-        // ImGui::TextUnformatted("NV-BDIZC");
-        // ImGui::Spacing();
-        // ImGui::EndGroup();
-        // ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 255, 255));
-        // ImGui::End();
-    // };
+    };
 }
 
 
@@ -519,7 +532,6 @@ void UI::end ()
     ImGui::DestroyContext();
 }
 
-
 void UI::debug(bool& running, _6502::Bus& bus, [[maybe_unused]] std::chrono::milliseconds& delay, [[maybe_unused]] bool& pause)
 {
     window.poll(running);
@@ -528,14 +540,7 @@ void UI::debug(bool& running, _6502::Bus& bus, [[maybe_unused]] std::chrono::mil
     static Page_View<decltype(bus.ram.data()), word, byte, 256> zeroPage("Zero Page", bus.ram.data());
     static Page_View<decltype(bus.ram.data()), word, byte, 256> Page1("Page 1", bus.ram.data(), 0x0200);
     static Hex_Editor<decltype(bus.ram.data()), word, byte, RAM_SIZE> HexEditor (bus.ram.data());
-    static Registers_Window<word,byte,byte,byte,byte> registers 
-    {
-        {"PC", bus.cpu.PC},
-        {"AC", bus.cpu.AC},
-        {"X", bus.cpu.X},
-        {"Y", bus.cpu.Y},
-        {"SP", bus.cpu.SP}
-    };
+    static Registers_Window registers (bus.cpu);
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
