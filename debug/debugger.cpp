@@ -2,8 +2,10 @@
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include <chrono>
+#include <concepts>
 #include <format>
 #include <imgui.h>
+#include "cpu.hpp"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_internal.h"
@@ -14,6 +16,9 @@
 #include "bus.hpp"
 #include "IconsFontAwesome6.h"
 #include <span>
+#include <tuple>
+#include <type_traits>
+#include <utility>
 
 #define WINDOW_W 1920
 #define WINDOW_H 1080
@@ -396,6 +401,79 @@ namespace
             ImGui::End();
         }
     };
+
+    template <class...T>
+    struct Registers_Window
+    {
+        std::tuple < std::pair<const char*, T&>...> items;
+        Registers_Window(std::pair<const char*, T&>... args)
+        : items (std::forward_as_tuple(args...))
+        {}
+        void draw ()
+        {
+            ImGui::Begin("Registers");
+            if (ImGui::BeginTable("##table##Registers", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit))
+            {
+                std::apply ([&](auto&...args)
+                {
+                        ImGui::TableNextRow();
+                        ImGui::TableNextColumn();
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted ("Hex"); ImGui::TableNextColumn();
+                        ImGui::TextUnformatted ("Dec"); ImGui::TableNextColumn();
+                        ImGui::TextUnformatted ("Bin"); ImGui::TableNextColumn();
+                        (ImGui::TextUnformatted(std::format("{:}", args.first).c_str()),...);     ImGui::TableNextColumn();
+                        (ImGui::TextUnformatted(std::format("{:04X}", args.second).c_str()),...); ImGui::TableNextColumn();
+                        (ImGui::TextUnformatted(std::format("{:0d}", args.second).c_str()),...);  ImGui::TableNextColumn();
+                        (ImGui::TextUnformatted(std::format("{:016b}", args.second).c_str()),...);
+
+                }, items);
+                ImGui::EndTable();
+            }
+            ImGui::End();
+        }
+    };
+    // void registers (_6502::Bus& bus)
+    // {
+
+        // static Register_Text pc {"PC", bus.cpu.PC};
+        // static Register_Text ac {"AC", bus.cpu.AC};
+        // static Register_Text x {"X", bus.cpu.X};
+        // static Register_Text y {"Y", bus.cpu.Y};
+        // static Register_Text sp {"SP", bus.cpu.SP};
+
+
+        // ImGui::SetNextWindowSize({200,0});
+        // ImGui::Begin ("Registers", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+        // // ImGui::Text ("PC :%04X", bus.cpu.PC);
+        // // pc.draw();
+        // // ac.draw();
+        // // x.draw();
+        // // y.draw();
+        // // sp.draw();
+        // ImGui::BeginTable("Registers table", 3);
+        // ImGui::TableNextRow();
+        // ImGui::TableNextColumn();
+        // ImGui::Text ("PC :%04X", bus.cpu.PC);
+        // ImGui::TableNextRow();
+
+        // ImGui::EndTable();
+
+        // ImGui::BeginGroup();
+        // ImGui::Spacing();
+        // ImGui::Spacing();
+        // ImGui::SameLine();
+        // ImGui::TextUnformatted (std::format ("{:08b}", bus.cpu.SR).c_str());
+        // ImGui::SameLine();
+        // ImGui::Spacing();
+        // ImGui::Spacing();
+        // ImGui::SameLine();
+        // ImGui::TextUnformatted("NV-BDIZC");
+        // ImGui::Spacing();
+        // ImGui::EndGroup();
+        // ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 255, 255));
+        // ImGui::End();
+    // };
 }
 
 
@@ -421,7 +499,7 @@ void UI::init ()
 
     ImGui_ImplSDL2_InitForOpenGL(window.get_window(), window.get_glContext());
     ImGui_ImplOpenGL3_Init(window.get_glslVersion());
-    textSize = 20.0f;
+    textSize = 15.0f;
     font = io.Fonts->AddFontFromFileTTF("imgui/misc/fonts/ProggyClean.ttf", textSize, nullptr, io.Fonts->GetGlyphRangesDefault());
     float iconFontSize = textSize * 2.0f / 3.0f; // FontAwesome fonts need to have their sizes reduced by 2.0f/3.0f in order to align correctly
     // merge in icons from Font Awesome
@@ -431,7 +509,6 @@ void UI::init ()
     icons_config.PixelSnapH = true; 
     icons_config.GlyphMinAdvanceX = iconFontSize;
     io.Fonts->AddFontFromFileTTF( FONT_ICON_FILE_NAME_FAS, iconFontSize, &icons_config, icons_ranges );
-
 }
 
 void UI::end ()
@@ -451,6 +528,14 @@ void UI::debug(bool& running, _6502::Bus& bus, [[maybe_unused]] std::chrono::mil
     static Page_View<decltype(bus.ram.data()), word, byte, 256> zeroPage("Zero Page", bus.ram.data());
     static Page_View<decltype(bus.ram.data()), word, byte, 256> Page1("Page 1", bus.ram.data(), 0x0200);
     static Hex_Editor<decltype(bus.ram.data()), word, byte, RAM_SIZE> HexEditor (bus.ram.data());
+    static Registers_Window<word,byte,byte,byte,byte> registers 
+    {
+        {"PC", bus.cpu.PC},
+        {"AC", bus.cpu.AC},
+        {"X", bus.cpu.X},
+        {"Y", bus.cpu.Y},
+        {"SP", bus.cpu.SP}
+    };
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
@@ -498,30 +583,14 @@ void UI::debug(bool& running, _6502::Bus& bus, [[maybe_unused]] std::chrono::mil
     ImGui::SameLine();
     if (ImGui::Button(ICON_FA_FORWARD))
     {
+
     }
     ImGui::End();
+    registers.draw();
+
+
+
     
-    ImGui::SetNextWindowSize({200,0});
-    ImGui::Begin ("Registers", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-    ImGui::Text ("PC :%04X", bus.cpu.PC);   
-    ImGui::Text ("AC :%d", bus.cpu.AC);   
-    ImGui::Text ("X  :%d", bus.cpu.X);    
-    ImGui::Text ("Y  :%d", bus.cpu.Y);   
-    ImGui::Text ("SP :%d", bus.cpu.SP);
-    ImGui::BeginGroup();
-    ImGui::Spacing();
-    ImGui::Spacing();
-    ImGui::SameLine();
-    ImGui::TextUnformatted (std::format ("{:08b}", bus.cpu.SR).c_str());
-    ImGui::SameLine();
-    ImGui::Spacing();
-    ImGui::Spacing();
-    ImGui::SameLine();
-    ImGui::TextUnformatted("NV-BDIZC");
-    ImGui::Spacing();
-    ImGui::EndGroup();
-    ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 255, 255));
-    ImGui::End();
 
         // ImGui::SetNextWindowSize({0,0});
         // ImGui::Begin("memory window debugger", NULL, ImGuiWindowFlags_AlwaysAutoResize);
