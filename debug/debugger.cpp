@@ -1,7 +1,6 @@
 #include "debugger.hpp"
 #include <SDL.h>
 #include <SDL_opengl.h>
-#include <X11/X.h>
 #include <chrono>
 #include <format>
 #include <imgui.h>
@@ -14,6 +13,7 @@
 #include "common.hpp"
 #include "bus.hpp"
 #include "IconsFontAwesome6.h"
+#include <span>
 
 #define WINDOW_W 1920
 #define WINDOW_H 1080

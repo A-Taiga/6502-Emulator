@@ -70,7 +70,7 @@ namespace _6502
             byte SR;   /* status register [NV-BDIZC] (aka flags) */
             byte SP;   /* stack pointer */
             Bus& bus;
-            std::array <opcode,256> opcodes;
+            // std::array <opcode,256> opcodes;
             std::vector<std::pair<word, std::string>>  decompiledCode;
             instruction current_ins;
 

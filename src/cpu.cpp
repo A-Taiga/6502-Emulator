@@ -30,21 +30,20 @@ C	Carry
     29kb = free
 */
 
-[[maybe_unused]] static constexpr word C = 1 << 0;
-[[maybe_unused]] static constexpr word Z = 1 << 1;
-[[maybe_unused]] static constexpr word I = 1 << 2;
-[[maybe_unused]] static constexpr word D = 1 << 3;
-[[maybe_unused]] static constexpr word B = 1 << 4;
-[[maybe_unused]] static constexpr word V = 1 << 6;
-[[maybe_unused]] static constexpr word N = 1 << 7;
 
-
-_6502::CPU::CPU(Bus& bus)
-: bus {bus}
-, decompiledCode{}
+namespace
 {
-    opcodes = 
-    {{
+
+    [[maybe_unused]] const word C = 1 << 0;
+    [[maybe_unused]] const word Z = 1 << 1;
+    [[maybe_unused]] const word I = 1 << 2;
+    [[maybe_unused]] const word D = 1 << 3;
+    [[maybe_unused]] const word B = 1 << 4;
+    [[maybe_unused]] const word V = 1 << 6;
+    [[maybe_unused]] const word N = 1 << 7;
+
+    std::array <_6502::opcode,256> opcodes
+    ({
         {"BRK", &_6502::CPU::BRK, &_6502::CPU::IMP, 7}, {"ORA", &_6502::CPU::ORA, &_6502::CPU::IZX, 6}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"ORA", &_6502::CPU::ORA, &_6502::CPU::ZPG, 3}, {"ASL", &_6502::CPU::ASL, &_6502::CPU::ZPG, 5}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"PHP", &_6502::CPU::PHP, &_6502::CPU::IMP, 3}, {"ORA", &_6502::CPU::ORA, &_6502::CPU::IMM, 2}, {"ASL", &_6502::CPU::ASL, &_6502::CPU::IMP, 2}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"ORA", &_6502::CPU::ORA, &_6502::CPU::ABS, 4}, {"ASL", &_6502::CPU::ASL, &_6502::CPU::ABS, 6}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0},
         {"BPL", &_6502::CPU::BPL, &_6502::CPU::REL, 2}, {"ORA", &_6502::CPU::ORA, &_6502::CPU::IZY, 5}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"ORA", &_6502::CPU::ORA, &_6502::CPU::ZPX, 3}, {"ASL", &_6502::CPU::ASL, &_6502::CPU::ZPX, 7}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"CLC", &_6502::CPU::CLC, &_6502::CPU::IMP, 2}, {"ORA", &_6502::CPU::ORA, &_6502::CPU::ABY, 4}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"ORA", &_6502::CPU::ORA, &_6502::CPU::ABX, 4}, {"ASL", &_6502::CPU::ASL, &_6502::CPU::ABX, 7}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0},
         {"JSR", &_6502::CPU::JSR, &_6502::CPU::ABS, 6}, {"AND", &_6502::CPU::AND, &_6502::CPU::IZX, 6}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"BIT", &_6502::CPU::BIT, &_6502::CPU::ZPG, 3}, {"AND", &_6502::CPU::AND, &_6502::CPU::ZPG, 3}, {"ROL", &_6502::CPU::ROL, &_6502::CPU::ZPG, 5}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"PLP", &_6502::CPU::PLP, &_6502::CPU::IMP, 4}, {"AND", &_6502::CPU::AND, &_6502::CPU::IMM, 2}, {"ROL", &_6502::CPU::ROL, &_6502::CPU::IMP, 2}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"BIT", &_6502::CPU::BIT, &_6502::CPU::ABS, 4}, {"AND", &_6502::CPU::AND, &_6502::CPU::ABS, 4}, {"ROL", &_6502::CPU::ROL, &_6502::CPU::ABS, 6}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0},
@@ -61,7 +60,13 @@ _6502::CPU::CPU(Bus& bus)
         {"BNE", &_6502::CPU::BNE, &_6502::CPU::REL, 2}, {"CMP", &_6502::CPU::CMP, &_6502::CPU::IZY, 5}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"CMP", &_6502::CPU::CMP, &_6502::CPU::ZPX, 4}, {"DEC", &_6502::CPU::DEC, &_6502::CPU::ZPX, 6}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"CLD", &_6502::CPU::CLD, &_6502::CPU::IMP, 2}, {"CMP", &_6502::CPU::CMP, &_6502::CPU::ABY, 4}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"CMP", &_6502::CPU::CMP, &_6502::CPU::ABX, 4}, {"DEC", &_6502::CPU::DEC, &_6502::CPU::ABX, 7}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0},
         {"CPX", &_6502::CPU::CPX, &_6502::CPU::IMM, 2}, {"SBC", &_6502::CPU::SBC, &_6502::CPU::IZX, 6}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"CPX", &_6502::CPU::CPX, &_6502::CPU::ZPG, 3}, {"SBC", &_6502::CPU::SBC, &_6502::CPU::ZPG, 3}, {"INC", &_6502::CPU::INC, &_6502::CPU::ZPG, 5}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"INX", &_6502::CPU::INX, &_6502::CPU::IMP, 2}, {"SBC", &_6502::CPU::SPC, &_6502::CPU::IMM, 2}, {"NOP", &_6502::CPU::NOP, &_6502::CPU::IMP, 2}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"CPX", &_6502::CPU::CPX, &_6502::CPU::ABS, 4}, {"SBC", &_6502::CPU::SBC, &_6502::CPU::ABS, 4}, {"INC", &_6502::CPU::INC, &_6502::CPU::ABS, 6}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0},
         {"BEQ", &_6502::CPU::BEQ, &_6502::CPU::REL, 2}, {"SBC", &_6502::CPU::SBC, &_6502::CPU::IZY, 5}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"SBC", &_6502::CPU::SBC, &_6502::CPU::ZPX, 4}, {"INC", &_6502::CPU::INC, &_6502::CPU::ZPX, 6}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"SED", &_6502::CPU::SED, &_6502::CPU::IMP, 2}, {"SBC", &_6502::CPU::SBC, &_6502::CPU::ABY, 4}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}, {"SBC", &_6502::CPU::SBC, &_6502::CPU::ABX, 4}, {"INC", &_6502::CPU::INC, &_6502::CPU::ABX, 7}, {"???", &_6502::CPU::XXX, &_6502::CPU::IMM, 0}
-    }};
+    });
+}
+
+_6502::CPU::CPU(Bus& bus)
+: bus {bus}
+, decompiledCode {}
+{
     reset();
 }
 
@@ -78,6 +83,7 @@ void _6502::CPU::reset()
 void _6502::CPU::decompiler()
 {
     opcode* current;
+    
     for (word i = 0; i < 4096;)
     {
         word index = ROM_BEGIN + i;
@@ -137,7 +143,6 @@ void _6502::CPU::write (const word& address, const byte& data)
 {
     bus.cpu_write(address, data);
 }
-
 
 short _6502::CPU::IMP ()
 {
