@@ -35,13 +35,14 @@ C	Carry
 namespace
 {
 
-    [[maybe_unused]] const word C = 1 << 0;
-    [[maybe_unused]] const word Z = 1 << 1;
-    [[maybe_unused]] const word I = 1 << 2;
-    [[maybe_unused]] const word D = 1 << 3;
-    [[maybe_unused]] const word B = 1 << 4;
-    [[maybe_unused]] const word V = 1 << 6;
-    [[maybe_unused]] const word N = 1 << 7;
+
+    [[maybe_unused]] const byte C = 1 << 0;
+    [[maybe_unused]] const byte Z = 1 << 1;
+    [[maybe_unused]] const byte I = 1 << 2;
+    [[maybe_unused]] const byte D = 1 << 3;
+    [[maybe_unused]] const byte B = 1 << 4;
+    [[maybe_unused]] const byte V = 1 << 6;
+    [[maybe_unused]] const byte N = 1 << 7;
 
     using CPU = _6502::CPU;
     using x = _6502::Address_Type;
@@ -139,6 +140,14 @@ void _6502::CPU::write (const word& address, const byte& data)
     bus.cpu_write(address, data);
 }
 
+void _6502::CPU::set_flag(byte flag, bool condition)
+{
+    if (condition)
+        SR |= flag;
+    else
+        SR &= ~flag;
+}
+
 short _6502::CPU::IMP ()
 {
     current_ins.data = AC;
@@ -147,7 +156,8 @@ short _6502::CPU::IMP ()
 
 short _6502::CPU::IMM ()
 {
-    current_ins.data = PC++;
+    current_ins.data = PC;
+    PC++;
     return 0;
 }
 
@@ -277,17 +287,12 @@ void _6502::CPU::RTS(void){}
 void _6502::CPU::PLA(void){}
 void _6502::CPU::ADC(void)
 {
-    if (current_ins.opcode->mode != &_6502::CPU::IMP)
-        AC += read (current_ins.data);
 
-    word temp = AC + read (current_ins.data) + (SR &= C);
+    word temp = AC + read (current_ins.data) + (SR & C);
 
-    if (temp > 0xFF)
-        SR |= C;
-    if (temp == 0)
-        SR |= Z;
-    if (temp & 0x8000)
-        SR |= N;
+    set_flag(Z, (temp & 0xFF) == 0);
+    set_flag(C, temp > 255);
+    set_flag(N, temp & 0x80);
 
 }
 void _6502::CPU::ROR(void){}

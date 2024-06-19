@@ -138,15 +138,22 @@ namespace
     
         void draw ()
         {
+
             ImGui::Begin("Program", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse);
             draw_data();
-            ImGui::GetWindowSize();
+            auto s = ImGui::GetWindowSize();
             ImGui::End();
+
+            ImGui::Begin("debug");
+            ImGui::Text("%f %f", s.x, s.y);
+            ImGui::End();
+
         };
 
         void draw_data ()
         {
-            ImGui::BeginChild("programClipper", {0, ImGui::GetTextLineHeightWithSpacing() * 18});
+            auto s = ImGui::GetWindowSize();
+            ImGui::BeginChild("programClipper", {0, s.y - ImGui::GetTextLineHeightWithSpacing() * 2}, ImGuiChildFlags_Border);
             ImGuiListClipper clipper;
             clipper.Begin(buffer.size(), ImGui::GetTextLineHeightWithSpacing());
             while (clipper.Step())
@@ -406,7 +413,8 @@ namespace
         const byte &AC;
         const byte &X;
         const byte &Y;
-        const byte SP;
+        const byte &SP;
+        const byte &SR;
         
         Registers_Window (const _6502::CPU& cpu)
         : PC (cpu.PC)
@@ -414,6 +422,7 @@ namespace
         , X (cpu.X)
         , Y (cpu.Y)
         , SP (cpu.SP)
+        , SR (cpu.SR)
         {}
 
         void draw ()
@@ -472,10 +481,59 @@ namespace
                 ImGui::TableNextColumn(); 
                 ImGui::TextUnformatted(std::format ("{:{}} {:08b}", " ", 8, Y).c_str()); 
 
-
-
-            ImGui::EndTable();
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted("SP"); 
+                ImGui::TableNextColumn(); 
+                ImGui::TextUnformatted(std::format ("{:{}}{:02X}"," ",2,SP).c_str());
+                ImGui::TableNextColumn(); 
+                ImGui::TextUnformatted(std::format ("{:>5d}",SP).c_str()); 
+                ImGui::TableNextColumn(); 
+                ImGui::TextUnformatted(std::format ("{:{}} {:08b}", " ", 8, Y).c_str()); 
+                ImGui::EndTable();
             }
+
+            // [[maybe_unused]] const word C = 1 << 0;
+            // [[maybe_unused]] const word Z = 1 << 1;
+            // [[maybe_unused]] const word I = 1 << 2;
+            // [[maybe_unused]] const word D = 1 << 3;
+            // [[maybe_unused]] const word B = 1 << 4;
+            // [[maybe_unused]] const word V = 1 << 6;
+            // [[maybe_unused]] const word N = 1 << 7;
+
+            // [NV-BDIZC]	(8 bit)
+            // if (SR & 0b00000001)
+            // {
+
+            // }
+            // else if (SR & 0b00000010)
+            // {
+
+            // }
+            // else if (SR & 0b00000100)
+            std::bitset<8> flags(SR);
+            // ImVec4 set = {255,0,0,255};
+            // ImVec4 notSet = {255,255,255,255};
+            ImGui::TextUnformatted("NV-BDIZC");
+            ImGui::TextUnformatted("CZIDB-VN");
+
+            for (int i = 0; i < 8; i++)
+            {   
+                ImGui::Text("%d", static_cast<int>((SR >> i) & 0x1));
+                ImGui::SameLine(0,0);
+            }
+
+            // ImGui::TextColored(flags.test(0) ? set : notSet, "C"); ImGui::SameLine(0,0);
+            // ImGui::TextColored(flags.test(1) ? set : notSet, "Z"); ImGui::SameLine(0,0);
+            // ImGui::TextColored(flags.test(2) ? set : notSet, "I"); ImGui::SameLine(0,0);
+            // ImGui::TextColored(flags.test(3) ? set : notSet, "D"); ImGui::SameLine(0,0);
+            // ImGui::TextColored(flags.test(4) ? set : notSet, "B"); ImGui::SameLine(0,0);
+            // ImGui::TextColored(flags.test(5) ? set : notSet, "-"); ImGui::SameLine(0,0);
+            // ImGui::TextColored(flags.test(6) ? set : notSet, "V"); ImGui::SameLine(0,0);
+            // ImGui::TextColored(flags.test(7) ? set : notSet, "N"); ImGui::SameLine(0,0);
+
+
+            
             ImGui::End();
         }
     };
@@ -553,12 +611,10 @@ void UI::debug(bool& running, _6502::Bus& bus, [[maybe_unused]] std::chrono::mil
         ImGui::EndMainMenuBar();
     }
 
-
     zeroPage.draw();
     Page1.draw();
     programWindow.draw();
     HexEditor.draw();
-
 
     ImGuiWindowClass window_class;
     window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;

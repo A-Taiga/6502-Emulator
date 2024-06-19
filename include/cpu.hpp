@@ -90,9 +90,13 @@ namespace _6502
             // std::array <opcode,256> opcodes;
             std::vector<std::pair<word, std::string>>  decompiledCode;
             instruction current_ins;
-
             byte read (const word& address);
             void write (const word& address, const byte& data);
+            void set_flag(byte flag, bool condition);
+
+
+
+
             
             short IMP (); 
             short IMM (); 
