@@ -16,7 +16,7 @@
 #include "IconsFontAwesome6.h"
 #include <span>
 #include <utility>
-
+#include <bitset>
 #define WINDOW_W 1920
 #define WINDOW_H 1080
 
@@ -251,7 +251,7 @@ namespace
         Page_View (const char* name, CONTAINER_TYPE container, ADDRESS_TYPE offset = 0)
         : Memory_Window <CONTAINER_TYPE, ADDRESS_TYPE, DATA_TYPE, SIZE> {name, container, offset}
         {
-
+            this->settings.startingAddress = offset;
             this->sizes.rowWidth = 16;
             this->settings.isShowing = true;
             this->settings.windowFlags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
@@ -416,6 +416,14 @@ namespace
         const byte &SP;
         const byte &SR;
         
+        struct 
+        {
+            ImVec4 set = {0,255,0,255};
+            ImVec4 notSet = {255,255,255,0};
+        } colors;
+
+
+        
         Registers_Window (const _6502::CPU& cpu)
         : PC (cpu.PC)
         , AC (cpu.AC)
@@ -429,7 +437,7 @@ namespace
         {
 
             ImGui::Begin ("Registers");
-            if (ImGui::BeginTable("Regesters Table", 4, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders))
+            if (ImGui::BeginTable("Regesters Table", 4, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders | ImGuiTableFlags_NoHostExtendX))
             {
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
@@ -493,54 +501,67 @@ namespace
                 ImGui::EndTable();
             }
 
-            // [[maybe_unused]] const word C = 1 << 0;
-            // [[maybe_unused]] const word Z = 1 << 1;
-            // [[maybe_unused]] const word I = 1 << 2;
-            // [[maybe_unused]] const word D = 1 << 3;
-            // [[maybe_unused]] const word B = 1 << 4;
-            // [[maybe_unused]] const word V = 1 << 6;
-            // [[maybe_unused]] const word N = 1 << 7;
+            if (ImGui::BeginTable("Flags Table", 8, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders | ImGuiTableFlags_NoHostExtendX))
+            {
+                ImGui::TableNextColumn();
 
-            // [NV-BDIZC]	(8 bit)
-            // if (SR & 0b00000001)
-            // {
+                ImGui::Dummy(ImGui::CalcTextSize("C"));
+                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 0) ? colors.set : colors.notSet)));
+                ImGui::TableNextColumn();
+                ImGui::Dummy(ImGui::CalcTextSize("Z"));
+                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 1) ? colors.set : colors.notSet)));
+                ImGui::TableNextColumn();
+                ImGui::Dummy(ImGui::CalcTextSize("I"));
+                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 2) ? colors.set : colors.notSet)));
+                ImGui::TableNextColumn();
+                ImGui::Dummy(ImGui::CalcTextSize("D"));
+                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 3) ? colors.set : colors.notSet)));
+                ImGui::TableNextColumn();
+                ImGui::Dummy(ImGui::CalcTextSize("B"));
+                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 4) ? colors.set : colors.notSet)));
+                ImGui::TableNextColumn();
+                ImGui::Dummy(ImGui::CalcTextSize("-"));
+                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 5) ? colors.set : colors.notSet)));
+                ImGui::TableNextColumn();
+                ImGui::Dummy(ImGui::CalcTextSize("V"));
+                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 6) ? colors.set : colors.notSet)));
+                ImGui::TableNextColumn();
+                ImGui::Dummy(ImGui::CalcTextSize("N"));
+                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 7) ? colors.set : colors.notSet)));
 
-            // }
-            // else if (SR & 0b00000010)
-            // {
+                ImGui::TableNextRow();
 
-            // }
-            // else if (SR & 0b00000100)
-            std::bitset<8> flags(SR);
-            // ImVec4 set = {255,0,0,255};
-            // ImVec4 notSet = {255,255,255,255};
-            ImGui::TextUnformatted("NV-BDIZC");
-            ImGui::TextUnformatted("CZIDB-VN");
-
-            for (int i = 0; i < 8; i++)
-            {   
-                ImGui::Text("%d", static_cast<int>((SR >> i) & 0x1));
-                ImGui::SameLine(0,0);
+                ImGui::TableNextColumn();
+                ImGui::Text("C");
+                ImGui::TableNextColumn();
+                ImGui::Text("Z");
+                ImGui::TableNextColumn();
+                ImGui::Text("I");
+                ImGui::TableNextColumn();
+                ImGui::Text("D");
+                ImGui::TableNextColumn();
+                ImGui::Text("B");
+                ImGui::TableNextColumn();
+                ImGui::Text("-");
+                ImGui::TableNextColumn();
+                ImGui::Text("V");
+                ImGui::TableNextColumn();
+                ImGui::Text("N");
+        
+                ImGui::EndTable();
             }
 
-            // ImGui::TextColored(flags.test(0) ? set : notSet, "C"); ImGui::SameLine(0,0);
-            // ImGui::TextColored(flags.test(1) ? set : notSet, "Z"); ImGui::SameLine(0,0);
-            // ImGui::TextColored(flags.test(2) ? set : notSet, "I"); ImGui::SameLine(0,0);
-            // ImGui::TextColored(flags.test(3) ? set : notSet, "D"); ImGui::SameLine(0,0);
-            // ImGui::TextColored(flags.test(4) ? set : notSet, "B"); ImGui::SameLine(0,0);
-            // ImGui::TextColored(flags.test(5) ? set : notSet, "-"); ImGui::SameLine(0,0);
-            // ImGui::TextColored(flags.test(6) ? set : notSet, "V"); ImGui::SameLine(0,0);
-            // ImGui::TextColored(flags.test(7) ? set : notSet, "N"); ImGui::SameLine(0,0);
+            // ImGui::TextColored (SR & (1 << 0) ? colors.set : colors.notSet, "C"); ImGui::SameLine(0,0);
+            // ImGui::TextColored (SR & (1 << 1) ? colors.set : colors.notSet, "Z"); ImGui::SameLine(0,0);
+            // ImGui::TextColored (SR & (1 << 2) ? colors.set : colors.notSet, "I"); ImGui::SameLine(0,0);
+            // ImGui::TextColored (SR & (1 << 3) ? colors.set : colors.notSet, "D"); ImGui::SameLine(0,0);
+            // ImGui::TextColored (SR & (1 << 4) ? colors.set : colors.notSet, "B"); ImGui::SameLine(0,0);
+            // ImGui::TextColored (SR & (1 << 5) ? colors.set : colors.notSet, "-"); ImGui::SameLine(0,0);
+            // ImGui::TextColored (SR & (1 << 6) ? colors.set : colors.notSet, "V"); ImGui::SameLine(0,0);
+            // ImGui::TextColored (SR & (1 << 7) ? colors.set : colors.notSet, "N"); ImGui::SameLine(0,0);
 
-
-            
             ImGui::End();
         }
-    };
-
-    struct Flags_Window
-    {
-
     };
 }
 
@@ -555,8 +576,6 @@ void UI::init ()
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
     // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
     ImGui::StyleColorsDark();
-    // ImGui::StyleColorsLight();
-
     // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
     ImGuiStyle& style = ImGui::GetStyle();
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -567,7 +586,7 @@ void UI::init ()
 
     ImGui_ImplSDL2_InitForOpenGL(window.get_window(), window.get_glContext());
     ImGui_ImplOpenGL3_Init(window.get_glslVersion());
-    textSize = 15.0f;
+    textSize = 20.0f;
     font = io.Fonts->AddFontFromFileTTF("imgui/misc/fonts/ProggyClean.ttf", textSize, nullptr, io.Fonts->GetGlyphRangesDefault());
     float iconFontSize = textSize * 2.0f / 3.0f; // FontAwesome fonts need to have their sizes reduced by 2.0f/3.0f in order to align correctly
     // merge in icons from Font Awesome
