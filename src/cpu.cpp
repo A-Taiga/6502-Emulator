@@ -2,6 +2,7 @@
 #include "common.hpp"
 #include "bus.hpp"
 #include <cstdint>
+#include <cstring>
 #include <format>
 /*
 
@@ -44,6 +45,8 @@ namespace
     [[maybe_unused]] const byte V = 1 << 6;
     [[maybe_unused]] const byte N = 1 << 7;
 
+    
+
     using CPU = _6502::CPU;
     using x = _6502::Address_Type;
     std::array <_6502::opcode,256> opcodes
@@ -57,7 +60,7 @@ namespace
         {"RTS", &CPU::RTS, &CPU::IMP, x::IMP, 6}, {"ADC", &CPU::ADC, &CPU::IZX, x::IZX, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"ADC", &CPU::ADC, &CPU::ZPG, x::ZPG, 3}, {"ROR", &CPU::ROR, &CPU::ZPG, x::ZPG, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"PLA", &CPU::PLA, &CPU::IMP, x::IMP, 4}, {"ADC", &CPU::ADC, &CPU::IMM, x::IMM, 2}, {"ROR", &CPU::ROR, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"JMP", &CPU::JMP, &CPU::IND, x::IND, 5}, {"ADC", &CPU::ADC, &CPU::ABS, x::ABS, 4}, {"ROR", &CPU::ROR, &CPU::ABS, x::ABS, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
         {"BVS", &CPU::BVS, &CPU::REL, x::REL, 2}, {"ADC", &CPU::ADC, &CPU::IZY, x::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"ADC", &CPU::ADC, &CPU::ZPX, x::ZPX, 4}, {"ROR", &CPU::ROR, &CPU::ZPX, x::ZPX, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"SEI", &CPU::SEI, &CPU::IMP, x::IMP, 2}, {"ADC", &CPU::ADC, &CPU::ABY, x::ABY, 4}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"ADC", &CPU::ADC, &CPU::ABX, x::ABX, 4}, {"ROR", &CPU::ROR, &CPU::ABX, x::ABX, 7}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
         {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"STA", &CPU::STA, &CPU::IZX, x::IZX, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"STY", &CPU::STY, &CPU::ZPG, x::ZPG, 3}, {"STA", &CPU::STA, &CPU::ZPG, x::ZPG, 3}, {"STX", &CPU::STX, &CPU::ZPG, x::ZPG, 3}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"DEY", &CPU::DEY, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"TXA", &CPU::TXA, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"STY", &CPU::STY, &CPU::ABS, x::ABS, 4}, {"STA", &CPU::STA, &CPU::ABS, x::ABS, 4}, {"STX", &CPU::STX, &CPU::ABS, x::ABS, 4}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
-        {"BBC", &CPU::BBC, &CPU::REL, x::REL, 2}, {"STA", &CPU::STA, &CPU::IZY, x::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"STY", &CPU::STY, &CPU::ZPX, x::ZPX, 4}, {"STA", &CPU::STA, &CPU::ZPX, x::ZPX, 4}, {"STX", &CPU::STX, &CPU::ZPY, x::ZPY, 4}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"TYA", &CPU::TYA, &CPU::IMP, x::IMP, 2}, {"STA", &CPU::STA, &CPU::ABY, x::ABY, 5}, {"TXS", &CPU::TXS, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"STA", &CPU::STA, &CPU::ABX, x::ABX, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
+        {"BCC", &CPU::BCC, &CPU::REL, x::REL, 2}, {"STA", &CPU::STA, &CPU::IZY, x::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"STY", &CPU::STY, &CPU::ZPX, x::ZPX, 4}, {"STA", &CPU::STA, &CPU::ZPX, x::ZPX, 4}, {"STX", &CPU::STX, &CPU::ZPY, x::ZPY, 4}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"TYA", &CPU::TYA, &CPU::IMP, x::IMP, 2}, {"STA", &CPU::STA, &CPU::ABY, x::ABY, 5}, {"TXS", &CPU::TXS, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"STA", &CPU::STA, &CPU::ABX, x::ABX, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
         {"LDY", &CPU::LDY, &CPU::IMM, x::IMM, 2}, {"LDA", &CPU::LDA, &CPU::IZX, x::IZX, 6}, {"LDX", &CPU::LDX, &CPU::IMM, x::IMM, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"LDY", &CPU::LDY, &CPU::ZPG, x::ZPG, 3}, {"LDA", &CPU::LDA, &CPU::ZPG, x::ZPG, 3}, {"LDX", &CPU::LDX, &CPU::ZPG, x::ZPG, 3}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"TAY", &CPU::TAY, &CPU::IMP, x::IMP, 2}, {"LDA", &CPU::LDA, &CPU::IMM, x::IMM, 2}, {"TAX", &CPU::TAX, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"LDY", &CPU::LDY, &CPU::ABS, x::ABS, 4}, {"LDA", &CPU::LDA, &CPU::ABS, x::ABS, 4}, {"LDX", &CPU::LDX, &CPU::ABS, x::ABS, 4}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
         {"BCS", &CPU::BCS, &CPU::REL, x::REL, 2}, {"LDA", &CPU::LDA, &CPU::IZY, x::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"LDY", &CPU::LDY, &CPU::ZPX, x::ZPX, 4}, {"LDA", &CPU::LDA, &CPU::ZPX, x::ZPX, 4}, {"LDX", &CPU::LDX, &CPU::ZPY, x::ZPY, 4}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"CLV", &CPU::CLV, &CPU::IMP, x::IMP, 2}, {"LDA", &CPU::LDA, &CPU::ABY, x::ABY, 4}, {"TSX", &CPU::TSX, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"LDY", &CPU::LDY, &CPU::ABX, x::ABX, 4}, {"LDA", &CPU::LDA, &CPU::ABX, x::ABX, 4}, {"LDX", &CPU::LDX, &CPU::ABY, x::ABY, 4}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
         {"CPY", &CPU::CPY, &CPU::IMM, x::IMM, 2}, {"CMP", &CPU::CMP, &CPU::IZX, x::IZX, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"CPY", &CPU::CPY, &CPU::ZPG, x::ZPG, 3}, {"CMP", &CPU::CMP, &CPU::ZPG, x::ZPG, 3}, {"DEC", &CPU::DEC, &CPU::ZPG, x::ZPG, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"INY", &CPU::INY, &CPU::IMP, x::IMP, 2}, {"CMP", &CPU::CMP, &CPU::IMM, x::IMM, 2}, {"DEX", &CPU::DEX, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"CPY", &CPU::CPY, &CPU::ABS, x::ABS, 4}, {"CMP", &CPU::CMP, &CPU::ABS, x::ABS, 4}, {"DEC", &CPU::DEC, &CPU::ABS, x::ABS, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
@@ -94,29 +97,38 @@ void _6502::CPU::decompiler()
         current = &opcodes[read(i+ROM_BEGIN)];
         switch (current->addrType)
         {
-            case _6502::Address_Type::IMP: decompiledCode.emplace_back(index,std::format ("{:04X} {:02X} {:>9}", index, read(index), current->mnemonic));  i+=1; 
+            case _6502::Address_Type::IMP: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:>9}", index, read(index), current->mnemonic));  i+=1; 
             break;
-            case _6502::Address_Type::IMM: decompiledCode.emplace_back(index,std::format ("{:04X} {:02X} {:02X} {:>6} #${:02X}", index, read(index), read(index+1), current->mnemonic, read(index+1)));  i+=2; 
+            case _6502::Address_Type::IMM: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} #${:02X}", index, read(index), read(index+1), current->mnemonic, read(index+1)));  i+=2; 
             break;
-            case _6502::Address_Type::ABS: decompiledCode.emplace_back(index,std::format ("{:04X} {:02X} {:02X} {:02X} {:} ${:04X} ", index, read(index), read(index+1), read(index+2), current->mnemonic, (read(index+2) << 8) | read(index+1)));  i+=3; 
+            case _6502::Address_Type::ABS: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X} ", index, read(index), read(index+1), read(index+2), current->mnemonic, (read(index+2) << 8) | read(index+1)));  i+=3; 
             break;
-            case _6502::Address_Type::ZPG: decompiledCode.emplace_back(index,std::format ("{:04X} {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current->mnemonic, read(index+1)));  i+=2; 
+            case _6502::Address_Type::ZPG: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current->mnemonic, read(index+1)));  i+=2; 
             break;
-            case _6502::Address_Type::ABX: decompiledCode.emplace_back(index,std::format ("{:04X} {:02X} {:02X} {:02X} {:} ${:02X}, X:${:02X}", index, read(index), read(index+1), read(index+2), current->mnemonic, read(index+1), read(index+2)));  i+=3; 
+            case _6502::Address_Type::ABX: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X}, X", index, read(index), read(index+1), read(index+2), current->mnemonic, (read(index+2) << 8) | read(index+1)));  i+=3; 
             break;
-            case _6502::Address_Type::ABY: decompiledCode.emplace_back(index,std::format ("{:04X} {:02X} {:02X} {:02X} {:}", index, read(index), read(index+1), read(index+2), current->mnemonic));  i+=3; 
+            case _6502::Address_Type::ABY: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:}", index, read(index), read(index+1), read(index+2), current->mnemonic));  i+=3; 
             break;
-            case _6502::Address_Type::ZPX: decompiledCode.emplace_back(index,std::format ("{:04X} {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current->mnemonic, read(index+1)));  i+=2; 
+            case _6502::Address_Type::ZPX: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:>6} ${:02X}", index, read(index+1), current->mnemonic, read(index+1)));  i+=2; 
             break;
-            case _6502::Address_Type::ZPY: decompiledCode.emplace_back(index,std::format ("{:04X} {:02X} {:02X} {:>6}", index, read(index), read(index+1), current->mnemonic));  i+=2; 
+            case _6502::Address_Type::ZPY: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6}", index, read(index), read(index+1), current->mnemonic));  i+=2; 
             break;
-            case _6502::Address_Type::IND: decompiledCode.emplace_back(index,std::format ("{:04X} {:02X} {:02X} {:02X} {:}", index, read(index), read(index+1), read(index+2), current->mnemonic));  i+=3; 
+            case _6502::Address_Type::IND: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:}", index, read(index), read(index+1), read(index+2), current->mnemonic));  i+=3; 
             break;
-            case _6502::Address_Type::IZX: decompiledCode.emplace_back(index,std::format ("{:04X} {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current->mnemonic, read(index+1)));  i+=2; 
+            case _6502::Address_Type::IZX: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current->mnemonic, read(index+1)));  i+=2; 
             break;
-            case _6502::Address_Type::IZY: decompiledCode.emplace_back(index,std::format ("{:04X} {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current->mnemonic, read(index+1)));  i+=2; 
+            case _6502::Address_Type::IZY: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current->mnemonic, read(index+1)));  i+=2; 
             break;
-            case _6502::Address_Type::REL: decompiledCode.emplace_back(index,std::format ("{:04X} {:02X} {:02X} {:>6}", index, read(index), read(index+1), current->mnemonic)); i+=2; 
+            case _6502::Address_Type::REL:
+
+                if (std::strcmp(current->mnemonic, "CPX"))
+                {
+                    word result = read (index+1);
+                    if (result & 0x80) result |= 0xFF00;
+                    word addr = index+2 + result;
+                    decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:04X}", index, read(index), read(index+1), current->mnemonic, addr)); i+=2;
+                }
+
             break;
         }
     }
@@ -125,17 +137,16 @@ void _6502::CPU::decompiler()
 void _6502::CPU::run()
 {
     current_ins.opcode = &opcodes[read(PC++)];
-    current_ins.cycles += current_ins.opcode->cycles;
     current_ins.cycles += (this->*current_ins.opcode->mode)();
     (this->*current_ins.opcode->op)();
 }
 
-byte _6502::CPU::read(const word& address)
+byte _6502::CPU::read(word address)
 {
     return bus.cpu_read(address);
 }
 
-void _6502::CPU::write (const word& address, const byte& data)
+void _6502::CPU::write (word address, byte data)
 {
     bus.cpu_write(address, data);
 }
@@ -156,8 +167,7 @@ short _6502::CPU::IMP ()
 
 short _6502::CPU::IMM ()
 {
-    current_ins.data = PC;
-    PC++;
+    current_ins.data = PC++;
     return 0;
 }
 
@@ -240,116 +250,209 @@ short _6502::CPU::IZY ()
 
 short _6502::CPU::REL ()
 {
+    current_ins.data = read (PC++);
+    if (current_ins.data & 0x80)
+        current_ins.data |= 0xFF00;
     return 0;
 }
 
 void _6502::CPU::XXX(void){}
+/* force break */
 void _6502::CPU::BRK(void){}
+/* OR memory with accumulator */
 void _6502::CPU::ORA(void){}
+/* shift left one bit (memory or accumulator) */
 void _6502::CPU::ASL(void){}
+/* push processor status on stack */
 void _6502::CPU::PHP(void){}
+/* branch on result plus */
 void _6502::CPU::BPL(void){}
+/* clear carry flag */
 void _6502::CPU::CLC(void)
 {
     SR &= ~C;
 }
+/* jump to new location saving return address */
 void _6502::CPU::JSR(void){}
+/* AND memory with accumulator */
 void _6502::CPU::AND(void)
 {
 
 }
+/* test bits in memory with accumulator */
 void _6502::CPU::BIT(void){}
+/* rotate one bit left (memory or accumulator) */
 void _6502::CPU::ROL(void){}
+/* pull processor status from stack */
 void _6502::CPU::PLP(void){}
+/* branch on result minus */
 void _6502::CPU::BMI(void){}
+/* set carry flag */
 void _6502::CPU::SEC(void){}
+/* return from interrupt */
 void _6502::CPU::RTI(void){}
+/* XOR memory with accumulator */
 void _6502::CPU::EOR(void)
 {
-    AC = AC ^ read(current_ins.data);
-    if (AC == 0)
-        SR |= Z;
-    if (AC & 0x80)
-        SR |= N;
+    word result = AC ^ read(current_ins.data);
+    set_flag (N, result & 0x0080);
+    set_flag (Z, (result & 0x00FF) == 0x00);
+    AC = result;
 }
+/* shift one bit right (memory or accumulator) */
 void _6502::CPU::LSR(void){}
+/* push accumulator on stack */
 void _6502::CPU::PHA(void){}
+/* jump to new location */
 void _6502::CPU::JMP(void)
 {
     PC = current_ins.data;
 }
+/* branch on overflow clear */
 void _6502::CPU::BVC(void){}
+/* clear interrupt disable bit */
 void _6502::CPU::CLI(void)
 {
     SR &= ~I;
 }
+/* return from subroutine */
 void _6502::CPU::RTS(void){}
+/* pull accumulator from stack */
 void _6502::CPU::PLA(void){}
+/* 
+    add memory to accumulator with carry
+    https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+    !((M^N) & 0x80) && ((M^result) & 0x80)
+*/
 void _6502::CPU::ADC(void)
 {
-
-    word temp = AC + read (current_ins.data) + (SR & C);
-
-    set_flag(Z, (temp & 0xFF) == 0);
-    set_flag(C, temp > 255);
-    set_flag(N, temp & 0x80);
-
+    word result = AC + read (current_ins.data) + (SR & C);
+    set_flag (N, result & 0x80);
+    set_flag (Z, (result & 0xFF) == 0);
+    set_flag (C, result > 0x00FF);
+    set_flag (V, (AC ^ result) & (read(current_ins.data) ^ result) & 0x80);
+    AC = result & 0x00FF;
 }
+/* rotate one bit right (memory or accumulator) */
 void _6502::CPU::ROR(void){}
+/* branch on overflow set */
 void _6502::CPU::BVS(void){}
+/* set interrupt disable status */
 void _6502::CPU::SEI(void){}
+/* store accumulator in memory */
 void _6502::CPU::STA(void)
 {
     write (current_ins.data, AC);
 }
+/* store index y in memory */
 void _6502::CPU::STY(void){}
+/* store index x in memory */
 void _6502::CPU::STX(void){}
+/* decrment index y by 1 */
 void _6502::CPU::DEY(void){}
+/* transfer index x to accumulator */
 void _6502::CPU::TXA(void){}
 void _6502::CPU::STZ(void){}
-void _6502::CPU::BBC(void){}
+/* branch on carry clear */
+void _6502::CPU::BCC(void){}
+/* transfer index y to accumulator */
 void _6502::CPU::TYA(void){}
+/* transfer index x to stack register */
 void _6502::CPU::TXS(void){}
+/* load index y with memory */
 void _6502::CPU::LDY(void){}
+/* load accumulator with memory */
 void _6502::CPU::LDA(void)
 {
-    AC = read (current_ins.data);
+    word result = read (current_ins.data);
+    set_flag(N, result & 0x0080);
+    set_flag(Z, result == 0x0000);
+    AC = result;
 }
-void _6502::CPU::LDX(void){}
+/* load index x with memory */
+void _6502::CPU::LDX(void) 
+{
+    word result = read(current_ins.data);
+    set_flag(N, result & 0x80);
+    set_flag(Z, result == 0x00);
+    X = result;
+}
+/* transfer accumulator to index y */
 void _6502::CPU::TAY(void){}
+/* transfer accumulator to index x */
 void _6502::CPU::TAX(void){}
+/* branch on carry set */
 void _6502::CPU::BCS(void){}
+/* clear overflow flag */
 void _6502::CPU::CLV(void)
 {
     SR &= ~V;
 }
+/* transfer stack pointer to index x */
 void _6502::CPU::TSX(void){}
+/* compare memory with index y */
 void _6502::CPU::CPY(void){}
-void _6502::CPU::CMP(void){}
+/* compare memory with accumulator */
+void _6502::CPU::CMP(void)
+{
+
+}
+/* decrment memory by one */
 void _6502::CPU::DEC(void){}
+/* increment index y by 1*/
 void _6502::CPU::INY(void){}
-void _6502::CPU::DEX(void){}
-void _6502::CPU::BNE(void){}
+/* decrment index x by 1*/
+void _6502::CPU::DEX(void)
+{
+    X-=1;
+    set_flag(N, X & 0x80);
+    set_flag(Z, X == 0x00);
+}
+/* branch on result not zero */
+void _6502::CPU::BNE(void) 
+{
+    if ((SR & Z) == 0)
+    {
+        current_ins.cycles++;
+        word addr = PC + current_ins.data;
+        if ((addr & 0xFF00) != (PC & 0xFF00)) // checking for page boundry cross
+            current_ins.cycles++;
+        PC = addr;
+    }
+}
+/* clear decimal mode */
 void _6502::CPU::CLD(void)
 {
     SR &= ~D;
 }
-void _6502::CPU::CPX(void){}
+/* compare memory with index x*/
+void _6502::CPU::CPX(void)
+{
+    word fetched = read(current_ins.data);
+    word result = (X - fetched);
+    set_flag(C, X >= fetched);
+    set_flag(N, result & 0x0080);
+    set_flag(Z, (result & 0x00FF) == 0x0000);
+
+}
+/* subtract memory from accumulator with borrow */
 void _6502::CPU::SBC(void){}
+/* increment memory by one */
 void _6502::CPU::INC(void){}
+/* increment index x by 1 */
 void _6502::CPU::INX(void)
 {
     X+=1;
+    set_flag(N, X & 0x80);
+    set_flag(Z, X == 0x00);
 }
+/* */
 void _6502::CPU::SPC(void){}
-void _6502::CPU::NOP(void){}
+/* no operation */
+void _6502::CPU::NOP(void)
+{
+}
+/* branch on equal */
 void _6502::CPU::BEQ(void){}
-void _6502::CPU::SED(void)
-{
-
-}
-
-const word& _6502::CPU::get_pc ()
-{
-    return PC;
-}
+/* set decimal flag */
+void _6502::CPU::SED(void){}
