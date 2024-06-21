@@ -3,6 +3,7 @@
 #include <chrono>
 #include <format>
 #include <cstring>
+#include "cpu.hpp"
 #include "debugger.hpp"
 #include <thread>
 
@@ -26,37 +27,36 @@ namespace
     }
 }
 
-_6502::Emulator::Emulator(const char* filePath, bool& _running)
+_6502::Emulator::Emulator(const char* filePath)
 : bus ()
-, running(_running)
 {
     load_rom (filePath, bus.ram.data(), ROM_BEGIN, ROM_END);
 }
 
 void _6502::Emulator::run()
 {
-    std::chrono::milliseconds delay(100);
-    bool running = true;
-    bool pause = true;
+
+    using namespace std::chrono_literals;
+    UI::debug_v debugData = {bus, 100ms, true, true, false};
     UI::init();
     bus.cpu.decompiler();
 
     static std::thread t ([&](){
-        while (running)
+        while (debugData.running)
         {
-            if (!pause)
+            if (!debugData.pause)
             {
                 bus.cpu.run();
-                std::this_thread::sleep_for(delay);
+                std::this_thread::sleep_for(debugData.delay);
             }
         }
     });
     
-    while (running)
+    while (debugData.running)
     {
-        UI::debug(running, bus, delay, pause);
+        UI::debug(debugData);
     }
-
     t.join();
     UI::end();
 }
+

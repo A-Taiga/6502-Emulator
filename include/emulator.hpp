@@ -12,10 +12,9 @@ namespace _6502
     {
         private:
             Bus bus;
-            bool& running;
         public:
             void run();
-            Emulator (const char* filePath, bool& _running);
+            Emulator (const char* filePath);
     };
 }
 

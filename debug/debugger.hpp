@@ -28,14 +28,19 @@ struct OS_Window
         std::uint32_t   get_windowID ();
 };
 
-namespace _6502
-{
-class Bus;
-}
+namespace _6502 {class Bus;}
 namespace UI
 {
+    struct debug_v
+    {
+        _6502::Bus& bus;
+        std::chrono::milliseconds delay;
+        bool running;
+        bool pause;
+        bool step;
+    };
     void init ();
-    void debug (bool& running, _6502::Bus& bus, std::chrono::milliseconds& delay, bool& pause);
+    void debug (debug_v& values);
     void end ();
 }
 

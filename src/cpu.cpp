@@ -1,7 +1,6 @@
 #include "cpu.hpp"
 #include "common.hpp"
 #include "bus.hpp"
-#include <cstdint>
 #include <cstring>
 #include <format>
 /*
@@ -128,7 +127,6 @@ void _6502::CPU::decompiler()
                     word addr = index+2 + result;
                     decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:04X}", index, read(index), read(index+1), current->mnemonic, addr)); i+=2;
                 }
-
             break;
         }
     }
@@ -257,10 +255,17 @@ short _6502::CPU::REL ()
 }
 
 void _6502::CPU::XXX(void){}
-/* force break */
+/* BRK force break */
 void _6502::CPU::BRK(void){}
-/* OR memory with accumulator */
-void _6502::CPU::ORA(void){}
+/* ORA OR memory with accumulator */
+void _6502::CPU::ORA(void)
+{
+    word data = static_cast<word>(read (current_ins.data));
+    word result = AC | data;
+    set_flag(N, result & 0x0080);
+    set_flag(Z, (result & 0x00FF) == 0);
+    AC = result;
+}
 /* shift left one bit (memory or accumulator) */
 void _6502::CPU::ASL(void){}
 /* push processor status on stack */
@@ -294,10 +299,7 @@ void _6502::CPU::RTI(void){}
 /* XOR memory with accumulator */
 void _6502::CPU::EOR(void)
 {
-    word result = AC ^ read(current_ins.data);
-    set_flag (N, result & 0x0080);
-    set_flag (Z, (result & 0x00FF) == 0x00);
-    AC = result;
+
 }
 /* shift one bit right (memory or accumulator) */
 void _6502::CPU::LSR(void){}
@@ -325,12 +327,13 @@ void _6502::CPU::PLA(void){}
     !((M^N) & 0x80) && ((M^result) & 0x80)
 */
 void _6502::CPU::ADC(void)
-{
-    word result = AC + read (current_ins.data) + (SR & C);
-    set_flag (N, result & 0x80);
+{   
+    word data =  static_cast<word>(read(current_ins.data));
+    word result = AC + data + (SR & C);
+    set_flag (N, result & 0x0080);
     set_flag (Z, (result & 0xFF) == 0);
     set_flag (C, result > 0x00FF);
-    set_flag (V, (AC ^ result) & (read(current_ins.data) ^ result) & 0x80);
+    set_flag (V, (AC ^ result) & (data ^ result) & 0x80);
     AC = result & 0x00FF;
 }
 /* rotate one bit right (memory or accumulator) */

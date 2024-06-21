@@ -2,6 +2,7 @@
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include <chrono>
+#include <cstdio>
 #include <format>
 #include <imgui.h>
 #include "cpu.hpp"
@@ -16,7 +17,7 @@
 #include "IconsFontAwesome6.h"
 #include <span>
 #include <utility>
-#include <bitset>
+
 #define WINDOW_W 1920
 #define WINDOW_H 1080
 
@@ -199,7 +200,6 @@ namespace
             int   rowWidth;
         } sizes;
 
-
         struct
         {
             bool showBoundingRects;
@@ -211,7 +211,7 @@ namespace
             settings.windowName = name;
             sizes.addressPadding = sizeof(ADDRESS_TYPE) * 8 / 4;
         }
-
+        
         void calc ()
         {
             sizes.glyphWidth       = ImGui::CalcTextSize("F").x;
@@ -375,7 +375,6 @@ namespace
                     ImGui::SameLine(0, this->sizes.glyphWidth*2);
                     for (ADDRESS_TYPE i = 0; i < this->sizes.rowWidth; i++)
                     {
-    
                         char value = this->data[row * this->sizes.rowWidth + i];
                         if (value > 32)
                             ImGui::Text ("%c", value);
@@ -405,7 +404,6 @@ namespace
             ImGui::End();
         }
     };
-
 
     struct Registers_Window
     {
@@ -550,17 +548,19 @@ namespace
         
                 ImGui::EndTable();
             }
-
-            // ImGui::TextColored (SR & (1 << 0) ? colors.set : colors.notSet, "C"); ImGui::SameLine(0,0);
-            // ImGui::TextColored (SR & (1 << 1) ? colors.set : colors.notSet, "Z"); ImGui::SameLine(0,0);
-            // ImGui::TextColored (SR & (1 << 2) ? colors.set : colors.notSet, "I"); ImGui::SameLine(0,0);
-            // ImGui::TextColored (SR & (1 << 3) ? colors.set : colors.notSet, "D"); ImGui::SameLine(0,0);
-            // ImGui::TextColored (SR & (1 << 4) ? colors.set : colors.notSet, "B"); ImGui::SameLine(0,0);
-            // ImGui::TextColored (SR & (1 << 5) ? colors.set : colors.notSet, "-"); ImGui::SameLine(0,0);
-            // ImGui::TextColored (SR & (1 << 6) ? colors.set : colors.notSet, "V"); ImGui::SameLine(0,0);
-            // ImGui::TextColored (SR & (1 << 7) ? colors.set : colors.notSet, "N"); ImGui::SameLine(0,0);
-
             ImGui::End();
+        }
+    };
+
+    struct Trace_window
+    {
+        std::vector <std::string> history;
+        Trace_window ()
+        {}
+
+        void push_instruction ()
+        {
+
         }
     };
 }
@@ -606,15 +606,16 @@ void UI::end ()
     ImGui::DestroyContext();
 }
 
-void UI::debug(bool& running, _6502::Bus& bus, [[maybe_unused]] std::chrono::milliseconds& delay, [[maybe_unused]] bool& pause)
+void UI::debug(debug_v& values)
 {
-    window.poll(running);
+
+    window.poll(values.running);
     static ImGuiIO& io = ImGui::GetIO(); (void)io;
-    static Program_Window<word> programWindow {bus.cpu.decompiledCode, bus.cpu.PC};
-    static Page_View<decltype(bus.ram.data()), word, byte, 256> zeroPage("Zero Page", bus.ram.data());
-    static Page_View<decltype(bus.ram.data()), word, byte, 256> Page1("Page 1", bus.ram.data(), 0x0200);
-    static Hex_Editor<decltype(bus.ram.data()), word, byte, RAM_SIZE> HexEditor (bus.ram.data());
-    static Registers_Window registers (bus.cpu);
+    static Program_Window<word> programWindow {values.bus.cpu.decompiledCode, values.bus.cpu.PC};
+    static Page_View<decltype(values.bus.ram.data()), word, byte, 256> zeroPage("Zero Page", values.bus.ram.data());
+    static Page_View<decltype(values.bus.ram.data()), word, byte, 256> Page1("Page 1", values.bus.ram.data(), 0x0200);
+    static Hex_Editor<decltype(values.bus.ram.data()), word, byte, RAM_SIZE> HexEditor (values.bus.ram.data());
+    static Registers_Window registers (values.bus.cpu);
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
@@ -639,31 +640,35 @@ void UI::debug(bool& running, _6502::Bus& bus, [[maybe_unused]] std::chrono::mil
     window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
     ImGui::SetNextWindowClass(&window_class);
     ImGui::SetNextWindowSize({static_cast<float>(window.width),0});
-    ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar);
+    ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
     static int v = 100;
     if (ImGui::DragInt("##milliseconds delay", &v, 1, 1, 1000, "%d", ImGuiSliderFlags_AlwaysClamp))
     {
-        delay = std::chrono::milliseconds(v);
+        values.delay = std::chrono::milliseconds(v);
     }
     ImGui::SameLine();
-    if (ImGui::Button((pause ? ICON_FA_PLAY: ICON_FA_PAUSE)))
+    if (ImGui::Button((values.pause ? ICON_FA_PLAY: ICON_FA_PAUSE)))
     {
-        if (pause)
-            pause = false;
+        if (values.pause)
+        {
+            values.pause = false;
+            values.step = false;
+        }
         else
-            pause = true;
+            values.pause = true;
+
     }
     ImGui::SameLine();
-    if (ImGui::Button(ICON_FA_FORWARD))
+    if (ImGui::Button(ICON_FA_ARROW_RIGHT))
     {
-
+        values.step = true;
+        if (!values.pause)
+            values.pause = true;
+        values.bus.cpu.run();
     }
     ImGui::End();
     registers.draw();
 
-
-
-    
 
         // ImGui::SetNextWindowSize({0,0});
         // ImGui::Begin("memory window debugger", NULL, ImGuiWindowFlags_AlwaysAutoResize);

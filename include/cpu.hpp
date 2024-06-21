@@ -93,10 +93,6 @@ namespace _6502
             byte read (word address);
             void write (word address, byte data);
             void set_flag(byte flag, bool condition);
-
-
-
-
             
             short IMP (); 
             short IMM (); 
