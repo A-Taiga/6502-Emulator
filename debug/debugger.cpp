@@ -181,6 +181,7 @@ namespace
             bool isShowing;
             ADDRESS_TYPE startingAddress;
             ImGuiWindowFlags windowFlags;
+
         } settings;
 
         struct  
@@ -198,6 +199,7 @@ namespace
             float lineHeight;
             int   addressPadding;
             int   rowWidth;
+
         } sizes;
 
         struct
@@ -298,7 +300,7 @@ namespace
     };
 
     template <class CONTAINER_TYPE, class ADDRESS_TYPE, class DATA_TYPE, std::size_t SIZE>
-    struct Hex_Editor : Memory_Window<CONTAINER_TYPE, ADDRESS_TYPE, DATA_TYPE, SIZE>
+    struct Hex_Editor : Memory_Window <CONTAINER_TYPE, ADDRESS_TYPE, DATA_TYPE, SIZE>
     {
 
         char lookupBuffer [array_size<ADDRESS_TYPE>()];
@@ -312,6 +314,8 @@ namespace
             ImVec4 scrollbar_grabberHover    {0.6f, 0.6f, 0.6f, 1.0f};
             ImVec4 scrollbar_grabberActive   {0.8f, 0.0f, 0.0f, 1.0f};
 
+            // ImVec4 ImGui::Get
+
         } colors;
 
         Hex_Editor (CONTAINER_TYPE container, ADDRESS_TYPE offset = 0)
@@ -323,7 +327,6 @@ namespace
             this->settings.windowFlags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
             lookupBuffer[0] = '0';
             scrollY = 0.0f;
-
         }
 
         void draw ()
@@ -358,19 +361,33 @@ namespace
                         ImGui::GetWindowDrawList()->AddRect({pos.x + this->sizes.addressTextWidth, pos.y}, {pos.x + this->sizes.addressTextWidth + this->sizes.dataColWidth, pos.y + this->sizes.lineHeight}, IM_COL32(0,255,0,255));
                         ImGui::GetWindowDrawList()->AddRect({pos.x + this->sizes.addressTextWidth + this->sizes.dataColWidth + this->sizes.glyphWidth, pos.y}, {pos.x + this->sizes.addressTextWidth + this->sizes.dataColWidth + this->sizes.asciiColWidth + this->sizes.glyphWidth, pos.y + this->sizes.lineHeight}, IM_COL32(0,255,255,255));
                     }
-                
                     ImGui::Text ("%.*X:", this->sizes.addressPadding, row * this->sizes.rowWidth);
                     ImGui::SameLine(this->sizes.addressTextWidth);
-                    for (ADDRESS_TYPE i = 0; i < this->sizes.rowWidth; i++)
+                    for (int i = 0; i < this->sizes.rowWidth; i++)
                     {
-                        DATA_TYPE value = this->data[row * this->sizes.rowWidth + i];
+                        ImGui::PushID(row * this->sizes.rowWidth + i);
+                        [[maybe_unused]] DATA_TYPE value = this->data[row * this->sizes.rowWidth + i];
                         if (i != 0 && i % 8 == 0)
                         {
                             ImGui::SameLine(0, 0);
                             ImGui::Dummy({this->sizes.glyphWidth, ImGui::GetTextLineHeight()});
                         }
                         ImGui::SameLine(0, this->sizes.glyphWidth);
-                        ImGui::TextColored (value == 0 ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled) : ImVec4(255,255,255,255),"%02X", value);
+                        
+                        // ImGui::TextColored (value == 0 ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled) : ImVec4(255,255,255,255),"%02X", value);
+                        char buffer[3];
+                        snprintf(buffer, sizeof(buffer), "%02X", value);
+                        ImGui::SetNextItemWidth(this->sizes.byteTextWidth);
+                        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0,0});
+                        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0,0,0,0)); // Dark gray background
+                        if(ImGui::InputText("##input", buffer, IM_ARRAYSIZE(buffer), ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_AutoSelectAll))
+                        {
+                            DATA_TYPE value = std::strtol(buffer, NULL, 16);
+                            this->data[row * this->sizes.rowWidth + i] = value;
+                        }
+                        ImGui::PopStyleColor();
+                        ImGui::PopStyleVar();
+                        ImGui::PopID();
                     }
                     ImGui::SameLine(0, this->sizes.glyphWidth*2);
                     for (ADDRESS_TYPE i = 0; i < this->sizes.rowWidth; i++)
@@ -389,22 +406,22 @@ namespace
             ImGui::EndChild();
             ImGui::PopStyleColor(4); // Pop the colors we pushed
             ImGui::PopStyleVar(2); // Pop the style variables we pushed
-            ImGui::Separator();
-            ImGui::SetNextWindowSize({100,0});
-            ImGui::SetNextItemWidth(150);
-            ImGui::DragInt("###column dragger", &(this->sizes).rowWidth, 0.1f, 8, 32, "%d columns");
-            if (this->sizes.rowWidth < 0) this->sizes.rowWidth = 1;
-            if (this->sizes.rowWidth > 32) this->sizes.rowWidth = 32;
-            ImGui::SameLine();
+            /* dragger for width not needed */
+                // ImGui::Separator();
+                // ImGui::SetNextItemWidth(150);
+                // ImGui::DragInt("###column dragger", &(this->sizes).rowWidth, 0.1f, 8, 32, "%d columns");
+                // if (this->sizes.rowWidth < 0) this->sizes.rowWidth = 1;
+                // if (this->sizes.rowWidth > 32) this->sizes.rowWidth = 32;
+                // ImGui::SameLine();
             ImGui::SetNextItemWidth(150);
             if (ImGui::InputText("##address lookup", lookupBuffer, array_size<ADDRESS_TYPE>() + 1, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue))
             {
                 lookup = true;
             }
+            ImGui::SameLine();
             ImGui::End();
         }
     };
-
     struct Registers_Window
     {
         const word &PC;
@@ -612,9 +629,9 @@ void UI::debug(debug_v& values)
     window.poll(values.running);
     static ImGuiIO& io = ImGui::GetIO(); (void)io;
     static Program_Window<word> programWindow {values.bus.cpu.decompiledCode, values.bus.cpu.PC};
-    static Page_View<decltype(values.bus.ram.data()), word, byte, 256> zeroPage("Zero Page", values.bus.ram.data());
-    static Page_View<decltype(values.bus.ram.data()), word, byte, 256> Page1("Page 1", values.bus.ram.data(), 0x0200);
-    static Hex_Editor<decltype(values.bus.ram.data()), word, byte, RAM_SIZE> HexEditor (values.bus.ram.data());
+    static Page_View<decltype(values.bus.ram.data()), word, byte, 256>          zeroPage("Zero Page", values.bus.ram.data());
+    static Page_View<decltype(values.bus.ram.data()), word, byte, 256>          Page1("Page 1", values.bus.ram.data(), 0x0200);
+    static Hex_Editor<decltype(values.bus.ram.data()), word, byte, RAM_SIZE>    HexEditor (values.bus.ram.data());
     static Registers_Window registers (values.bus.cpu);
 
     ImGui_ImplOpenGL3_NewFrame();
