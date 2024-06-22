@@ -168,7 +168,6 @@ namespace
         using Memory_Span = std::span <DATA_TYPE, SIZE>;
         Memory_Span data;
 
-        
         struct
         {
             const char* windowName;
@@ -362,11 +361,11 @@ namespace
                     ImVec2 pos = ImGui::GetCursorScreenPos();
                     ImGui::Text ("%.*X:", this->sizes.addressPadding, row * this->sizes.rowWidth);
                     ImGui::SameLine(this->sizes.addressTextWidth);
-                    for (int i = 0; i < this->sizes.rowWidth; i++)
+                    for (std::size_t col = 0; col < (std::size_t)this->sizes.rowWidth; col++)
                     {
-                        std::size_t index = row * this->sizes.rowWidth + i;
-                        float byte_pos_x = ((this->sizes.addressTextWidth + this->sizes.glyphWidth) - pos.x) + (this->sizes.byteTextWidth +  this->sizes.glyphWidth) * i;
-                        if (i >= 8)
+                        std::size_t index = row * this->sizes.rowWidth + col;
+                        float byte_pos_x = ((this->sizes.addressTextWidth + this->sizes.glyphWidth) - pos.x) + (this->sizes.byteTextWidth +  this->sizes.glyphWidth) * col;
+                        if (col >= 8)
                             byte_pos_x += this->sizes.glyphWidth;
                         ImGui::PushID(index);
                         DATA_TYPE value = this->data[index];
@@ -404,7 +403,7 @@ namespace
                         if(ImGui::InputText("##input", uData.buffer, sizeof(uData.buffer), inpuTextFlags, User_Data::callback, &uData))
                         {
                             DATA_TYPE value = std::strtol(uData.buffer, NULL, 16);
-                            this->data[row * this->sizes.rowWidth + i] = value;
+                            this->data[row * this->sizes.rowWidth + col] = value;
                         }
                         if(uData.set)
                         {
@@ -418,7 +417,7 @@ namespace
                         ImGui::PopID();
                     }
                     ImGui::SameLine(0, this->sizes.glyphWidth*2);
-                    for (ADDRESS_TYPE i = 0; i < this->sizes.rowWidth; i++)
+                    for (std::size_t i = 0; i < (std::size_t)this->sizes.rowWidth; i++)
                     {
                         char value = this->data[row * this->sizes.rowWidth + i];
                         if (value > 32)
@@ -626,10 +625,9 @@ void UI::init ()
         style.WindowRounding = 0.0f;
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
-
     ImGui_ImplSDL2_InitForOpenGL(window.get_window(), window.get_glContext());
     ImGui_ImplOpenGL3_Init(window.get_glslVersion());
-    textSize = 18.0f;
+    textSize = 30.0f;
     font = io.Fonts->AddFontFromFileTTF("imgui/misc/fonts/ProggyClean.ttf", textSize, nullptr, io.Fonts->GetGlyphRangesDefault());
     float iconFontSize = textSize * 2.0f / 3.0f; // FontAwesome fonts need to have their sizes reduced by 2.0f/3.0f in order to align correctly
     // merge in icons from Font Awesome
@@ -669,6 +667,7 @@ void UI::debug(debug_v& values)
     {
         if (ImGui::BeginMenu("File"))
         {
+
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
