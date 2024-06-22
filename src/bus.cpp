@@ -3,9 +3,10 @@
 
 
 _6502::Bus::Bus()
-: cpu(*this)
-, ram {}
+: ram {}
+, cpu(*this)
 {
+    
 }
 
 _6502::Bus::~Bus()

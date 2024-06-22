@@ -10,8 +10,8 @@ namespace _6502
     class Bus
     {
         public:
-            CPU cpu;
             RAM ram;
+            CPU cpu;
             Bus ();
             ~Bus ();
             void cpu_write (const word& address, byte data);

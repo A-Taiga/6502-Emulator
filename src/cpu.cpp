@@ -3,6 +3,7 @@
 #include "bus.hpp"
 #include <cstring>
 #include <format>
+#include <iostream>
 /*
 
 N	Negative
@@ -73,17 +74,17 @@ _6502::CPU::CPU(Bus& bus)
 : bus {bus}
 , decompiledCode {}
 {
-    reset();
+
 }
 
 void _6502::CPU::reset()
 {
-    PC = ROM_BEGIN; // temp for now
     AC = 0;
     X  = 0;
     Y  = 0;
     SR = 0;
     SP = 0;
+    PC = (bus.ram[RESET_VECTOR+1]  << 8) | bus.ram[RESET_VECTOR];
 }
 
 void _6502::CPU::decompiler()
@@ -350,7 +351,10 @@ void _6502::CPU::STA(void)
 /* store index y in memory */
 void _6502::CPU::STY(void){}
 /* store index x in memory */
-void _6502::CPU::STX(void){}
+void _6502::CPU::STX(void)
+{
+    write (current_ins.data, X);
+}
 /* decrment index y by 1 */
 void _6502::CPU::DEY(void){}
 /* transfer index x to accumulator */

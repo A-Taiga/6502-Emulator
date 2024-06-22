@@ -1,6 +1,5 @@
 #include "emulator.hpp"
 #include "common.hpp"
-#include <chrono>
 #include <format>
 #include <cstring>
 #include "cpu.hpp"
@@ -29,15 +28,18 @@ namespace
 
 _6502::Emulator::Emulator(const char* filePath)
 : bus ()
+, currentFile(filePath)
 {
     load_rom (filePath, bus.ram.data(), ROM_BEGIN, ROM_END);
+    bus.ram[RESET_VECTOR]     = ROM_BEGIN & 0x00FF;
+    bus.ram[RESET_VECTOR + 1] = (ROM_BEGIN & 0xFF00) >> 8;
 }
 
 void _6502::Emulator::run()
 {
-
+    bus.cpu.reset();
     using namespace std::chrono_literals;
-    UI::debug_v debugData = {bus, 100ms, true, true, false};
+    UI::debug_v debugData = {bus, 100ms, true, true, false,[&](){reset();}};
     UI::init();
     bus.cpu.decompiler();
 
@@ -59,4 +61,15 @@ void _6502::Emulator::run()
     t.join();
     UI::end();
 }
+
+void _6502::Emulator::reset ()
+{
+    bus.ram.reset();
+    load_rom (currentFile.c_str(), bus.ram.data(), ROM_BEGIN, ROM_END);
+    bus.ram[RESET_VECTOR]     = (byte)0x00;
+    bus.ram[RESET_VECTOR + 1] = (byte)0xF0;
+    bus.cpu.reset();
+}
+
+
 

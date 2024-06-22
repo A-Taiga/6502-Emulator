@@ -38,6 +38,7 @@ namespace UI
         bool running;
         bool pause;
         bool step;
+        std::function<void()> resetCallback;
     };
     void init ();
     void debug (debug_v& values);

@@ -2,7 +2,7 @@
 
 int main()
 {
-    _6502::Emulator emu("testBins/branchingTest.bin");
+    _6502::Emulator emu("testBins/loop6.bin");
     emu.run();
     return 0;
 }

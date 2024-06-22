@@ -12,9 +12,11 @@ namespace _6502
     {
         private:
             Bus bus;
+            std::string currentFile;
         public:
             void run();
             Emulator (const char* filePath);
+            void reset ();
     };
 }
 
