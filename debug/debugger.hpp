@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <functional>
 
 struct ImVec4;
 struct SDL_Window;
