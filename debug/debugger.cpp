@@ -416,7 +416,7 @@ class Hex_Editor : protected Memory_Window<T, Address_Type, Size>
         this->sizes.rowWidth = 16;
         this->sizes.scrollBarWidth = 20.f;
     }
-    
+
     void draw ()
     {
         [[maybe_unused]] static float scrollY = 0.0f;
@@ -483,7 +483,7 @@ class Hex_Editor : protected Memory_Window<T, Address_Type, Size>
                 for (std::size_t i = 0; i < (std::size_t)this->sizes.rowWidth; i++)
                 {
                     char value = this->view[row * this->sizes.rowWidth + i];
-                    if (value > 32)
+                    if (value >= 32)
                         ImGui::Text ("%c", value);
                     else
                         ImGui::Text (".");
@@ -584,11 +584,13 @@ void UI::debug(debug_v& values)
 {
     window.poll(values.running);
     static ImGuiIO& io = ImGui::GetIO(); (void)io;
-    static Program_Window<word>                                                programWindow {values.bus.cpu.decompiledCode, values.bus.cpu.PC};
-    static Hex_Editor  <std::array <byte, RAM_SIZE>, std::uint16_t, RAM_SIZE>  HexEditor ("Editor",values.bus.ram.data().begin());
-    static Hex_Editor  <std::array <byte, RAM_SIZE>, word, 256>                zeroPage ("Zero Page", values.bus.ram.data().begin());
-    static Hex_Editor  <std::array <byte, RAM_SIZE>, word, 256>                Page1 ("Page 1", values.bus.ram.data().begin()+0x200);
-    static Registers_Window                                                    registers (values.bus.cpu);
+    
+    static Program_Window <word>                                                  programWindow {values.bus.cpu.decompiledCode, values.bus.cpu.PC};
+    static Hex_Editor     <std::array <byte, RAM_SIZE>, std::uint16_t, RAM_SIZE>  HexEditor ("Editor",values.bus.ram.data().begin());
+    static Hex_Editor     <std::array <byte, RAM_SIZE>, word, 256>                zeroPage ("Zero Page", values.bus.ram.data().begin());
+    static Hex_Editor     <std::array <byte, RAM_SIZE>, word, 256>                Page1 ("Page 1", values.bus.ram.data().begin()+0x200);
+    static Registers_Window                                                       registers (values.bus.cpu);
+    
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
