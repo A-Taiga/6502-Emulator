@@ -16,6 +16,8 @@
 #include "bus.hpp"
 #include "IconsFontAwesome6.h"
 #include <span>
+#include <sys/types.h>
+#include <type_traits>
 #include <utility>
 
 #define WINDOW_W 1920
@@ -161,306 +163,7 @@ namespace
             ImGui::EndChild();
         }
     };
-    
-    template <class CONTAINER_TYPE, class ADDRESS_TYPE, class DATA_TYPE, std::size_t SIZE>
-    struct Memory_Window
-    {
-        using Memory_Span = std::span <DATA_TYPE, SIZE>;
-        Memory_Span data;
 
-        struct
-        {
-            const char* windowName;
-            bool isShowing;
-            ADDRESS_TYPE startingAddress;
-            ImGuiWindowFlags windowFlags;
-
-        } settings;
-
-        struct  
-        {
-            float glyphWidth;
-            float glyphHeight;
-            float addressTextWidth;
-            float byteTextWidth;
-            float dataColWidth;
-            float asciiColWidth;
-            float addressEnd;
-            float minWindowWidth;
-            float minWindowHeight;
-            float scrollBarWidth;
-            float windowSize;
-            float colSpacing;
-            int   addressPadding;
-            int   rowWidth;
-
-        } sizes;
-
-        struct
-        {
-            bool showBoundingRects = true;
-        } db;
-
-        Memory_Window (const char* name, CONTAINER_TYPE container, ADDRESS_TYPE offset)
-        : data {container.begin() + offset, SIZE}
-        {
-            settings.windowName = name;
-            sizes.addressPadding = sizeof(ADDRESS_TYPE) * 8 / 4;
-        }
-        
-        void calc ()
-        {
-            sizes.glyphWidth       = ImGui::CalcTextSize("F").x + 1; // monospace 
-            sizes.glyphHeight      = ImGui::GetTextLineHeight();
-            sizes.addressTextWidth = (sizes.glyphWidth * sizes.addressPadding) + sizes.glyphWidth; 
-            sizes.byteTextWidth    = sizes.glyphWidth * 2;
-            sizes.dataColWidth     = (((sizes.byteTextWidth) + sizes.glyphWidth) * sizes.rowWidth) + (sizes.glyphWidth * (std::ceil(sizes.rowWidth / 8.f) - 1));
-            sizes.asciiColWidth    = (sizes.glyphWidth * sizes.rowWidth);
-            sizes.minWindowWidth   =  sizes.windowSize = sizes.addressTextWidth +  sizes.dataColWidth  + sizes.asciiColWidth + (sizes.scrollBarWidth*3);
-
-            sizes.colSpacing = sizes.byteTextWidth * .25f;
-        }
-        
-        void draw_column_labels ()
-        {
-            ImGui::BeginGroup();
-            ImVec2 pos = ImGui::GetCursorScreenPos();
-            ImGui::Dummy({sizes.addressTextWidth, sizes.glyphHeight});
-            for (int i = 0; i < 16; i++)
-            {
-                pos = ImGui::GetCursorScreenPos();
-                float byte_pos_x = ((sizes.addressTextWidth + sizes.glyphWidth) - pos.x) + (sizes.byteTextWidth +  sizes.glyphWidth) * i;
-                if (i >= 8)
-                    byte_pos_x += sizes.glyphWidth;
-                ImGui::SameLine(byte_pos_x);
-                ImGui::Text("%02X", i);
-            }
-            ImGui::SameLine(((sizes.addressTextWidth + sizes.glyphWidth) - pos.x) + (sizes.byteTextWidth +  sizes.glyphWidth) * 16 + sizes.byteTextWidth);
-            ImGui::Text("ASCII");
-            ImGui::EndGroup();
-            ImGui::Separator();
-
-        }
-    };
-
-    template <class CONTAINER_TYPE, class ADDRESS_TYPE, class DATA_TYPE, std::size_t SIZE>
-    struct Page_View : Memory_Window <CONTAINER_TYPE, ADDRESS_TYPE, DATA_TYPE, SIZE>
-    {
-        Page_View (const char* name, CONTAINER_TYPE container, ADDRESS_TYPE offset = 0)
-        : Memory_Window <CONTAINER_TYPE, ADDRESS_TYPE, DATA_TYPE, SIZE> {name, container, offset}
-        {
-            this->settings.startingAddress = offset;
-            this->sizes.rowWidth = 16;
-            this->settings.isShowing = true;
-            this->settings.windowFlags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
-        }
-
-        void draw ()
-        {
-            if (this->settings.isShowing)
-            {
-                this->calc();
-                ImGui::Begin (this->settings.windowName, &this->settings.isShowing, this->settings.windowFlags);
-                this->draw_column_labels();
-                for (std::size_t row = 0; row < SIZE / 16; row++)
-                {
-                    ImGui::Text("%04X:", (ADDRESS_TYPE)(row * 16));
-                    for (std::size_t col = 0; col < 16; col++)
-                    {
-                        std::size_t index = row * this->sizes.rowWidth + col;
-                        float byte_pos_x = (this->sizes.addressTextWidth + this->sizes.glyphWidth) + (this->sizes.byteTextWidth +  this->sizes.glyphWidth) * col;
-                        if (col >= 8)
-                            byte_pos_x += this->sizes.glyphWidth;
-                        ImGui::SameLine(byte_pos_x);
-                        ImGui::PushStyleColor(ImGuiCol_Text, this->data[index] ?  ImVec4(1,1,1,1) : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-                        ImGui::Text("%02X", this->data[index]);
-                        ImGui::PopStyleColor();
-                    }
-                    ImGui::SameLine((this->sizes.addressTextWidth + (this->sizes.glyphWidth)) + (this->sizes.byteTextWidth +  this->sizes.glyphWidth) * 16 + this->sizes.byteTextWidth);
-                    for (std::size_t col = 0; col < 16; col++)
-                    {
-                        std::size_t index = row * this->sizes.rowWidth + col;
-                        DATA_TYPE value = this->data[index];
-                        if (value >= 32 && value <= 126)
-                            ImGui::Text("%c", this->data[index]);
-                        else
-                            ImGui::Text(".");
-                        ImGui::SameLine(0,0);
-                    }
-                    ImGui::NewLine();
-                }
-                ImGui::End();
-            }
-        }
-    };
-
-    /* 
-        I used this as a guide on developing mine https://github.com/ocornut/imgui_club
-    */
-    template <class CONTAINER_TYPE, class ADDRESS_TYPE, class DATA_TYPE, std::size_t SIZE>
-    struct Hex_Editor : Memory_Window <CONTAINER_TYPE, ADDRESS_TYPE, DATA_TYPE, SIZE>
-    {
-        char lookupBuffer [array_size<ADDRESS_TYPE>()];
-        bool lookup;
-        float scrollY;
-        DATA_TYPE    selectedValue;
-        ADDRESS_TYPE selectedIndex;
-        
-        ImGuiInputTextFlags inpuTextFlags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_CallbackAlways;
-
-        struct
-        {
-            ImVec4 scrollbar_backGroundColor {0.2f, 0.2f, 0.2f, 1.0f};
-            ImVec4 scrollbar_grabber         {0.4f, 0.4f, 0.4f, 1.0f};
-            ImVec4 scrollbar_grabberHover    {0.6f, 0.6f, 0.6f, 1.0f};
-            ImVec4 scrollbar_grabberActive   {0.8f, 0.0f, 0.0f, 1.0f};
-            ImVec4 white {1,1,1,1};
-            ImVec4 dissabled {ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled)};
-
-            // ImVec4 ImGui::Get
-
-        } colors;
-
-        Hex_Editor (CONTAINER_TYPE container, ADDRESS_TYPE offset = 0)
-        : Memory_Window <CONTAINER_TYPE, ADDRESS_TYPE, DATA_TYPE, SIZE> ("Hex Editor", container, offset)
-        {
-            this->sizes.rowWidth = 16;
-            this->sizes.scrollBarWidth = 20.f;
-            this->settings.isShowing = true;
-            this->settings.windowFlags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
-            lookupBuffer[0] = '0';
-            scrollY = 0.0f;
-        }
-
-        void draw ()
-        {
-            this->calc();
-            ImGui::SetNextWindowSize({this->sizes.minWindowWidth, 0});
-            ImGui::Begin("Hex Editor", nullptr, this->settings.windowFlags);
-            this->draw_column_labels();
-            ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, colors.scrollbar_backGroundColor);
-            ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, colors.scrollbar_grabber);
-            ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, colors.scrollbar_grabberHover);
-            ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, colors.scrollbar_grabberActive);
-            ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 0);
-            ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, this->sizes.scrollBarWidth);
-            ImGui::BeginChild ("list",{0, ImGui::GetTextLineHeightWithSpacing() * 16});
-            ImGuiListClipper clipper;
-
-            clipper.Begin(SIZE / this->sizes.rowWidth, ImGui::GetTextLineHeightWithSpacing());
-            if (lookup)
-            {
-                int val = std::strtol (lookupBuffer, nullptr, 16);
-                ImGui::SetScrollY((std::floor(val / this->sizes.rowWidth)) * ImGui::GetTextLineHeightWithSpacing());
-                lookup = false;
-            }
-            while (clipper.Step())
-            {
-                for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
-                {
-                    ImVec2 pos = ImGui::GetCursorScreenPos();
-                    ImGui::Text ("%.*X:", this->sizes.addressPadding, row * this->sizes.rowWidth);
-                    ImGui::SameLine(this->sizes.addressTextWidth);
-                    for (std::size_t col = 0; col < (std::size_t)this->sizes.rowWidth; col++)
-                    {
-                        std::size_t index = row * this->sizes.rowWidth + col;
-                        float byte_pos_x = ((this->sizes.addressTextWidth + this->sizes.glyphWidth) - pos.x) + (this->sizes.byteTextWidth +  this->sizes.glyphWidth) * col;
-                        if (col >= 8)
-                            byte_pos_x += this->sizes.glyphWidth;
-                        ImGui::PushID(index);
-                        DATA_TYPE value = this->data[index];
-                        ImGui::SameLine(byte_pos_x);
-                        ImGui::SetNextItemWidth(this->sizes.byteTextWidth);
-                        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0,0});
-                        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0,0,0,0)); // Dark gray background
-
-                        struct User_Data
-                        {
-                            bool set = false;
-                            bool selected;
-                            char buffer[3];
-                            static int callback (ImGuiInputTextCallbackData* data)
-                            {
-                                User_Data* uData = (User_Data*)data->UserData;
-                                uData->set = ImGui::IsItemActive();
-                                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(255, 255, 255, 255));
-                                if (data->SelectionStart == 0 && data->SelectionEnd == data->BufTextLen)
-                                {
-                                    // When not editing a byte, always refresh its InputText content pulled from underlying memory data
-                                    // (this is a bit tricky, since InputText technically "owns" the master copy of the buffer we edit it in there)
-                                    data->DeleteChars(0, data->BufTextLen);
-                                    data->InsertChars(0, uData->buffer);
-                                    data->SelectionStart = 0;
-                                    data->SelectionEnd = 2;
-                                    data->CursorPos = 0;
-                                }
-                                return 0;
-                            }
-                        };
-                        User_Data uData;
-                        snprintf(uData.buffer, sizeof(uData.buffer), "%02X", value);
-                        ImGui::PushStyleColor(ImGuiCol_Text, this->data[index] == 0x00 ? colors.dissabled : colors.white);
-                        if(ImGui::InputText("##input", uData.buffer, sizeof(uData.buffer), inpuTextFlags, User_Data::callback, &uData))
-                        {
-                            DATA_TYPE value = std::strtol(uData.buffer, NULL, 16);
-                            this->data[row * this->sizes.rowWidth + col] = value;
-                        }
-                        if(uData.set)
-                        {
-                            selectedValue = this->data[index];
-                            selectedIndex = index;
-                            ImGui::PopStyleColor();
-                        }
-                        ImGui::PopStyleColor();
-                        ImGui::PopStyleVar();
-                        ImGui::PopStyleColor();
-                        ImGui::PopID();
-                    }
-                    ImGui::SameLine(0, this->sizes.glyphWidth*2);
-                    for (std::size_t i = 0; i < (std::size_t)this->sizes.rowWidth; i++)
-                    {
-                        char value = this->data[row * this->sizes.rowWidth + i];
-                        if (value > 32)
-                            ImGui::Text ("%c", value);
-                        else
-                            ImGui::Text (".");
-                        ImGui::SameLine(0,0);
-                    }
-                    ImGui::NewLine();
-                    scrollY = ImGui::GetScrollY();
-                }
-            }
-            ImGui::EndChild();
-            ImGui::PopStyleColor(4);
-            ImGui::PopStyleVar(2); 
-            ImGui::SetNextItemWidth(150);
-            if (ImGui::InputText("##address lookup", lookupBuffer, array_size<ADDRESS_TYPE>() + 1, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
-            {
-                lookup = true;
-            }
-            ImGui::NewLine();
-            ImGui::TextUnformatted(std::format ("Hex     {:{}}{:02X}", " ", 5, selectedValue).c_str());
-            ImGui::TextUnformatted(std::format ("Binary  {:{}}{:08b}", " ", 5, selectedValue).c_str());
-            ImGui::TextUnformatted(std::format ("Octal   {:{}}{:o}", " ", 5, selectedValue).c_str());
-            ImGui::TextUnformatted(std::format ("uint8   {:{}}{:}", " ", 5, selectedValue).c_str());
-            ImGui::TextUnformatted(std::format ("int8    {:{}}{:}", " ", 5, (std::int8_t)selectedValue).c_str());
-            if (selectedIndex + 1 >= SIZE)
-            {
-                ImGui::TextUnformatted(std::format ("uint16  {:{}}EOF", " ", 5).c_str());
-                ImGui::TextUnformatted(std::format ("int16   {:{}}EOF", " ", 5).c_str());
-            }
-            else
-            {
-                /* the 6502 is little-endian so display the values that way */
-                std::uint16_t u16v = (this->data[selectedIndex+1] << 8) | (selectedValue );
-                std::int16_t  i16v = (this->data[selectedIndex+1] << 8) | (selectedValue );
-                ImGui::TextUnformatted(std::format ("uint16  {:{}}{:}", " ", 5, u16v).c_str());
-                ImGui::TextUnformatted(std::format ("int16   {:{}}{:}", " ", 5, i16v).c_str());
-            }
-            ImGui::TextUnformatted(std::format ("ACII    {:{}}{:}", " ", 5, (char)selectedValue).c_str());
-            ImGui::End();
-        }
-    };
     struct Registers_Window
     {
         const word &PC;
@@ -608,6 +311,307 @@ namespace
 }
 
 
+template <class T>
+concept is_container = requires {{typename std::remove_reference <decltype (*std::declval <T>().begin())>::type()} -> std::integral;};
+
+template <class T, class Address_Type, std::size_t Size>
+requires is_container <T> && std::is_integral_v<Address_Type>
+class Memory_Window
+{
+    protected:
+    using dataType =  std::remove_reference <decltype (*std::declval <T>().begin())>::type;
+    using span = std::span <dataType, Size>;
+    span view;
+    static const int addressPadding {sizeof(Address_Type) * 8 / 4};
+    struct
+    {
+        float glyphWidth;
+        float glyphHeight;
+        float addressTextWidth;
+        float byteTextWidth;
+        float dataColWidth;
+        float asciiColWidth;
+        float addressEnd;
+        float minWindowWidth;
+        float minWindowHeight;
+        float scrollBarWidth;
+        float windowSize;
+        float colSpacing;
+        int   rowWidth;
+    } sizes;
+
+    Memory_Window (const T::iterator& offset)
+    : view {offset, offset + Size}
+    {}
+
+    void calc ()
+    {
+        sizes.glyphWidth       = ImGui::CalcTextSize("F").x + 1; // monospace 
+        sizes.glyphHeight      = ImGui::GetTextLineHeight();
+        sizes.addressTextWidth = (sizes.glyphWidth * addressPadding) + sizes.glyphWidth;
+        sizes.byteTextWidth    = sizes.glyphWidth * 2;
+        sizes.dataColWidth     = (((sizes.byteTextWidth) + sizes.glyphWidth) * sizes.rowWidth) + (sizes.glyphWidth * (std::ceil(sizes.rowWidth / 8.f) - 1));
+        sizes.asciiColWidth    = (sizes.glyphWidth * sizes.rowWidth);
+        sizes.minWindowWidth   =  sizes.windowSize = sizes.addressTextWidth +  sizes.dataColWidth  + sizes.asciiColWidth + (sizes.scrollBarWidth*3);
+    }
+    
+    void draw_column_labels ()
+    {
+        ImGui::BeginGroup();
+        ImVec2 pos = ImGui::GetCursorPos();
+        ImGui::Dummy({sizes.addressTextWidth, sizes.glyphHeight});
+        for (int i = 0; i < 16; i++)
+        {
+            pos = ImGui::GetCursorPos();
+            float byte_pos_x = ((sizes.addressTextWidth + sizes.glyphWidth) - pos.x) + (sizes.byteTextWidth +  sizes.glyphWidth) * i;
+            if (i >= 8)
+                byte_pos_x += sizes.glyphWidth;
+            ImGui::SameLine(byte_pos_x);
+            ImGui::Text("%02X", i);
+        }
+        ImGui::SameLine(((sizes.addressTextWidth + sizes.glyphWidth) - pos.x) + (sizes.byteTextWidth +  sizes.glyphWidth) * 16 + sizes.byteTextWidth);
+        ImGui::Text("ASCII");
+        ImGui::EndGroup();
+        ImGui::Separator();
+    }
+};
+
+
+/* 
+    I used this as a guide on developing mine https://github.com/ocornut/imgui_club
+*/
+template <class T, class Address_Type, std::size_t Size>
+requires is_container <T> && std::is_integral_v<Address_Type>
+class Hex_Editor : protected Memory_Window<T, Address_Type, Size>
+{
+    using dataType = Memory_Window<T, Address_Type, Size>::dataType;
+    static const ImGuiInputTextFlags inpuTextFlags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_CallbackAlways;
+    static const ImGuiWindowFlags windowFlags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
+    struct
+    { 
+
+        char lookupBuffer [array_size<Address_Type>()];
+        bool lookup = false;
+        bool isShowing = true;
+    } settings;
+    
+    struct
+    {
+        const ImVec4 scrollbar_backGroundColor {0.2f, 0.2f, 0.2f, 1.0f};
+        const ImVec4 scrollbar_grabber         {0.4f, 0.4f, 0.4f, 1.0f};
+        const ImVec4 scrollbar_grabberHover    {0.6f, 0.6f, 0.6f, 1.0f};
+        const ImVec4 scrollbar_grabberActive   {0.8f, 0.0f, 0.0f, 1.0f};
+        const ImVec4 white                     {1,1,1,1};
+
+    } colors;
+
+    Address_Type selectedIndex;
+
+
+    public:
+    Hex_Editor (const T::iterator& offset)
+    : Memory_Window <T, Address_Type, Size> (offset)
+    {
+            this->sizes.rowWidth = 16;
+            this->sizes.scrollBarWidth = 20.f;
+    }
+
+    void draw ()
+    {
+
+        [[maybe_unused]] static float scrollY = 0.0f;
+        static dataType selectedValue = 0;
+
+        this->calc();
+
+        ImGui::SetNextWindowSize({this->sizes.minWindowWidth, 0});
+        ImGui::Begin("Hex Editor", &settings.isShowing, windowFlags);
+        this->draw_column_labels();
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, colors.scrollbar_backGroundColor);
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, colors.scrollbar_grabber);
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, colors.scrollbar_grabberHover);
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, colors.scrollbar_grabberActive);
+        ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 0);
+        ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, this->sizes.scrollBarWidth);
+        ImGui::BeginChild ("list",{0, ImGui::GetTextLineHeightWithSpacing() * 16});
+        ImGuiListClipper clipper;
+
+        clipper.Begin(Size / this->sizes.rowWidth, ImGui::GetTextLineHeightWithSpacing());
+        if (settings.lookup)
+        {
+            int val = std::strtol (settings.lookupBuffer, nullptr, 16);
+            ImGui::SetScrollY((std::floor(val / this->sizes.rowWidth)) * ImGui::GetTextLineHeightWithSpacing());
+            settings.lookup = false;
+        }
+        while (clipper.Step())
+        {
+            for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
+            {
+                ImGui::Text ("%.*X:", this->addressPadding, row * this->sizes.rowWidth);
+                auto pos = ImGui::GetCursorPos();
+
+                printf("%.02f\r", pos.x);
+                for (std::size_t col = 0; col < 16; col++)
+                {
+                    std::size_t index = row * this->sizes.rowWidth + col;
+                    /* dawg i don't even know */
+
+                    float byte_pos_x = (this->sizes.addressTextWidth + this->sizes.glyphWidth) - pos.x + (this->sizes.byteTextWidth +  this->sizes.glyphWidth) * col;
+                    if (col >= 8)
+                        byte_pos_x += this->sizes.glyphWidth;
+
+                    ImGui::PushID(index);
+                    auto value = this->view[index];
+                    ImGui::SameLine(byte_pos_x);
+                    ImGui::SetNextItemWidth(this->sizes.byteTextWidth);
+                    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0,0});
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0,0,0,0));
+                    struct User_Data
+                    {
+                        bool set = false;
+                        bool selected;
+                        char buffer[3];
+                        static int callback (ImGuiInputTextCallbackData* data)
+                        {
+                            User_Data* uData = (User_Data*)data->UserData;
+                            uData->set = ImGui::IsItemActive();
+                            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(255, 255, 255, 255));
+                            if (data->SelectionStart == 0 && data->SelectionEnd == data->BufTextLen)
+                            {
+                                data->DeleteChars(0, data->BufTextLen);
+                                data->InsertChars(0, uData->buffer);
+                                data->SelectionStart = 0;
+                                data->SelectionEnd = 2;
+                                data->CursorPos = 0;
+                            }
+                            return 0;
+                        }
+                    };
+                    User_Data uData;
+                    snprintf(uData.buffer, sizeof(uData.buffer), "%02X", value);
+                    ImGui::PushStyleColor(ImGuiCol_Text, this->view[index] == 0x00 ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled) : colors.white);
+                    if(ImGui::InputText("##input", uData.buffer, sizeof(uData.buffer), inpuTextFlags, User_Data::callback, &uData))
+                    {
+                        auto value = std::strtol(uData.buffer, NULL, 16);
+                        this->view[row * this->sizes.rowWidth + col] = value;
+                    }
+                    if(uData.set)
+                    {
+                        selectedValue = this->view[index];
+                        selectedIndex = index;
+                        ImGui::PopStyleColor();
+                    }
+                    ImGui::PopStyleColor();
+                    ImGui::PopStyleVar();
+                    ImGui::PopStyleColor();
+                    ImGui::PopID();
+                }
+                ImGui::SameLine(0, this->sizes.glyphWidth*2);
+                for (std::size_t i = 0; i < (std::size_t)this->sizes.rowWidth; i++)
+                {
+                    char value = this->view[row * this->sizes.rowWidth + i];
+                    if (value > 32)
+                        ImGui::Text ("%c", value);
+                    else
+                        ImGui::Text (".");
+                    ImGui::SameLine(0,0);
+                }
+                ImGui::NewLine();
+                scrollY = ImGui::GetScrollY();
+            }
+        }
+        ImGui::EndChild();
+        ImGui::PopStyleColor(4);
+        ImGui::PopStyleVar(2); 
+        ImGui::SetNextItemWidth(150);
+        if (ImGui::InputText("##address lookup", settings.lookupBuffer, array_size<Address_Type>() + 1, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
+        {
+            settings.lookup = true;
+        }
+        ImGui::NewLine();
+        ImGui::TextUnformatted(std::format ("Hex     {:{}}{:02X}", " ", 5, selectedValue).c_str());
+        ImGui::TextUnformatted(std::format ("Binary  {:{}}{:08b}", " ", 5, selectedValue).c_str());
+        ImGui::TextUnformatted(std::format ("Octal   {:{}}{:o}", " ", 5, selectedValue).c_str());
+        ImGui::TextUnformatted(std::format ("uint8   {:{}}{:}", " ", 5, selectedValue).c_str());
+        ImGui::TextUnformatted(std::format ("int8    {:{}}{:}", " ", 5, (std::int8_t)selectedValue).c_str());
+        if (selectedIndex + 1 >= Size)
+        {
+            ImGui::TextUnformatted(std::format ("uint16  {:{}}EOF", " ", 5).c_str());
+            ImGui::TextUnformatted(std::format ("int16   {:{}}EOF", " ", 5).c_str());
+        }
+        else
+        {
+            /* the 6502 is little-endian so display the values that way */
+            std::uint16_t u16v = (this->view[selectedIndex+1] << 8) | (selectedValue );
+            std::int16_t  i16v = (this->view[selectedIndex+1] << 8) | (selectedValue );
+            ImGui::TextUnformatted(std::format ("uint16  {:{}}{:}", " ", 5, u16v).c_str());
+            ImGui::TextUnformatted(std::format ("int16   {:{}}{:}", " ", 5, i16v).c_str());
+        }
+        ImGui::TextUnformatted(std::format ("ACII    {:{}}{:}", " ", 5, (char)selectedValue).c_str());
+        ImGui::End();
+    }
+};
+
+
+template <class T, class Address_Type, std::size_t Size>
+class Page_View : Memory_Window <T, Address_Type, Size>
+{
+    const char* name;
+    using dataType = typename Memory_Window<T, Address_Type, Size>::dataType;
+
+    struct
+    {
+        ImGuiWindowFlags windowFlags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
+        bool isShowing = true;
+    } settings;
+
+    public:
+    Page_View (const char* name, const T::iterator& offset)
+    : Memory_Window <T, Address_Type, Size> (offset)
+    , name (name)
+    {
+        this->sizes.rowWidth = 16;
+    }
+
+    void draw ()
+    {
+        if (settings.isShowing)
+        {
+            this->calc();
+            ImGui::Begin (name, &settings.isShowing, settings.windowFlags);
+            this->draw_column_labels();
+            for (std::size_t row = 0; row < Size / 16; row++)
+            {
+                ImGui::Text("%.*zX:", this->addressPadding, row * 16);
+                for (std::size_t col = 0; col < 16; col++)
+                {
+                    std::size_t index = row * this->sizes.rowWidth + col;
+                    float byte_pos_x = (this->sizes.addressTextWidth + this->sizes.glyphWidth) + (this->sizes.byteTextWidth +  this->sizes.glyphWidth) * col;
+                    if (col >= 8)
+                        byte_pos_x += this->sizes.glyphWidth;
+                    ImGui::SameLine(byte_pos_x);
+                    ImGui::PushStyleColor(ImGuiCol_Text, this->view[index] ?  ImVec4(1,1,1,1) : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+                    ImGui::Text("%02X", this->view[index]);
+                    ImGui::PopStyleColor();
+                }
+                ImGui::SameLine((this->sizes.addressTextWidth + (this->sizes.glyphWidth)) + (this->sizes.byteTextWidth +  this->sizes.glyphWidth) * 16 + this->sizes.byteTextWidth);
+                for (std::size_t col = 0; col < 16; col++)
+                {
+                    std::size_t index = row * this->sizes.rowWidth + col;
+                    dataType value = this->view[index];
+                    if (value >= 32 && value <= 126)
+                        ImGui::Text("%c", this->view[index]);
+                    else
+                        ImGui::Text(".");
+                    ImGui::SameLine(0,0);
+                }
+                ImGui::NewLine();
+            }
+            ImGui::End();
+        }
+    }
+};
+
 void UI::init ()
 {
     IMGUI_CHECKVERSION();
@@ -627,7 +631,7 @@ void UI::init ()
     }
     ImGui_ImplSDL2_InitForOpenGL(window.get_window(), window.get_glContext());
     ImGui_ImplOpenGL3_Init(window.get_glslVersion());
-    textSize = 18.0f;
+    textSize = 40.0f;
     font = io.Fonts->AddFontFromFileTTF("imgui/misc/fonts/ProggyClean.ttf", textSize, nullptr, io.Fonts->GetGlyphRangesDefault());
     float iconFontSize = textSize * 2.0f / 3.0f; // FontAwesome fonts need to have their sizes reduced by 2.0f/3.0f in order to align correctly
     // merge in icons from Font Awesome
@@ -647,16 +651,30 @@ void UI::end ()
     ImGui::DestroyContext();
 }
 
+static std::vector<int> t = []() -> decltype(t)
+{
+    std::vector<int> temp;
+    for (int i = 0 ; i < 256; i++)
+    {
+        temp.push_back(i);
+    }
+    return temp;
+}();
+
+
+
 void UI::debug(debug_v& values)
 {
 
     window.poll(values.running);
     static ImGuiIO& io = ImGui::GetIO(); (void)io;
-    static Program_Window<word> programWindow {values.bus.cpu.decompiledCode, values.bus.cpu.PC};
-    static Page_View<decltype(values.bus.ram.data()), word, byte, 256>          zeroPage("Zero Page", values.bus.ram.data());
-    static Page_View<decltype(values.bus.ram.data()), word, byte, 256>          Page1("Page 1", values.bus.ram.data(), 0x0200);
-    static Hex_Editor<decltype(values.bus.ram.data()), word, byte, RAM_SIZE>    HexEditor (values.bus.ram.data());
-    static Registers_Window registers (values.bus.cpu);
+    static Program_Window<word>                                               programWindow {values.bus.cpu.decompiledCode, values.bus.cpu.PC};
+    static Hex_Editor <std::array <byte, RAM_SIZE>, std::uint16_t, RAM_SIZE>  HexEditor (values.bus.ram.data().begin());
+    static Page_View  <std::array <byte, RAM_SIZE>, word, 256>                zeroPage ("Zero Page", values.bus.ram.data().begin());
+    static Page_View  <std::array <byte, RAM_SIZE>, word, 256>                Page1 ("Page 1", values.bus.ram.data().begin()+0x200);
+    static Registers_Window                                                   registers (values.bus.cpu);
+
+    static Page_View<std::vector<int>, std::uint64_t, 256> testPage ("Test Page",t.begin());
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
@@ -677,6 +695,7 @@ void UI::debug(debug_v& values)
     Page1.draw();
     programWindow.draw();
     HexEditor.draw();
+    testPage.draw();
 
     ImGuiWindowClass window_class;
     window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
