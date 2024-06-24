@@ -580,16 +580,6 @@ void UI::end ()
     ImGui::DestroyContext();
 }
 
-static std::vector<int> t = []() -> decltype(t)
-{
-    std::vector<int> temp;
-    for (int i = 0 ; i < 256; i++)
-    {
-        temp.push_back(i);
-    }
-    return temp;
-}();
-
 void UI::debug(debug_v& values)
 {
     window.poll(values.running);
