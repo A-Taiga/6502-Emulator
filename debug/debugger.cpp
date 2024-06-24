@@ -100,7 +100,6 @@ SDL_GLContext OS_Window::get_glContext () { return glContext;}
 const char* OS_Window::get_glslVersion () { return glslVersion;}
 std::uint32_t OS_Window::get_windowID () { return SDL_GetWindowID (window);}
 
-
 template <class ADDRESS_TYPE>
 constexpr std::size_t array_size ()
 {
@@ -310,7 +309,6 @@ namespace
     };
 }
 
-
 template <class T>
 concept is_container = requires {{typename std::remove_reference <decltype (*std::declval <T>().begin())>::type()} -> std::integral;};
 
@@ -319,7 +317,7 @@ requires is_container <T> && std::is_integral_v<Address_Type>
 class Memory_Window
 {
     protected:
-    using dataType =  std::remove_reference <decltype (*std::declval <T>().begin())>::type;
+    using dataType = typename std::remove_reference <decltype (*std::declval <T>().begin())>::type;
     using span = std::span <dataType, Size>;
     span view;
     static const int addressPadding {sizeof(Address_Type) * 8 / 4};
@@ -375,7 +373,6 @@ class Memory_Window
     }
 };
 
-
 /* 
     I used this as a guide on developing mine https://github.com/ocornut/imgui_club
 */
@@ -391,7 +388,7 @@ class Hex_Editor : protected Memory_Window<T, Address_Type, Size>
     bool lookup;
     bool isShowing;
     dataType selectedValue = 0;
-
+    Address_Type selectedIndex;
     
     struct
     {
@@ -403,7 +400,12 @@ class Hex_Editor : protected Memory_Window<T, Address_Type, Size>
 
     } colors;
 
-    Address_Type selectedIndex;
+    struct User_Data
+    {
+        bool set = false;
+        bool selected;
+        char buffer[3];
+    };
 
 
     public:
@@ -411,10 +413,10 @@ class Hex_Editor : protected Memory_Window<T, Address_Type, Size>
     : Memory_Window <T, Address_Type, Size> (offset)
     , name (name)
     {
-            this->sizes.rowWidth = 16;
-            this->sizes.scrollBarWidth = 20.f;
+        this->sizes.rowWidth = 16;
+        this->sizes.scrollBarWidth = 20.f;
     }
-
+    
     void draw ()
     {
         [[maybe_unused]] static float scrollY = 0.0f;
@@ -438,12 +440,12 @@ class Hex_Editor : protected Memory_Window<T, Address_Type, Size>
             ImGui::SetScrollY((std::floor(val / this->sizes.rowWidth)) * ImGui::GetTextLineHeightWithSpacing());
             lookup = false;
         }
+
         while (clipper.Step())
         {
             for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
             {
                 ImGui::Text ("%.*X:", this->addressPadding, row * this->sizes.rowWidth);
-    
                 for (std::size_t col = 0; col < 16; col++)
                 {
                     std::size_t index = row * this->sizes.rowWidth + col;
@@ -457,31 +459,11 @@ class Hex_Editor : protected Memory_Window<T, Address_Type, Size>
                     ImGui::SetNextItemWidth(this->sizes.byteTextWidth);
                     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0,0});
                     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0,0,0,0));
-                    struct User_Data
-                    {
-                        bool set = false;
-                        bool selected;
-                        char buffer[3];
-                        static int callback (ImGuiInputTextCallbackData* data)
-                        {
-                            User_Data* uData = (User_Data*)data->UserData;
-                            uData->set = ImGui::IsItemActive();
-                            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(255, 255, 255, 255));
-                            if (data->SelectionStart == 0 && data->SelectionEnd == data->BufTextLen)
-                            {
-                                data->DeleteChars(0, data->BufTextLen);
-                                data->InsertChars(0, uData->buffer);
-                                data->SelectionStart = 0;
-                                data->SelectionEnd = 2;
-                                data->CursorPos = 0;
-                            }
-                            return 0;
-                        }
-                    };
+
                     User_Data uData;
                     snprintf(uData.buffer, sizeof(uData.buffer), "%02X", value);
                     ImGui::PushStyleColor(ImGuiCol_Text, this->view[index] == 0x00 ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled) : colors.white);
-                    if(ImGui::InputText("##input", uData.buffer, sizeof(uData.buffer), inpuTextFlags, User_Data::callback, &uData))
+                    if(ImGui::InputText("##input", uData.buffer, sizeof(uData.buffer), inpuTextFlags, Hex_Editor::input_callback, &uData))
                     {
                         auto value = std::strtol(uData.buffer, NULL, 16);
                         this->view[row * this->sizes.rowWidth + col] = value;
@@ -541,6 +523,22 @@ class Hex_Editor : protected Memory_Window<T, Address_Type, Size>
         ImGui::TextUnformatted(std::format ("ACII    {:{}}{:}", " ", 5, (char)selectedValue).c_str());
         ImGui::End();
     }
+
+    static int input_callback(ImGuiInputTextCallbackData* data)
+    {
+        User_Data* uData = (User_Data*)data->UserData;
+        uData->set = ImGui::IsItemActive();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(255, 255, 255, 255));
+        if (data->SelectionStart == 0 && data->SelectionEnd == data->BufTextLen)
+        {
+            data->DeleteChars(0, data->BufTextLen);
+            data->InsertChars(0, uData->buffer);
+            data->SelectionStart = 0;
+            data->SelectionEnd = 2;
+            data->CursorPos = 0;
+        }
+        return 0;
+    }
 };
 
 void UI::init ()
@@ -592,11 +590,8 @@ static std::vector<int> t = []() -> decltype(t)
     return temp;
 }();
 
-
-
 void UI::debug(debug_v& values)
 {
-
     window.poll(values.running);
     static ImGuiIO& io = ImGui::GetIO(); (void)io;
     static Program_Window<word>                                                programWindow {values.bus.cpu.decompiledCode, values.bus.cpu.PC};
