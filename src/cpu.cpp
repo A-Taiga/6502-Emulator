@@ -3,7 +3,6 @@
 #include "bus.hpp"
 #include <cstring>
 #include <format>
-#include <iostream>
 /*
 
 N	Negative
@@ -35,21 +34,18 @@ C	Carry
 
 namespace
 {
-
-
-    [[maybe_unused]] const byte C = 1 << 0;
-    [[maybe_unused]] const byte Z = 1 << 1;
-    [[maybe_unused]] const byte I = 1 << 2;
-    [[maybe_unused]] const byte D = 1 << 3;
-    [[maybe_unused]] const byte B = 1 << 4;
-    [[maybe_unused]] const byte V = 1 << 6;
-    [[maybe_unused]] const byte N = 1 << 7;
-
-    
+    const byte C = 1 << 0; // carry
+    const byte Z = 1 << 1; // zero 
+    const byte I = 1 << 2; // interrupt
+    const byte D = 1 << 3; // decimal
+    const byte B = 1 << 4; // break
+    const byte U = 1 << 5; // ignored / unused
+    const byte V = 1 << 6; // overflow
+    const byte N = 1 << 7; // negative
 
     using CPU = _6502::CPU;
     using x = _6502::Address_Type;
-    std::array <_6502::opcode,256> opcodes
+    static const std::array <_6502::opcode,256> opcodes
     ({
         {"BRK", &CPU::BRK, &CPU::IMP, x::IMP, 7}, {"ORA", &CPU::ORA, &CPU::IZX, x::IZX, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"ORA", &CPU::ORA, &CPU::ZPG, x::ZPG, 3}, {"ASL", &CPU::ASL, &CPU::ZPG, x::ZPG, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"PHP", &CPU::PHP, &CPU::IMP, x::IMP, 3}, {"ORA", &CPU::ORA, &CPU::IMM, x::IMM, 2}, {"ASL", &CPU::ASL, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"ORA", &CPU::ORA, &CPU::ABS, x::ABS, 4}, {"ASL", &CPU::ASL, &CPU::ABS, x::ABS, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
         {"BPL", &CPU::BPL, &CPU::REL, x::REL, 2}, {"ORA", &CPU::ORA, &CPU::IZY, x::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"ORA", &CPU::ORA, &CPU::ZPX, x::ZPX, 3}, {"ASL", &CPU::ASL, &CPU::ZPX, x::ZPX, 7}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"CLC", &CPU::CLC, &CPU::IMP, x::IMP, 2}, {"ORA", &CPU::ORA, &CPU::ABY, x::ABY, 4}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"ORA", &CPU::ORA, &CPU::ABX, x::ABX, 4}, {"ASL", &CPU::ASL, &CPU::ABX, x::ABX, 7}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
@@ -83,50 +79,48 @@ void _6502::CPU::reset()
     X  = 0;
     Y  = 0;
     SR = 0;
-    SP = 0;
+    SP = 0xFF;
     PC = (bus.ram[RESET_VECTOR+1]  << 8) | bus.ram[RESET_VECTOR];
 }
 
 void _6502::CPU::decompiler()
 {
-    opcode* current;
     word i = 0;
     while (i < 4096)
     {
         word index = ROM_BEGIN+i;
-        current = &opcodes[read(i+ROM_BEGIN)];
-        switch (current->addrType)
+        const opcode& current = opcodes[read(i+ROM_BEGIN)];
+        switch (current.addrType)
         {
-            case _6502::Address_Type::IMP: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:>9}", index, read(index), current->mnemonic));  i+=1; 
+            case _6502::Address_Type::IMP: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:>9}", index, read(index), current.mnemonic));  i+=1; 
             break;
-            case _6502::Address_Type::IMM: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} #${:02X}", index, read(index), read(index+1), current->mnemonic, read(index+1)));  i+=2; 
+            case _6502::Address_Type::IMM: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} #${:02X}", index, read(index), read(index+1), current.mnemonic, read(index+1)));  i+=2; 
             break;
-            case _6502::Address_Type::ABS: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X} ", index, read(index), read(index+1), read(index+2), current->mnemonic, (read(index+2) << 8) | read(index+1)));  i+=3; 
+            case _6502::Address_Type::ABS: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X} ", index, read(index), read(index+1), read(index+2), current.mnemonic, (read(index+2) << 8) | read(index+1)));  i+=3; 
             break;
-            case _6502::Address_Type::ZPG: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current->mnemonic, read(index+1)));  i+=2; 
+            case _6502::Address_Type::ZPG: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current.mnemonic, read(index+1)));  i+=2; 
             break;
-            case _6502::Address_Type::ABX: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X}, X", index, read(index), read(index+1), read(index+2), current->mnemonic, (read(index+2) << 8) | read(index+1)));  i+=3; 
+            case _6502::Address_Type::ABX: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X}, X", index, read(index), read(index+1), read(index+2), current.mnemonic, (read(index+2) << 8) | read(index+1)));  i+=3; 
             break;
-            case _6502::Address_Type::ABY: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:}", index, read(index), read(index+1), read(index+2), current->mnemonic));  i+=3; 
+            case _6502::Address_Type::ABY: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:}", index, read(index), read(index+1), read(index+2), current.mnemonic));  i+=3; 
             break;
-            case _6502::Address_Type::ZPX: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:>6} ${:02X}", index, read(index+1), current->mnemonic, read(index+1)));  i+=2; 
+            case _6502::Address_Type::ZPX: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:>6} ${:02X}", index, read(index+1), current.mnemonic, read(index+1)));  i+=2; 
             break;
-            case _6502::Address_Type::ZPY: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6}", index, read(index), read(index+1), current->mnemonic));  i+=2; 
+            case _6502::Address_Type::ZPY: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6}", index, read(index), read(index+1), current.mnemonic));  i+=2; 
             break;
-            case _6502::Address_Type::IND: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:}", index, read(index), read(index+1), read(index+2), current->mnemonic));  i+=3; 
+            case _6502::Address_Type::IND: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:}", index, read(index), read(index+1), read(index+2), current.mnemonic));  i+=3; 
             break;
-            case _6502::Address_Type::IZX: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current->mnemonic, read(index+1)));  i+=2; 
+            case _6502::Address_Type::IZX: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current.mnemonic, read(index+1)));  i+=2; 
             break;
-            case _6502::Address_Type::IZY: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current->mnemonic, read(index+1)));  i+=2; 
+            case _6502::Address_Type::IZY: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current.mnemonic, read(index+1)));  i+=2; 
             break;
             case _6502::Address_Type::REL:
-
-                if (std::strcmp(current->mnemonic, "CPX"))
+                if (std::strcmp(current.mnemonic, "CPX"))
                 {
                     word result = read (index+1);
                     if (result & 0x80) result |= 0xFF00;
                     word addr = index+2 + result;
-                    decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:04X}", index, read(index), read(index+1), current->mnemonic, addr)); i+=2;
+                    decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:04X}", index, read(index), read(index+1), current.mnemonic, addr)); i+=2;
                 }
             break;
         }
@@ -196,7 +190,7 @@ short _6502::CPU::ABY ()
 {
     byte low = read(PC++);
     byte high = read(PC++);
-    current_ins.data = static_cast<word> ((high << 8) | low) + Y;
+    current_ins.data = (word) ((high << 8) | low) + Y;
     return ((current_ins.data & 0xFF00) != high << 8) ? 1 : 0;
 }
 
@@ -235,7 +229,7 @@ short _6502::CPU::IZX ()
     byte low  = read ((temp + X) & 0xFF);
     byte high = read ((temp + 1 + X) & 0xFF);
     current_ins.data = (high << 8) | low;
-    return 0;
+    return ((current_ins.data & 0xFF00) != high << 8) ? 1 : 0;
 }
 
 short _6502::CPU::IZY ()
@@ -261,16 +255,42 @@ void _6502::CPU::BRK(void){}
 /* ORA OR memory with accumulator */
 void _6502::CPU::ORA(void)
 {
-    word data = static_cast<word>(read (current_ins.data));
+    word data = (word) (read (current_ins.data));
     word result = AC | data;
-    set_flag(N, result & 0x0080);
-    set_flag(Z, (result & 0x00FF) == 0);
+    set_flag (N, result & 0x0080);
+    set_flag (Z, (result & 0x00FF) == 0);
     AC = result;
 }
-/* shift left one bit (memory or accumulator) */
-void _6502::CPU::ASL(void){}
-/* push processor status on stack */
-void _6502::CPU::PHP(void){}
+/* ASL shift left one bit (memory or accumulator) */
+void _6502::CPU::ASL(void)
+{
+    word data = [&]()
+    {
+        if (current_ins.opcode->addrType == Address_Type::IMP)
+            return (word) (AC);
+        else
+            return (word) (read (current_ins.data));
+    }();
+
+    word result = data << 1;
+    set_flag (N, result & 0x0080);
+    set_flag (Z, (result & 0x00FF) == 0);
+    set_flag (C, result > 0x00FF);
+
+    if (current_ins.opcode->addrType == Address_Type::IMP)
+        AC = result;
+    else
+        write (current_ins.data, result & 0x00FF);
+}
+/* PHP push processor status on stack */
+/* http://www.atarihq.com/danb/files/64doc.txt */
+void _6502::CPU::PHP(void)
+{
+    write (STK_BEGIN + SP, SR | U | B);
+    set_flag(U, false);
+    set_flag(B, false);
+    SP--;
+}
 /* branch on result plus */
 void _6502::CPU::BPL(void){}
 /* clear carry flag */
@@ -305,7 +325,11 @@ void _6502::CPU::EOR(void)
 /* shift one bit right (memory or accumulator) */
 void _6502::CPU::LSR(void){}
 /* push accumulator on stack */
-void _6502::CPU::PHA(void){}
+void _6502::CPU::PHA(void)
+{
+    write (STK_BEGIN + SP, AC);
+    SP--;
+}
 /* jump to new location */
 void _6502::CPU::JMP(void)
 {
@@ -321,7 +345,12 @@ void _6502::CPU::CLI(void)
 /* return from subroutine */
 void _6502::CPU::RTS(void){}
 /* pull accumulator from stack */
-void _6502::CPU::PLA(void){}
+void _6502::CPU::PLA(void)
+{
+    AC = read (STK_BEGIN + (++SP));
+    set_flag (N, AC & 0x80);
+    set_flag (Z, AC == 0x00);
+}
 /* 
     add memory to accumulator with carry
     https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
@@ -329,7 +358,7 @@ void _6502::CPU::PLA(void){}
 */
 void _6502::CPU::ADC(void)
 {   
-    word data =  static_cast<word>(read(current_ins.data));
+    word data =  (word)(read(current_ins.data));
     word result = AC + data + (SR & C);
     set_flag (N, result & 0x0080);
     set_flag (Z, (result & 0xFF) == 0);

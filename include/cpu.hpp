@@ -63,7 +63,7 @@ namespace _6502
 
     struct instruction
     {
-        opcode* opcode = nullptr;
+        const opcode* opcode = nullptr;
         word data;
         short cycles;
     };
