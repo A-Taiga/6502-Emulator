@@ -600,7 +600,6 @@ void UI::debug(debug_v& values)
     {
         if (ImGui::BeginMenu("File"))
         {
-
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
