@@ -77,7 +77,7 @@ void _6502::CPU::reset()
     AC = 0;
     X  = 0;
     Y  = 0;
-    SR = 0;
+    SR = 0xFFFF & U;
     SP = 0xFF;
     PC = (bus.ram[RESET_VECTOR+1]  << 8) | bus.ram[RESET_VECTOR];
 }
@@ -134,9 +134,8 @@ void _6502::CPU::write (const word address, const byte data)
 
 byte _6502::CPU::stack_pop ()
 {
-    const byte data = read (STK_BEGIN + SP); 
     SP++;
-    return data;
+    return read (STK_BEGIN + SP); 
 }
 
 void _6502::CPU::stack_push (const byte data)
@@ -314,12 +313,12 @@ void _6502::CPU::BPL(void)
         PC = addr;
     }
 }
-/* clear carry flag */
+/* CLC clear carry flag */
 void _6502::CPU::CLC(void)
 {
     SR &= ~C;
 }
-/* jump to new location saving return address */
+/* JSR jump to new location saving return address */
 void _6502::CPU::JSR(void)
 {
     PC++;
@@ -334,33 +333,36 @@ void _6502::CPU::AND(void)
     set_flag(N, AC & 0x80);
     set_flag(Z, AC == 0x00);
 }
-/* test bits in memory with accumulator */
+/* BIT test bits in memory with accumulator */
 void _6502::CPU::BIT(void)
 {
     // weird 
 }
-/* rotate one bit left (memory or accumulator) */
+/* ROL rotate one bit left (memory or accumulator) */
 void _6502::CPU::ROL(void)
 {
-    const word result = (([&]()
+    const word result = static_cast<word >(([&]()
     {
         if (current_ins.opcode->addrType == Address_Type::IMP)
-            return static_cast <word> (AC);
+            return AC;
         else
-            return static_cast <word> (read (current_ins.data));
+            return read (current_ins.data);
     }()) << 1) | (C & SP);
-    
+
     set_flag(N, result & 0x0080);
     set_flag(Z, (result & 0x00FF) == 0x00);
     set_flag(C, result & 0xFF00);
 
     if (current_ins.opcode->addrType == Address_Type::IMP)
-        AC = result;
+        AC = result & 0x00FF;
     else
         write (current_ins.data, result & 0x00FF);
 }
 /* pull processor status from stack */
-void _6502::CPU::PLP(void){}
+void _6502::CPU::PLP(void)
+{
+    SR = stack_pop();
+}
 /* branch on result minus */
 void _6502::CPU::BMI(void){}
 /* set carry flag */
@@ -377,7 +379,6 @@ void _6502::CPU::LSR(void){}
 /* push accumulator on stack */
 void _6502::CPU::PHA(void)
 {
-
     stack_push(AC);
 }
 /* jump to new location */
@@ -409,11 +410,13 @@ void _6502::CPU::PLA(void)
 void _6502::CPU::ADC(void)
 {   
     const word data =  static_cast <word> (read(current_ins.data));
-    const word result = AC + data + (SR & C);
+    const word result = static_cast <word> (AC) 
+                        + data 
+                        + static_cast <word> (SR & C);
     set_flag (N, result & 0x0080);
-    set_flag (Z, (result & 0xFF) == 0);
+    set_flag (Z, (result & 0x00FF) == 0);
     set_flag (C, result > 0x00FF);
-    set_flag (V, (AC ^ result) & (data ^ result) & 0x80);
+    set_flag (V, (AC ^ result) & (data ^ result) & 0x0080);
     AC = result & 0x00FF;
 }
 /* rotate one bit right (memory or accumulator) */
@@ -453,7 +456,7 @@ void _6502::CPU::LDA(void)
     const word result = read (current_ins.data);
     set_flag(N, result & 0x0080);
     set_flag(Z, result == 0x0000);
-    AC = result;
+    AC = result & 0x00FF;
 }
 /* load index x with memory */
 void _6502::CPU::LDX(void) 
@@ -461,7 +464,7 @@ void _6502::CPU::LDX(void)
     const word result = read(current_ins.data);
     set_flag(N, result & 0x80);
     set_flag(Z, result == 0x00);
-    X = result;
+    X = result & 0x00FF;
 }
 /* transfer accumulator to index y */
 void _6502::CPU::TAY(void){}
@@ -515,7 +518,7 @@ void _6502::CPU::CLD(void)
 void _6502::CPU::CPX(void)
 {
     const word fetched = read(current_ins.data);
-    const word result = (X - fetched);
+    const word result = static_cast <word> (X) - fetched;
     set_flag(C, X >= fetched);
     set_flag(N, result & 0x0080);
     set_flag(Z, (result & 0x00FF) == 0x0000);
