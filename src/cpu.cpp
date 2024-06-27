@@ -256,8 +256,9 @@ void _6502::CPU::BRK(void)
     PC++;
     stack_push(PC & 0xFF00);
     stack_push(PC & 0x00FF);
-    set_flag(I, true);
+    set_flag(B, true);
     stack_push(SR);
+    set_flag(B, false);
     PC = static_cast <word> (read(0xFFFE)) | static_cast <word> (read(0xFFFF) << 8);
 }
 /* ORA OR memory with accumulator */
@@ -321,20 +322,43 @@ void _6502::CPU::CLC(void)
 /* jump to new location saving return address */
 void _6502::CPU::JSR(void)
 {
-
-
-
-
+    PC++;
+    stack_push(PC & 0xFF00);
+    stack_push(PC & 0x00FF);
+    PC = current_ins.data;
 }
 /* AND memory with accumulator */
 void _6502::CPU::AND(void)
 {
-
+    AC &= read(current_ins.data);
+    set_flag(N, AC & 0x80);
+    set_flag(Z, AC == 0x00);
 }
 /* test bits in memory with accumulator */
-void _6502::CPU::BIT(void){}
+void _6502::CPU::BIT(void)
+{
+    // weird 
+}
 /* rotate one bit left (memory or accumulator) */
-void _6502::CPU::ROL(void){}
+void _6502::CPU::ROL(void)
+{
+    const word result = (([&]()
+    {
+        if (current_ins.opcode->addrType == Address_Type::IMP)
+            return static_cast <word> (AC);
+        else
+            return static_cast <word> (read (current_ins.data));
+    }()) << 1) | (C & SP);
+    
+    set_flag(N, result & 0x0080);
+    set_flag(Z, (result & 0x00FF) == 0x00);
+    set_flag(C, result & 0xFF00);
+
+    if (current_ins.opcode->addrType == Address_Type::IMP)
+        AC = result;
+    else
+        write (current_ins.data, result & 0x00FF);
+}
 /* pull processor status from stack */
 void _6502::CPU::PLP(void){}
 /* branch on result minus */
