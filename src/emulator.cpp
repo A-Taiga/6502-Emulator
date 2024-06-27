@@ -16,7 +16,7 @@ namespace
     {
         try
         {
-            std::size_t fileSize = std::filesystem::file_size(path);
+            const std::size_t fileSize = std::filesystem::file_size(path);
             std::fstream file (path, std::ios::hex);
             file.read((char*)buffer.data()+offset, fileSize);
             file.close();
