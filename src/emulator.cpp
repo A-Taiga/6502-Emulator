@@ -1,28 +1,31 @@
 #include "emulator.hpp"
 #include "common.hpp"
-#include <format>
+#include <iostream>
+#include <cassert>
 #include <cstring>
 #include "cpu.hpp"
 #include "debugger.hpp"
 #include <thread>
+#include <filesystem>
+#include <fstream>
 
 namespace
 {
     template<std::size_t N>
-    std::size_t load_rom (const char* path, std::array<byte, N>& buffer, [[maybe_unused]] word begin = 0, word end = 0)
+    std::size_t load_rom (std::string_view path, const std::array<byte, N>& buffer, const std::size_t offset)
     {
-        FILE* file = fopen(path, "rb");
-        std::size_t size;
-
-        if (file == nullptr)                           throw std::runtime_error(std::strerror(errno));
-        if (std::fseek (file, 0L, SEEK_END) == -1)     throw std::runtime_error(std::strerror(errno));
-        if ((size = std::ftell(file)) == -1UL)         throw std::runtime_error(std::strerror(errno));
-        if (size > end)                                throw std::runtime_error(std::format("file > {:d}", N));
-        if ((std::fseek(file, 0L, SEEK_SET)) == -1L)   throw std::runtime_error(std::strerror(errno));
-        if ((std::fread(buffer.data() + ROM_BEGIN, size, 1, file)) == -1UL)  
-            throw std::runtime_error(std::strerror(errno));
-        fclose (file);
-        return size;
+        try
+        {
+            std::size_t fileSize = std::filesystem::file_size(path);
+            std::fstream file (path, std::ios::hex);
+            file.read((char*)buffer.data()+offset, fileSize);
+            file.close();
+            return fileSize;
+        }
+        catch (const std::filesystem::filesystem_error& e) { std::cerr << e.what() << '\n';}
+        catch (const std::ifstream::failure& e) {std::cerr << e.what() << '\n';}
+        catch (...) {std::cerr << "error catch all in " << __PRETTY_FUNCTION__ << '\n';}
+        return 0;
     }
 }
 
@@ -30,7 +33,7 @@ _6502::Emulator::Emulator(const char* filePath)
 : bus ()
 , currentFile(filePath)
 {
-    load_rom (filePath, bus.ram.data(), ROM_BEGIN, ROM_END);
+    load_rom (filePath, bus.ram.data(), ROM_BEGIN);
     bus.ram[RESET_VECTOR]     = ROM_BEGIN & 0x00FF;
     bus.ram[RESET_VECTOR + 1] = (ROM_BEGIN & 0xFF00) >> 8;
 }
@@ -65,7 +68,7 @@ void _6502::Emulator::run()
 void _6502::Emulator::reset ()
 {
     bus.ram.reset();
-    load_rom (currentFile.c_str(), bus.ram.data(), ROM_BEGIN, ROM_END);
+    load_rom (currentFile.c_str(), bus.ram.data(), ROM_BEGIN);
     bus.ram[RESET_VECTOR]     = (byte)0x00;
     bus.ram[RESET_VECTOR + 1] = (byte)0xF0;
     bus.cpu.reset();

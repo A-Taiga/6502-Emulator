@@ -108,10 +108,10 @@ constexpr std::size_t array_size ()
 
 namespace
 {
-    ImFont* font;
-    float textSize;
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-    OS_Window window ("Debugger", WINDOW_W, WINDOW_H);
+    static ImFont* font;
+    static float textSize;
+    static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    static OS_Window window ("Debugger", WINDOW_W, WINDOW_H);
 
 
     template <class ADDRESS_TYPE>
@@ -309,18 +309,26 @@ namespace
     };
 }
 
+/* checks if type is a container and if type is an integral type */
 template <class T>
-concept is_container = requires {{typename std::remove_reference <decltype (*std::declval <T>().begin())>::type()} -> std::integral;};
+concept is_container = requires {{typename std::decay_t<decltype(*std::declval <T>().begin())>()} -> std::integral;};
+
+template <class T>
+requires is_container <T>
+struct nested_type {using type = typename std::decay_t <decltype (*std::declval<T>().begin())>;};
+
+
 
 template <class T, class Address_Type, std::size_t Size>
 requires is_container <T> && std::is_integral_v<Address_Type>
 class Memory_Window
 {
     protected:
-    using dataType = typename std::remove_reference <decltype (*std::declval <T>().begin())>::type;
-    using span = std::span <dataType, Size>;
+    using type = nested_type <T>::type;
+    using span = std::span <type, Size>;
     span view;
     static const int addressPadding {sizeof(Address_Type) * 8 / 4};
+
     struct
     {
         float glyphWidth;
@@ -381,13 +389,13 @@ requires is_container <T> && std::is_integral_v<Address_Type>
 class Hex_Editor : protected Memory_Window<T, Address_Type, Size>
 {
     const char* name;
-    using dataType = Memory_Window<T, Address_Type, Size>::dataType;
+    using dataType = nested_type<T>::type;
     static const ImGuiInputTextFlags inpuTextFlags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_CallbackAlways;
     static const ImGuiWindowFlags windowFlags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
     char lookupBuffer [array_size<Address_Type>()];
     bool lookup;
     bool isShowing;
-    dataType selectedValue = 0;
+    dataType selectedValue;
     Address_Type selectedIndex;
     
     struct
@@ -415,6 +423,7 @@ class Hex_Editor : protected Memory_Window<T, Address_Type, Size>
     {
         this->sizes.rowWidth = 16;
         this->sizes.scrollBarWidth = 20.f;
+        selectedValue = 0;
     }
 
     void draw ()

@@ -6,15 +6,13 @@ _6502::Bus::Bus()
 : ram {}
 , cpu(*this)
 {
-    
 }
 
 _6502::Bus::~Bus()
 {
-
 }
 
-void _6502::Bus::cpu_write (const word& address, byte data)
+void _6502::Bus::cpu_write (const word& address, const byte data) const
 {
     ram[address] = data;
 }

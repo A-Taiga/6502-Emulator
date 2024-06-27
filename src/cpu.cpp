@@ -45,7 +45,7 @@ namespace
 
     using CPU = _6502::CPU;
     using x = _6502::Address_Type;
-    const std::array <_6502::opcode,256> opcodes
+    constinit std::array <_6502::opcode,256> opcodes
     ({
         {"BRK", &CPU::BRK, &CPU::IMP, x::IMP, 7}, {"ORA", &CPU::ORA, &CPU::IZX, x::IZX, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"ORA", &CPU::ORA, &CPU::ZPG, x::ZPG, 3}, {"ASL", &CPU::ASL, &CPU::ZPG, x::ZPG, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"PHP", &CPU::PHP, &CPU::IMP, x::IMP, 3}, {"ORA", &CPU::ORA, &CPU::IMM, x::IMM, 2}, {"ASL", &CPU::ASL, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"ORA", &CPU::ORA, &CPU::ABS, x::ABS, 4}, {"ASL", &CPU::ASL, &CPU::ABS, x::ABS, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
         {"BPL", &CPU::BPL, &CPU::REL, x::REL, 2}, {"ORA", &CPU::ORA, &CPU::IZY, x::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"ORA", &CPU::ORA, &CPU::ZPX, x::ZPX, 3}, {"ASL", &CPU::ASL, &CPU::ZPX, x::ZPX, 7}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"CLC", &CPU::CLC, &CPU::IMP, x::IMP, 2}, {"ORA", &CPU::ORA, &CPU::ABY, x::ABY, 4}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"ORA", &CPU::ORA, &CPU::ABX, x::ABX, 4}, {"ASL", &CPU::ASL, &CPU::ABX, x::ABX, 7}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
@@ -70,7 +70,6 @@ _6502::CPU::CPU(Bus& bus)
 : bus {bus}
 , decompiledCode {}
 {
-
 }
 
 void _6502::CPU::reset()
@@ -92,28 +91,17 @@ void _6502::CPU::decompiler()
         const opcode& current = opcodes[read(i+ROM_BEGIN)];
         switch (current.addrType)
         {
-            case _6502::Address_Type::IMP: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:>9}", index, read(index), current.mnemonic));  i+=1; 
-            break;
-            case _6502::Address_Type::IMM: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} #${:02X}", index, read(index), read(index+1), current.mnemonic, read(index+1)));  i+=2; 
-            break;
-            case _6502::Address_Type::ABS: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X} ", index, read(index), read(index+1), read(index+2), current.mnemonic, (read(index+2) << 8) | read(index+1)));  i+=3; 
-            break;
-            case _6502::Address_Type::ZPG: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current.mnemonic, read(index+1)));  i+=2; 
-            break;
-            case _6502::Address_Type::ABX: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X}, X", index, read(index), read(index+1), read(index+2), current.mnemonic, (read(index+2) << 8) | read(index+1)));  i+=3; 
-            break;
-            case _6502::Address_Type::ABY: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:}", index, read(index), read(index+1), read(index+2), current.mnemonic));  i+=3; 
-            break;
-            case _6502::Address_Type::ZPX: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:>6} ${:02X}", index, read(index+1), current.mnemonic, read(index+1)));  i+=2; 
-            break;
-            case _6502::Address_Type::ZPY: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6}", index, read(index), read(index+1), current.mnemonic));  i+=2; 
-            break;
-            case _6502::Address_Type::IND: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:}", index, read(index), read(index+1), read(index+2), current.mnemonic));  i+=3; 
-            break;
-            case _6502::Address_Type::IZX: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current.mnemonic, read(index+1)));  i+=2; 
-            break;
-            case _6502::Address_Type::IZY: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current.mnemonic, read(index+1)));  i+=2; 
-            break;
+            case _6502::Address_Type::IMP: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:>9}", index, read(index), current.mnemonic));  i+=1; break;
+            case _6502::Address_Type::IMM: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} #${:02X}", index, read(index), read(index+1), current.mnemonic, read(index+1)));  i+=2; break;
+            case _6502::Address_Type::ABS: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X} ", index, read(index), read(index+1), read(index+2), current.mnemonic, (read(index+2) << 8) | read(index+1)));  i+=3; break;
+            case _6502::Address_Type::ZPG: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current.mnemonic, read(index+1)));  i+=2; break;
+            case _6502::Address_Type::ABX: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X}, X", index, read(index), read(index+1), read(index+2), current.mnemonic, (read(index+2) << 8) | read(index+1)));  i+=3; break;
+            case _6502::Address_Type::ABY: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:}", index, read(index), read(index+1), read(index+2), current.mnemonic));  i+=3; break;
+            case _6502::Address_Type::ZPX: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:>6} ${:02X}", index, read(index+1), current.mnemonic, read(index+1)));  i+=2; break;
+            case _6502::Address_Type::ZPY: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6}", index, read(index), read(index+1), current.mnemonic));  i+=2; break;
+            case _6502::Address_Type::IND: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:}", index, read(index), read(index+1), read(index+2), current.mnemonic));  i+=3; break;
+            case _6502::Address_Type::IZX: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current.mnemonic, read(index+1)));  i+=2; break;
+            case _6502::Address_Type::IZY: decompiledCode.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current.mnemonic, read(index+1)));  i+=2; break;
             case _6502::Address_Type::REL:
                 if (std::strcmp(current.mnemonic, "CPX"))
                 {
@@ -134,17 +122,17 @@ void _6502::CPU::run()
     (this->*current_ins.opcode->op)();
 }
 
-byte _6502::CPU::read(word address)
+byte _6502::CPU::read(const word address)
 {
     return bus.cpu_read(address);
 }
 
-void _6502::CPU::write (word address, byte data)
+void _6502::CPU::write (const word address, const byte data)
 {
     bus.cpu_write(address, data);
 }
 
-void _6502::CPU::set_flag(byte flag, bool condition)
+void _6502::CPU::set_flag(const byte flag, const bool condition)
 {
     if (condition)
         SR |= flag;
@@ -152,66 +140,66 @@ void _6502::CPU::set_flag(byte flag, bool condition)
         SR &= ~flag;
 }
 
-short _6502::CPU::IMP ()
+int _6502::CPU::IMP ()
 {
     current_ins.data = AC;
     return 0;
 }
 
-short _6502::CPU::IMM ()
+int _6502::CPU::IMM ()
 {
     current_ins.data = PC++;
     return 0;
 }
 
-short _6502::CPU::ABS ()
+int _6502::CPU::ABS ()
 {
-    byte low = read(PC++);
-    byte high = read(PC++);
+    const byte low = read(PC++);
+    const byte high = read(PC++);
     current_ins.data = (high << 8) | low;
     return 0;
 }
 
-short _6502::CPU::ZPG ()
+int _6502::CPU::ZPG ()
 {
     current_ins.data = read(PC++);
     return 0;
 }
 
-short _6502::CPU::ABX ()
+int _6502::CPU::ABX ()
 {
-    byte low = read(PC++);
-    byte high = read(PC++);
+    const byte low = read(PC++);
+    const byte high = read(PC++);
     current_ins.data = ((high << 8 )| low) + X;
     return ((current_ins.data & 0xFF00) != high << 8) ? 1 : 0;
 }
 
-short _6502::CPU::ABY ()
+int _6502::CPU::ABY ()
 {
-    byte low = read(PC++);
-    byte high = read(PC++);
+    const byte low = read(PC++);
+    const byte high = read(PC++);
     current_ins.data = (word) ((high << 8) | low) + Y;
     return ((current_ins.data & 0xFF00) != high << 8) ? 1 : 0;
 }
 
-short _6502::CPU::ZPX ()
+int _6502::CPU::ZPX ()
 {
-    byte temp = read (PC++);
+    const byte temp = read (PC++);
     current_ins.data = (temp + X) & 0xFF;
     return 0;
 }
 
-short _6502::CPU::ZPY ()
+int _6502::CPU::ZPY ()
 {
-    byte temp = read (PC++);
+    const byte temp = read (PC++);
     current_ins.data = (temp + Y) & 0xFF;
     return 0;
 }
 
-short _6502::CPU::IND ()
+int _6502::CPU::IND ()
 {
-    byte low = read (PC++);
-    byte high = read (PC++);
+    const byte low = read (PC++);
+    const byte high = read (PC++);
     current_ins.data = (high << 8) | low;
     return 0;
 }
@@ -223,25 +211,25 @@ load the contents of the location given in addresses
 "$0070+X" and "$0070+1+X" into A
 */
 
-short _6502::CPU::IZX ()
+int _6502::CPU::IZX ()
 {
-    byte temp = read (PC++);
-    byte low  = read ((temp + X) & 0xFF);
-    byte high = read ((temp + 1 + X) & 0xFF);
+    const byte temp = read (PC++);
+    const byte low  = read ((temp + X) & 0xFF);
+    const byte high = read ((temp + 1 + X) & 0xFF);
     current_ins.data = (high << 8) | low;
     return ((current_ins.data & 0xFF00) != high << 8) ? 1 : 0;
 }
 
-short _6502::CPU::IZY ()
+int _6502::CPU::IZY ()
 {
-    byte temp = read (PC++);
-    byte low  = read (temp & 0xFF);
-    byte high = read ((temp + 1) & 0xFF);
+    const byte temp = read (PC++);
+    const byte low  = read (temp & 0xFF);
+    const byte high = read ((temp + 1) & 0xFF);
     current_ins.data = ((high << 8) | low) + Y;
     return ((current_ins.data & 0xFF00) != high << 8) ? 1 : 0;
 }
 
-short _6502::CPU::REL ()
+int _6502::CPU::REL ()
 {
     current_ins.data = read (PC++);
     if (current_ins.data & 0x80)
@@ -255,8 +243,8 @@ void _6502::CPU::BRK(void){}
 /* ORA OR memory with accumulator */
 void _6502::CPU::ORA(void)
 {
-    word data = (word) (read (current_ins.data));
-    word result = AC | data;
+    const word data = (word) (read (current_ins.data));
+    const word result = AC | data;
     set_flag (N, result & 0x0080);
     set_flag (Z, (result & 0x00FF) == 0);
     AC = result;
@@ -264,15 +252,17 @@ void _6502::CPU::ORA(void)
 /* ASL shift left one bit (memory or accumulator) */
 void _6502::CPU::ASL(void)
 {
-    word data = [&]()
+
+    const word result = ([&]()
     {
         if (current_ins.opcode->addrType == Address_Type::IMP)
             return (word) (AC);
         else
             return (word) (read (current_ins.data));
-    }();
+    }()) << 1;
+    
 
-    word result = data << 1;
+    // const word result = data << 1;
     set_flag (N, result & 0x0080);
     set_flag (Z, (result & 0x00FF) == 0);
     set_flag (C, result > 0x00FF);
@@ -358,8 +348,8 @@ void _6502::CPU::PLA(void)
 */
 void _6502::CPU::ADC(void)
 {   
-    word data =  (word)(read(current_ins.data));
-    word result = AC + data + (SR & C);
+    const word data =  (word)(read(current_ins.data));
+    const word result = AC + data + (SR & C);
     set_flag (N, result & 0x0080);
     set_flag (Z, (result & 0xFF) == 0);
     set_flag (C, result > 0x00FF);
@@ -400,7 +390,7 @@ void _6502::CPU::LDY(void){}
 /* load accumulator with memory */
 void _6502::CPU::LDA(void)
 {
-    word result = read (current_ins.data);
+    const word result = read (current_ins.data);
     set_flag(N, result & 0x0080);
     set_flag(Z, result == 0x0000);
     AC = result;
@@ -408,7 +398,7 @@ void _6502::CPU::LDA(void)
 /* load index x with memory */
 void _6502::CPU::LDX(void) 
 {
-    word result = read(current_ins.data);
+    const word result = read(current_ins.data);
     set_flag(N, result & 0x80);
     set_flag(Z, result == 0x00);
     X = result;
@@ -440,7 +430,7 @@ void _6502::CPU::INY(void){}
 /* decrment index x by 1*/
 void _6502::CPU::DEX(void)
 {
-    X-=1;
+    X -= 1;
     set_flag(N, X & 0x80);
     set_flag(Z, X == 0x00);
 }
@@ -450,7 +440,7 @@ void _6502::CPU::BNE(void)
     if ((SR & Z) == 0)
     {
         current_ins.cycles++;
-        word addr = PC + current_ins.data;
+        const word addr = PC + current_ins.data;
         if ((addr & 0xFF00) != (PC & 0xFF00)) // checking for page boundry cross
             current_ins.cycles++;
         PC = addr;
@@ -464,8 +454,8 @@ void _6502::CPU::CLD(void)
 /* compare memory with index x*/
 void _6502::CPU::CPX(void)
 {
-    word fetched = read(current_ins.data);
-    word result = (X - fetched);
+    const word fetched = read(current_ins.data);
+    const word result = (X - fetched);
     set_flag(C, X >= fetched);
     set_flag(N, result & 0x0080);
     set_flag(Z, (result & 0x00FF) == 0x0000);
@@ -478,7 +468,7 @@ void _6502::CPU::INC(void){}
 /* increment index x by 1 */
 void _6502::CPU::INX(void)
 {
-    X+=1;
+    X += 1;
     set_flag(N, X & 0x80);
     set_flag(Z, X == 0x00);
 }

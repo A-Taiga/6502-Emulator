@@ -37,18 +37,8 @@ namespace _6502
 
     enum class Address_Type
     {
-        IMP,
-        IMM,
-        ABS,
-        ZPG,
-        ABX,
-        ABY,
-        ZPX,
-        ZPY,
-        IND,
-        IZX,
-        IZY,
-        REL
+        IMP, IMM, ABS, ZPG, ABX, ABY,
+        ZPX, ZPY, IND, IZX, IZY, REL
     };
 
     class CPU;
@@ -56,7 +46,7 @@ namespace _6502
     {
         const char* mnemonic;
         void (_6502::CPU::*op)(void);
-        short (_6502::CPU::*mode)(void);
+        int (_6502::CPU::*mode)(void);
         Address_Type addrType;
         std::size_t cycles;
     };
@@ -90,22 +80,23 @@ namespace _6502
             // std::array <opcode,256> opcodes;
             std::vector<std::pair<word, std::string>>  decompiledCode;
             instruction current_ins;
-            byte read (word address);
-            void write (word address, byte data);
-            void set_flag(byte flag, bool condition);
             
-            short IMP (); 
-            short IMM (); 
-            short ABS (); 
-            short ZPG (); 
-            short ABX (); 
-            short ABY ();
-            short ZPX (); 
-            short ZPY (); 
-            short IND (); 
-            short IZX (); 
-            short IZY (); 
-            short REL ();
+            byte read (const word address);
+            void write (const word address, const byte data);
+            void set_flag(const byte flag, const bool condition);
+            
+            int IMP (); 
+            int IMM (); 
+            int ABS (); 
+            int ZPG (); 
+            int ABX (); 
+            int ABY ();
+            int ZPX (); 
+            int ZPY (); 
+            int IND (); 
+            int IZX (); 
+            int IZY (); 
+            int REL ();
 
             void BRK (void); void ORA (void); void ASL (void); void PHP (void); void BPL (void);
             void CLC (void); void JSR (void); void AND (void); void BIT (void); void ROL (void); 
