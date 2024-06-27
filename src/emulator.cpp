@@ -22,9 +22,7 @@ namespace
             file.close();
             return fileSize;
         }
-        catch (const std::filesystem::filesystem_error& e) { std::cerr << e.what() << '\n';}
-        catch (const std::ifstream::failure& e) {std::cerr << e.what() << '\n';}
-        catch (...) {std::cerr << "error catch all in " << __PRETTY_FUNCTION__ << '\n';}
+        catch (const std::exception& e) {std::cerr << e.what() << '\n';}
         return 0;
     }
 }
