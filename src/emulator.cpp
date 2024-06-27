@@ -12,7 +12,7 @@
 namespace
 {
     template<std::size_t N>
-    std::size_t load_rom (std::string_view path, const std::array<byte, N>& buffer, const std::size_t offset)
+    std::size_t load_rom (const std::string_view path, const std::array<byte, N>& buffer, const std::size_t offset)
     {
         try
         {
