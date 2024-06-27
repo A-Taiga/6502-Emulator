@@ -77,12 +77,13 @@ namespace _6502
             byte SR;   /* status register [NV-BDIZC] (aka flags) */
             byte SP;   /* stack pointer */
             Bus& bus;
-            // std::array <opcode,256> opcodes;
             std::vector<std::pair<word, std::string>>  decompiledCode;
             instruction current_ins;
             
             byte read (const word address);
             void write (const word address, const byte data);
+            void stack_push (const byte data);
+            byte stack_pop ();
             void set_flag(const byte flag, const bool condition);
             
             int IMP (); 

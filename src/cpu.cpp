@@ -132,6 +132,19 @@ void _6502::CPU::write (const word address, const byte data)
     bus.cpu_write(address, data);
 }
 
+byte _6502::CPU::stack_pop ()
+{
+    const byte data = read (STK_BEGIN + SP); 
+    SP++;
+    return data;
+}
+
+void _6502::CPU::stack_push (const byte data)
+{
+    write (STK_BEGIN+SP, data); 
+    SP--;
+}
+
 void _6502::CPU::set_flag(const byte flag, const bool condition)
 {
     if (condition)
@@ -178,7 +191,7 @@ int _6502::CPU::ABY ()
 {
     const byte low = read(PC++);
     const byte high = read(PC++);
-    current_ins.data = (word) ((high << 8) | low) + Y;
+    current_ins.data = static_cast <word> (((high << 8) | low) + Y);
     return ((current_ins.data & 0xFF00) != high << 8) ? 1 : 0;
 }
 
@@ -236,14 +249,21 @@ int _6502::CPU::REL ()
         current_ins.data |= 0xFF00;
     return 0;
 }
-
-void _6502::CPU::XXX(void){}
 /* BRK force break */
-void _6502::CPU::BRK(void){}
+
+void _6502::CPU::BRK(void)
+{
+    PC++;
+    stack_push(PC & 0xFF00);
+    stack_push(PC & 0x00FF);
+    set_flag(I, true);
+    stack_push(SR);
+    PC = static_cast <word> (read(0xFFFE)) | static_cast <word> (read(0xFFFF) << 8);
+}
 /* ORA OR memory with accumulator */
 void _6502::CPU::ORA(void)
 {
-    const word data = (word) (read (current_ins.data));
+    const word data = static_cast <word> (read (current_ins.data));
     const word result = AC | data;
     set_flag (N, result & 0x0080);
     set_flag (Z, (result & 0x00FF) == 0);
@@ -256,9 +276,9 @@ void _6502::CPU::ASL(void)
     const word result = ([&]()
     {
         if (current_ins.opcode->addrType == Address_Type::IMP)
-            return (word) (AC);
+            return static_cast <word> (AC);
         else
-            return (word) (read (current_ins.data));
+            return static_cast <word> (read (current_ins.data));
     }()) << 1;
     
 
@@ -276,20 +296,36 @@ void _6502::CPU::ASL(void)
 /* http://www.atarihq.com/danb/files/64doc.txt */
 void _6502::CPU::PHP(void)
 {
-    write (STK_BEGIN + SP, SR | U | B);
+    stack_push(SR | U | B);
     set_flag(U, false);
     set_flag(B, false);
     SP--;
 }
-/* branch on result plus */
-void _6502::CPU::BPL(void){}
+/* BPL branch on result plus */
+void _6502::CPU::BPL(void)
+{
+    if ((SR & N) == 0)
+    {
+        current_ins.cycles++;
+        const word addr = PC + current_ins.data;
+        if ((addr & 0xFF00) != (PC & 0xFF00))
+            current_ins.cycles++;
+        PC = addr;
+    }
+}
 /* clear carry flag */
 void _6502::CPU::CLC(void)
 {
     SR &= ~C;
 }
 /* jump to new location saving return address */
-void _6502::CPU::JSR(void){}
+void _6502::CPU::JSR(void)
+{
+
+
+
+
+}
 /* AND memory with accumulator */
 void _6502::CPU::AND(void)
 {
@@ -317,8 +353,8 @@ void _6502::CPU::LSR(void){}
 /* push accumulator on stack */
 void _6502::CPU::PHA(void)
 {
-    write (STK_BEGIN + SP, AC);
-    SP--;
+
+    stack_push(AC);
 }
 /* jump to new location */
 void _6502::CPU::JMP(void)
@@ -337,7 +373,7 @@ void _6502::CPU::RTS(void){}
 /* pull accumulator from stack */
 void _6502::CPU::PLA(void)
 {
-    AC = read (STK_BEGIN + (++SP));
+    AC = stack_pop();
     set_flag (N, AC & 0x80);
     set_flag (Z, AC == 0x00);
 }
@@ -348,7 +384,7 @@ void _6502::CPU::PLA(void)
 */
 void _6502::CPU::ADC(void)
 {   
-    const word data =  (word)(read(current_ins.data));
+    const word data =  static_cast <word> (read(current_ins.data));
     const word result = AC + data + (SR & C);
     set_flag (N, result & 0x0080);
     set_flag (Z, (result & 0xFF) == 0);
@@ -482,3 +518,9 @@ void _6502::CPU::NOP(void)
 void _6502::CPU::BEQ(void){}
 /* set decimal flag */
 void _6502::CPU::SED(void){}
+
+
+
+
+void _6502::CPU::XXX(void){}
+
