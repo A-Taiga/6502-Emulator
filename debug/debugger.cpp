@@ -79,7 +79,6 @@ void OS_Window::render (int a, int b, int x, int y, const ImVec4& color)
 
 void OS_Window::poll (bool& running)
 {
-
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {

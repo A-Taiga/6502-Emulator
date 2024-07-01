@@ -51,13 +51,6 @@ namespace _6502
         std::size_t cycles;
     };
 
-    struct instruction
-    {
-        const opcode* opcode = nullptr;
-        word data;
-        short cycles;
-    };
-
     class Bus;
     class CPU
     {
@@ -78,8 +71,15 @@ namespace _6502
             byte SP;   /* stack pointer */
             Bus& bus;
             std::vector<std::pair<word, std::string>>  decompiledCode;
-            instruction current_ins;
-            
+
+            struct
+            {
+                const opcode* fetched;
+                word data;
+                int cycles;
+
+            } ins;
+
             byte read (const word address);
             void write (const word address, const byte data);
             void stack_push (const byte data);
@@ -105,12 +105,12 @@ namespace _6502
             void LSR (void); void PHA (void); void JMP (void); void BVC (void); void CLI (void);
             void RTS (void); void PLA (void); void ADC (void); void ROR (void); void BVS (void);
             void SEI (void); void STA (void); void STY (void); void STX (void); void DEY (void);
-            void TXA (void); void STZ (void); void BCC (void); void TYA (void); void TXS (void);
-            void LDY (void); void LDA (void); void LDX (void); void TAY (void); void TAX (void);
-            void BCS (void); void CLV (void); void TSX (void); void CPY (void); void CMP (void);
-            void DEC (void); void INY (void); void DEX (void); void BNE (void); void CLD (void);
-            void CPX (void); void SBC (void); void INC (void); void INX (void); void SPC (void);
-            void NOP (void); void BEQ (void); void SED (void); void XXX (void);
+            void TXA (void); void BCC (void); void TYA (void); void TXS (void); void LDY (void); 
+            void LDA (void); void LDX (void); void TAY (void); void TAX (void); void BCS (void); 
+            void CLV (void); void TSX (void); void CPY (void); void CMP (void); void DEC (void); 
+            void INY (void); void DEX (void); void BNE (void); void CLD (void); void CPX (void); 
+            void SBC (void); void INC (void); void INX (void); void NOP (void); void BEQ (void); 
+            void SED (void); void XXX (void);
 
         };
 }
