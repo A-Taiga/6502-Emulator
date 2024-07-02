@@ -57,6 +57,8 @@ namespace _6502
         public:
             CPU (Bus& bus);
             void reset ();
+            void IRQ ();
+            void NMI ();
             void decompiler ();
             void run ();
             const word& get_pc ();
@@ -85,6 +87,7 @@ namespace _6502
             void stack_push (const byte data);
             byte stack_pop ();
             void set_flag(const byte flag, const bool condition);
+            void run_cycle ();
             
             int IMP (); 
             int IMM (); 

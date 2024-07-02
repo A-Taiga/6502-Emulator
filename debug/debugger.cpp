@@ -1,6 +1,5 @@
 #include "debugger.hpp"
-#include <SDL.h>
-#include <SDL_opengl.h>
+#include "window.hpp"
 #include <chrono>
 #include <cstdio>
 #include <format>
@@ -10,7 +9,6 @@
 #include "imgui_impl_sdl2.h"
 #include "imgui_internal.h"
 #include <cstddef>
-#include <stdexcept>
 #include <string>
 #include "common.hpp"
 #include "bus.hpp"
@@ -18,86 +16,9 @@
 #include <span>
 #include <sys/types.h>
 #include <type_traits>
-#include <utility>
 
-#define WINDOW_W 1920
-#define WINDOW_H 1080
 
-#define WINDOW_FLAGS SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
 
-OS_Window::OS_Window (const char* title, int w, int h)
-: width (w), height (h)
-{
-
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0) throw std::runtime_error (SDL_GetError());
-
-    #if defined (__APPLE__)
-        // GL 3.2 Core + GLSL 150
-        glslVersion = "#version 150";
-        SDL_GL_SetAttribute (SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); // Always required on Mac
-        SDL_GL_SetAttribute (SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-        SDL_GL_SetAttribute (SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-        SDL_GL_SetAttribute (SDL_GL_CONTEXT_MINOR_VERSION, 2);
-    #else
-        glslVersion = "#version 130";
-        SDL_GL_SetAttribute (SDL_GL_CONTEXT_FLAGS, 0);
-        SDL_GL_SetAttribute (SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-        SDL_GL_SetAttribute (SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-        SDL_GL_SetAttribute (SDL_GL_CONTEXT_MINOR_VERSION, 0);
-    #endif
-
-    #ifdef SDL_HINT_IME_SHOW_UI
-        SDL_SetHint (SDL_HINT_IME_SHOW_UI, "1");
-    #endif
-
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-
-    window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h, WINDOW_FLAGS);
-    if (window == nullptr) throw std::runtime_error (SDL_GetError());
-
-    glContext = SDL_GL_CreateContext (window);
-    SDL_GL_MakeCurrent (window, glContext);
-    SDL_GL_SetSwapInterval (1); // enables vsync
-}
-
-OS_Window::~OS_Window ()
-{
-    puts ("~OS_Window");
-    SDL_GL_DeleteContext(glContext);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
-}
-
-void OS_Window::render (int a, int b, int x, int y, const ImVec4& color)
-{
-    glViewport(a, b, x, y);
-    glClearColor(color.x * color.w, color.y * color.w, color.z * color.w, color.w);
-    glClear(GL_COLOR_BUFFER_BIT);
-}
-
-void OS_Window::poll (bool& running)
-{
-    SDL_Event event;
-    while (SDL_PollEvent(&event))
-    {
-        if (event.window.event == SDL_WINDOWEVENT_RESIZED)
-            SDL_GetWindowSize(window, &width, &height);
-        ImGui_ImplSDL2_ProcessEvent(&event);
-        if (event.type == SDL_QUIT)
-            running = false;
-        
-        if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID (window))
-            running = false;
-    }
-}
-
-void OS_Window::swap_window () { SDL_GL_SwapWindow(window);}
-SDL_Window* OS_Window::get_window () { return window;}
-SDL_GLContext OS_Window::get_glContext () { return glContext;}
-const char* OS_Window::get_glslVersion () { return glslVersion;}
-std::uint32_t OS_Window::get_windowID () { return SDL_GetWindowID (window);}
 
 template <class ADDRESS_TYPE>
 constexpr std::size_t array_size ()
@@ -110,7 +31,6 @@ namespace
     static ImFont* font;
     static float textSize;
     static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-    static OS_Window window ("Debugger", WINDOW_W, WINDOW_H);
 
 
     template <class ADDRESS_TYPE>
@@ -549,7 +469,7 @@ class Hex_Editor : protected Memory_Window<T, Address_Type, Size>
     }
 };
 
-void UI::init ()
+void UI::init (OS_Window& window)
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -590,9 +510,7 @@ void UI::end ()
 
 void UI::debug(debug_v& values)
 {
-    window.poll(values.running);
     static ImGuiIO& io = ImGui::GetIO(); (void)io;
-    
     static Program_Window <word>                                                  programWindow {values.bus.cpu.decompiledCode, values.bus.cpu.PC};
     static Hex_Editor     <std::array <byte, RAM_SIZE>, std::uint16_t, RAM_SIZE>  HexEditor ("Editor",values.bus.ram.data().begin());
     static Hex_Editor     <std::array <byte, RAM_SIZE>, word, 256>                zeroPage ("Zero Page", values.bus.ram.data().begin());
@@ -622,7 +540,7 @@ void UI::debug(debug_v& values)
     ImGuiWindowClass window_class;
     window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
     ImGui::SetNextWindowClass(&window_class);
-    ImGui::SetNextWindowSize({static_cast<float>(window.width),0});
+    ImGui::SetNextWindowSize({static_cast<float>(values.window.width),0});
     ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
     static int v = 100;
@@ -664,7 +582,7 @@ void UI::debug(debug_v& values)
 
     // Rendering
     ImGui::Render();
-    window.render(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y, clear_color);
+    values.window.render(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y, clear_color);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     // Update and Render additional Platform Windows
@@ -679,5 +597,5 @@ void UI::debug(debug_v& values)
         ImGui::RenderPlatformWindowsDefault();
         SDL_GL_MakeCurrent(backup_current_window, backup_current_context);
     }
-    SDL_GL_SwapWindow(window.get_window());
+    SDL_GL_SwapWindow(values.window.get_window());
 }

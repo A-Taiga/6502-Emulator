@@ -1,8 +1,10 @@
 #include "cpu.hpp"
 #include "common.hpp"
 #include "bus.hpp"
+#include <chrono>
 #include <cstring>
 #include <format>
+#include <thread>
 /*
 
 N	Negative
@@ -28,9 +30,13 @@ C	Carry
 
     VECTORS = 0xFFFA - 0xFFFF
 
-    29kb = free
-*/
+    $FFFA, $FFFB ... NMI (Non-Maskable Interrupt) vector
+    $FFFC, $FFFD ... RES (Reset) vector
+    $FFFE, $FFFF ... IRQ (Interrupt Request) vector
 
+    29kb = free
+    
+*/
 
 namespace
 {
@@ -84,7 +90,33 @@ void _6502::CPU::reset()
     PC = (bus.ram[RESET_VECTOR+1]  << 8) | bus.ram[RESET_VECTOR];
 
 }
+// $FFFE, $FFFF ... IRQ (Interrupt Request) vector
+void _6502::CPU::IRQ ()
+{
+    if (SR & I)
+    {
+        stack_push(PC & 0xFF00);
+        stack_push(PC & 0x00FF);
+		set_flag(I, true);
+		set_flag(U, true);
+        set_flag(B, false);
+        stack_push(SR);
+        const word low  = static_cast <word> (read(IRQ_VECTOR));
+        const word high = static_cast <word> (read(IRQ_VECTOR+1));
+        PC = (high << 8) | low;
 
+        int cycles = 7;
+        while (cycles > 0)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            cycles--;
+        }
+    }
+}
+void _6502::CPU::NMI ()
+{
+
+}
 
 void _6502::CPU::decompiler()
 {
@@ -124,6 +156,14 @@ void _6502::CPU::run()
     ins.fetched = &opcodes[read(PC++)];
     ins.cycles = ins.fetched->cycles + (this->*ins.fetched->mode)();
     (this->*ins.fetched->op)();
+
+    while (ins.cycles > 0)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        ins.cycles--;
+        if (ins.cycles == 2)
+            IRQ();
+    }
 }
 
 byte _6502::CPU::read(const word address)
@@ -385,7 +425,6 @@ void _6502::CPU::SEC(void)
 {
     SR |= C;
 }
-
 /* RTI return from interrupt */
 void _6502::CPU::RTI(void)
 {

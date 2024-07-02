@@ -1,13 +1,19 @@
 #include "emulator.hpp"
+#include "SDL2/SDL_events.h"
 #include "common.hpp"
 #include <iostream>
 #include <cassert>
 #include <cstring>
 #include "cpu.hpp"
 #include "debugger.hpp"
+#include "imgui_impl_sdl2.h"
+#include "window.hpp"
 #include <thread>
 #include <filesystem>
 #include <fstream>
+
+#define WINDOW_W 1920
+#define WINDOW_H 1080
 
 namespace
 {
@@ -38,10 +44,11 @@ _6502::Emulator::Emulator(const char* filePath)
 
 void _6502::Emulator::run()
 {
+    OS_Window window ("Debugger", WINDOW_W, WINDOW_H);
     bus.cpu.reset();
     using namespace std::chrono_literals;
-    UI::debug_v debugData = {bus, 100ms, true, true, false,[&](){reset();}};
-    UI::init();
+    UI::debug_v debugData = {bus, 100ms, true, true, false,[&](){reset();}, window};
+    UI::init(window);
     bus.cpu.decompiler();
 
     static std::thread t ([&](){
@@ -57,6 +64,26 @@ void _6502::Emulator::run()
     
     while (debugData.running)
     {
+        window.poll(debugData.running, [&](const SDL_Event& event){
+            ImGui_ImplSDL2_ProcessEvent(&event);
+            // if (event.type == SDL_KEYDOWN)
+            // {
+            //     switch (event.key.keysym.scancode)
+            //     {
+            //         case SDL_SCANCODE_0: bus.ram[keyBufferIndex] = 0; keyBufferIndex++; break;
+            //         case SDL_SCANCODE_1: bus.ram[keyBufferIndex] = 1; keyBufferIndex++; break;
+            //         case SDL_SCANCODE_2: bus.ram[keyBufferIndex] = 2; keyBufferIndex++; break;
+            //         case SDL_SCANCODE_3: bus.ram[keyBufferIndex] = 3; keyBufferIndex++; break;
+            //         case SDL_SCANCODE_4: bus.ram[keyBufferIndex] = 4; keyBufferIndex++; break;
+            //         case SDL_SCANCODE_5: bus.ram[keyBufferIndex] = 5; keyBufferIndex++; break;
+            //         case SDL_SCANCODE_6: bus.ram[keyBufferIndex] = 6; keyBufferIndex++; break;
+            //         case SDL_SCANCODE_7: bus.ram[keyBufferIndex] = 7; keyBufferIndex++; break;
+            //         case SDL_SCANCODE_8: bus.ram[keyBufferIndex] = 8; keyBufferIndex++; break;
+            //         case SDL_SCANCODE_9: bus.ram[keyBufferIndex] = 9; keyBufferIndex++; break;
+            //         default:;
+            //     }
+            // }
+        });
         UI::debug(debugData);
     }
     t.join();
