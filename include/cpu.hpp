@@ -34,6 +34,33 @@
 
 namespace _6502
 {
+    using pin_type = std::uint16_t;
+    enum class CPU_PINS : pin_type
+    {
+        RDY   = 1 << 0,   // ReaDY. When going LOW, the CPU waits after next read cycle for this line going HIGH again
+        OUT1  = 1 << 1,   // Phi1 out. (system clock)
+        IRQ   = 1 << 2,   // Interrupt requested 
+        NMI   = 1 << 3,   // Non Maskable Interrupt
+        SYNC  = 1 << 4,   // Synchronization. Becomes HIGH whenever the CPU fetches an opcode
+        RES   = 1 << 5,   // RESet. When going LOW, the CPU resets and waits for a LOW-HIGH transistion to load the PC with the value stored in $fffc/$fffd
+        OUT2  = 1 << 6,   // Phi2 out (system clock)
+        O     = 1 << 7,   // Set Overflow
+        IN    = 1 << 8,   // Phi 0 in. (system clock)
+        RW    = 1 << 9,   // Read/-Write. With this line, the CPU controls whether the next DRAM access will be a read or write cycle. LOW=write, HIGH=read
+    };
+
+    using flag_type = std::uint8_t;
+    enum class FLAG : flag_type
+    {
+        C = 1 << 0, // carry
+        Z = 1 << 1, // zero 
+        I = 1 << 2, // interrupt
+        D = 1 << 3, // decimal
+        B = 1 << 4, // break
+        U = 1 << 5, // ignored / unused
+        V = 1 << 6, // overflow
+        N = 1 << 7, // negative
+    };
 
     enum class Address_Type
     {
@@ -63,7 +90,6 @@ namespace _6502
             void run ();
             const word& get_pc ();
             // short IF (const byte& op); // opcode fetch returns opcode size
-        public:
             /* main registers */
             word PC;   /* program counter */
             byte AC;   /* accumulator */
@@ -71,6 +97,8 @@ namespace _6502
             byte Y;    /* y register */
             byte SR;   /* status register [NV-BDIZC] (aka flags) */
             byte SP;   /* stack pointer */
+
+            pin_type pins;
             Bus& bus;
             std::vector<std::pair<word, std::string>>  decompiledCode;
 
@@ -82,12 +110,13 @@ namespace _6502
 
             } ins;
 
+
             byte read (const word address);
             void write (const word address, const byte data);
             void stack_push (const byte data);
             byte stack_pop ();
-            void set_flag(const byte flag, const bool condition);
-            void run_cycle ();
+            void set_flag(const FLAG flag, const bool condition);
+            void set_pin (const CPU_PINS p);
             
             int IMP (); 
             int IMM (); 

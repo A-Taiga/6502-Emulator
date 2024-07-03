@@ -40,14 +40,6 @@ C	Carry
 
 namespace
 {
-    const byte C = 1 << 0; // carry
-    const byte Z = 1 << 1; // zero 
-    const byte I = 1 << 2; // interrupt
-    const byte D = 1 << 3; // decimal
-    const byte B = 1 << 4; // break
-    const byte U = 1 << 5; // ignored / unused
-    const byte V = 1 << 6; // overflow
-    const byte N = 1 << 7; // negative
 
     using CPU = _6502::CPU;
     using x = _6502::Address_Type;
@@ -85,7 +77,7 @@ void _6502::CPU::reset()
     AC = 0;
     X  = 0;
     Y  = 0;
-    SR = U;
+    SR = static_cast <flag_type> (FLAG::U);
     SP = 0xFF;
     PC = (bus.ram[RESET_VECTOR+1]  << 8) | bus.ram[RESET_VECTOR];
 
@@ -93,13 +85,13 @@ void _6502::CPU::reset()
 // $FFFE, $FFFF ... IRQ (Interrupt Request) vector
 void _6502::CPU::IRQ ()
 {
-    if (SR & I)
+    if (SR & static_cast <flag_type> (FLAG::I))
     {
         stack_push(PC & 0xFF00);
         stack_push(PC & 0x00FF);
-		set_flag(I, true);
-		set_flag(U, true);
-        set_flag(B, false);
+		set_flag(FLAG::I, true);
+		set_flag(FLAG::U, true);
+        set_flag(FLAG::B, false);
         stack_push(SR);
         const word low  = static_cast <word> (read(IRQ_VECTOR));
         const word high = static_cast <word> (read(IRQ_VECTOR+1));
@@ -108,10 +100,10 @@ void _6502::CPU::IRQ ()
         int cycles = 7;
         while (cycles > 0)
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
             cycles--;
         }
     }
+
 }
 void _6502::CPU::NMI ()
 {
@@ -159,7 +151,6 @@ void _6502::CPU::run()
 
     while (ins.cycles > 0)
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         ins.cycles--;
         if (ins.cycles == 2)
             IRQ();
@@ -188,12 +179,17 @@ void _6502::CPU::stack_push (const byte data)
     SP--;
 }
 
-void _6502::CPU::set_flag(const byte flag, const bool condition)
+void _6502::CPU::set_flag(const FLAG flag, const bool condition)
 {
     if (condition)
-        SR |= flag;
+        SR |= static_cast <flag_type> (flag);
     else
-        SR &= ~flag;
+        SR &= ~static_cast<flag_type>(flag);
+}
+
+void _6502::CPU::set_pin (const CPU_PINS p)
+{
+    pins |= static_cast<pin_type> (p);
 }
 
 int _6502::CPU::IMP ()
@@ -298,9 +294,9 @@ void _6502::CPU::BRK(void)
     PC++;
     stack_push(PC & 0xFF00);
     stack_push(PC & 0x00FF);
-    set_flag(B, true);
+    set_flag(FLAG::B, true);
     stack_push(SR);
-    set_flag(B, false);
+    set_flag(FLAG::B, false);
     PC = static_cast <word> (read(0xFFFE)) | static_cast <word> (read(0xFFFF) << 8);
 }
 /* ORA OR memory with accumulator */
@@ -308,8 +304,8 @@ void _6502::CPU::ORA(void)
 {
     const word data = static_cast <word> (read (ins.data));
     const word result = AC | data;
-    set_flag (N, result & 0x0080);
-    set_flag (Z, (result & 0x00FF) == 0);
+    set_flag(FLAG::N, result & 0x0080);
+    set_flag(FLAG::Z, (result & 0x00FF) == 0);
     AC = result;
 }
 /* ASL shift left one bit (memory or accumulator) */
@@ -324,9 +320,9 @@ void _6502::CPU::ASL(void)
     }()) << 1;
     
     // const word result = data << 1;
-    set_flag (N, result & 0x0080);
-    set_flag (Z, (result & 0x00FF) == 0);
-    set_flag (C, result > 0x00FF);
+    set_flag(FLAG::N, result & 0x0080);
+    set_flag(FLAG::Z, (result & 0x00FF) == 0);
+    set_flag(FLAG::C, result > 0x00FF);
 
     if (ins.fetched->addrType == Address_Type::IMP)
         AC = result;
@@ -337,15 +333,15 @@ void _6502::CPU::ASL(void)
 /* http://www.atarihq.com/danb/files/64doc.txt */
 void _6502::CPU::PHP(void)
 {
-    stack_push(SR | U | B);
-    set_flag(U, false);
-    set_flag(B, false);
+    stack_push(SR | static_cast <flag_type> (FLAG::U) | static_cast<flag_type> (FLAG::B));
+    set_flag(FLAG::U, false);
+    set_flag(FLAG::B, false);
     SP--;
 }
 /* BPL branch on result plus */
 void _6502::CPU::BPL(void)
 {
-    if (!(SR & N))
+    if (!(SR & static_cast <flag_type> (FLAG::N)))
     {
         ins.cycles++;
         const word addr = PC + ins.data;
@@ -357,7 +353,7 @@ void _6502::CPU::BPL(void)
 /* CLC clear carry flag */
 void _6502::CPU::CLC(void)
 {
-    SR &= ~C;
+    SR &= ~static_cast <flag_type> (FLAG::C);
 }
 /* JSR jump to new location saving return address */
 void _6502::CPU::JSR(void)
@@ -371,17 +367,17 @@ void _6502::CPU::JSR(void)
 void _6502::CPU::AND(void)
 {
     AC &= read(ins.data);
-    set_flag(N, AC & 0x80);
-    set_flag(Z, AC == 0x00);
+    set_flag(FLAG::N, AC & 0x80);
+    set_flag(FLAG::Z, AC == 0x00);
 }
 /* BIT test bits in memory with accumulator */
 void _6502::CPU::BIT(void)
 {
     word fetched = static_cast <word> (read(ins.data));
     word result  = static_cast <word> (AC) & fetched;
-    set_flag(N, fetched & (1 << 7));
-    set_flag(Z, (result & 0x00FF) == 0x0000);
-    set_flag(V, fetched & (1 << 6));
+    set_flag(FLAG::N, fetched & (1 << 7));
+    set_flag(FLAG::Z, (result & 0x00FF) == 0x0000);
+    set_flag(FLAG::V, fetched & (1 << 6));
 }
 /* ROL rotate one bit left (memory or accumulator) */
 void _6502::CPU::ROL(void)
@@ -392,11 +388,11 @@ void _6502::CPU::ROL(void)
             return AC;
         else
             return read (ins.data);
-    }()) << 1) | (C & SP);
+    }()) << 1) | (static_cast <flag_type> (FLAG::C) & SP);
 
-    set_flag(N, result & 0x0080);
-    set_flag(Z, (result & 0x00FF) == 0x00);
-    set_flag(C, result & 0xFF00);
+    set_flag(FLAG::N, result & 0x0080);
+    set_flag(FLAG::Z, (result & 0x00FF) == 0x00);
+    set_flag(FLAG::C, result & 0xFF00);
 
     if (ins.fetched->addrType == Address_Type::IMP)
         AC = result & 0x00FF;
@@ -411,7 +407,7 @@ void _6502::CPU::PLP(void)
 /* BMI branch on result minus */
 void _6502::CPU::BMI(void)
 {
-    if (SR & N)
+    if (SR & static_cast <flag_type> (FLAG::N))
     {
         ins.cycles++;
         const word addr = PC + ins.data;
@@ -423,7 +419,7 @@ void _6502::CPU::BMI(void)
 /* SEC set carry flag */
 void _6502::CPU::SEC(void)
 {
-    SR |= C;
+    SR |= static_cast <flag_type> (FLAG::C);
 }
 /* RTI return from interrupt */
 void _6502::CPU::RTI(void)
@@ -433,8 +429,8 @@ void _6502::CPU::RTI(void)
     and bit 5 ignored. Then PC is pulled from the stack.
     */
     SR = stack_pop();
-    SR &= ~B;
-    SR &= ~U;
+    SR &= ~static_cast <flag_type> (FLAG::B);
+    SR &= ~static_cast <flag_type> (FLAG::U);
     word low  = static_cast <word> (stack_pop());
     word high = static_cast <word> (stack_pop()) << 8;
     PC = high | low;
@@ -443,13 +439,13 @@ void _6502::CPU::RTI(void)
 void _6502::CPU::EOR(void)
 {
     AC |= static_cast <byte> (ins.data);
-    set_flag(N, AC & 0x80);
-    set_flag(Z, AC == 0);
+    set_flag(FLAG::N, AC & 0x80);
+    set_flag(FLAG::Z, AC == 0);
 }
 /* LSR shift one bit right (memory or accumulator) */
 void _6502::CPU::LSR(void)
 {
-    set_flag(C, ins.data & 0x0001);
+    set_flag(FLAG::C, ins.data & 0x0001);
     const word result = ([&]()
     {
         if (ins.fetched->addrType == Address_Type::IMP)
@@ -457,8 +453,8 @@ void _6502::CPU::LSR(void)
         else
             return static_cast <word> (read (ins.data));
     })() >> 1;
-    set_flag(N, result & 0x80);
-    set_flag(Z, result == 0x00);
+    set_flag(FLAG::N, result & 0x80);
+    set_flag(FLAG::Z, result == 0x00);
     if (ins.fetched->addrType == Address_Type::IMP)
         AC = result;
     else
@@ -477,7 +473,7 @@ void _6502::CPU::JMP(void)
 /* BVC branch on overflow clear */
 void _6502::CPU::BVC(void)
 {
-    if (!(SR & V))
+    if (!(SR & static_cast <flag_type> (FLAG::V)))
     {
         ins.cycles++;
         const word addr = PC + ins.data;
@@ -489,7 +485,7 @@ void _6502::CPU::BVC(void)
 /* CLI clear interrupt disable bit */
 void _6502::CPU::CLI(void)
 {
-    SR &= ~I;
+    SR &= ~static_cast <flag_type> (FLAG::I);
 }
 /* return from subroutine */
 void _6502::CPU::RTS(void)
@@ -503,8 +499,8 @@ void _6502::CPU::RTS(void)
 void _6502::CPU::PLA(void)
 {
     AC = stack_pop();
-    set_flag (N, AC & 0x80);
-    set_flag (Z, AC == 0x00);
+    set_flag(FLAG::N, AC & 0x80);
+    set_flag(FLAG::Z, AC == 0x00);
 }
 /* ADC add memory to accumulator with carry */
 void _6502::CPU::ADC(void)
@@ -512,11 +508,11 @@ void _6502::CPU::ADC(void)
     // with regards to the V flag
     // https://stackoverflow.com/questions/29193303/6502-emulation-proper-way-to-implement-adc-and-sbc
     const word fetched =  static_cast <word> (read(ins.data));
-    const word result = static_cast <word> (AC) + fetched + static_cast <word> (SR & C);
-    set_flag (N, result & 0x0080);
-    set_flag (Z, (result & 0x00FF) == 0);
-    set_flag (C, result > 0x00FF);
-    set_flag (V, ~(AC ^ fetched) & (AC ^ result) & 0x0080);
+    const word result = static_cast <word> (AC) + fetched + static_cast <word> (SR & static_cast <flag_type> (FLAG::C));
+    set_flag (FLAG::N, result & 0x0080);
+    set_flag (FLAG::Z, (result & 0x00FF) == 0);
+    set_flag (FLAG::C, result > 0x00FF);
+    set_flag (FLAG::V, ~(AC ^ fetched) & (AC ^ result) & 0x0080);
     AC = result & 0x00FF;
 }
 /* ROR rotate one bit right (memory or accumulator) */
@@ -528,10 +524,10 @@ void _6502::CPU::ROR(void)
             return AC;
         else
             return read (ins.data);
-    }()) >> 1) | ((SR & C) << 7);
-    set_flag(N, result & 0x0080);
-    set_flag(Z, (result & 0x0080) == 0);
-    set_flag(C, ins.data & 0x01);
+    }()) >> 1) | ((SR & static_cast <flag_type> (FLAG::C)) << 7);
+    set_flag(FLAG::N, result & 0x0080);
+    set_flag(FLAG::Z, (result & 0x0080) == 0);
+    set_flag(FLAG::C, ins.data & 0x01);
     if (ins.fetched->addrType == Address_Type::IMP)
         AC = result & 0x00FF;
     else
@@ -540,7 +536,7 @@ void _6502::CPU::ROR(void)
 /* BVS branch on overflow set */
 void _6502::CPU::BVS(void)
 {
-    if (SR & V)
+    if (SR & static_cast <flag_type> (FLAG::V))
     {
         ins.cycles++;
         const word addr = PC + ins.data;
@@ -552,7 +548,7 @@ void _6502::CPU::BVS(void)
 /* SEI set interrupt disable status */
 void _6502::CPU::SEI(void)
 {
-    SR |= I;
+    SR |= static_cast <flag_type> (FLAG::I);
 }
 /* store accumulator in memory */
 void _6502::CPU::STA(void)
@@ -573,20 +569,20 @@ void _6502::CPU::STX(void)
 void _6502::CPU::DEY(void)
 {
     Y -= 1;
-    set_flag(N, Y & 0x80);
-    set_flag(Z, Y == 0x00);
+    set_flag(FLAG::N, Y & 0x80);
+    set_flag(FLAG::Z, Y == 0x00);
 }
 /* TXA transfer index x to accumulator */
 void _6502::CPU::TXA(void)
 {
     AC = X;
-    set_flag(N, AC & 0x80);
-    set_flag(Z, AC == 0x00);
+    set_flag(FLAG::N, AC & 0x80);
+    set_flag(FLAG::Z, AC == 0x00);
 }
 /* BCC branch on carry clear */
 void _6502::CPU::BCC(void)
 {
-    if (!(SR & C))
+    if (!(SR & static_cast <flag_type> (FLAG::C)))
     {
         ins.cycles++;
         const word addr = PC + ins.data;
@@ -599,8 +595,8 @@ void _6502::CPU::BCC(void)
 void _6502::CPU::TYA(void)
 {
     AC = Y;
-    set_flag(N, AC & 0x80);
-    set_flag(Z, AC == 0x00);
+    set_flag(FLAG::N, AC & 0x80);
+    set_flag(FLAG::Z, AC == 0x00);
 
 }
 /* TXS transfer index x to stack register */
@@ -612,8 +608,8 @@ void _6502::CPU::TXS(void)
 void _6502::CPU::LDY(void)
 {
     const word result = static_cast <word> (read(ins.data));
-    set_flag(N, result & 0x0080);
-    set_flag(Z, result == 0x0000);
+    set_flag(FLAG::N, result & 0x0080);
+    set_flag(FLAG::Z, result == 0x0000);
     Y = result & 0x00FF;
 }
 
@@ -621,36 +617,36 @@ void _6502::CPU::LDY(void)
 void _6502::CPU::LDA(void)
 {
     const word result = static_cast <word> (read(ins.data));
-    set_flag(N, result & 0x0080);
-    set_flag(Z, result == 0x0000);
+    set_flag(FLAG::N, result & 0x0080);
+    set_flag(FLAG::Z, result == 0x0000);
     AC = result & 0x00FF;
 }
 /* LDX load index x with memory */
 void _6502::CPU::LDX(void) 
 {
     const word result = static_cast <word> (read(ins.data));
-    set_flag(N, result & 0x80);
-    set_flag(Z, result == 0x00);
+    set_flag(FLAG::N, result & 0x80);
+    set_flag(FLAG::Z, result == 0x00);
     X = result & 0x00FF;
 }
 /* TAY transfer accumulator to index y */
 void _6502::CPU::TAY(void)
 {
     Y = AC;
-    set_flag(N, Y & 0x80);
-    set_flag(Z, Y == 0x00);
+    set_flag(FLAG::N, Y & 0x80);
+    set_flag(FLAG::Z, Y == 0x00);
 }
 /* TAX transfer accumulator to index x */
 void _6502::CPU::TAX(void)
 {
     X = AC;
-    set_flag(N, X & 0x80);
-    set_flag(Z, X == 0x00);
+    set_flag(FLAG::N, X & 0x80);
+    set_flag(FLAG::Z, X == 0x00);
 }
 /* BCS branch on carry set */
 void _6502::CPU::BCS(void)
 {
-    if (SR & C)
+    if (SR & static_cast <flag_type> (FLAG::C))
     {
         ins.cycles++;
         const word addr = PC + ins.data;
@@ -662,32 +658,32 @@ void _6502::CPU::BCS(void)
 /* CLV clear overflow flag */
 void _6502::CPU::CLV(void)
 {
-    SR &= ~V;
+    SR &= ~static_cast <flag_type> (FLAG::V);
 }
 /* TSX transfer stack pointer to index x */
 void _6502::CPU::TSX(void)
 {
     X = SP;
-    set_flag(N, X & 0x80);
-    set_flag(Z, X == 0x00);
+    set_flag(FLAG::N, X & 0x80);
+    set_flag(FLAG::Z, X == 0x00);
 }
 /* CPY compare memory with index y */
 void _6502::CPU::CPY(void)
 {
     const word fetched = read(ins.data);
     const word result = Y - fetched;
-    set_flag(N, result & 0x0080);
-    set_flag(Z, result & 0x0000);
-    set_flag(C, Y >= fetched);
+    set_flag(FLAG::N, result & 0x0080);
+    set_flag(FLAG::Z, result & 0x0000);
+    set_flag(FLAG::C, Y >= fetched);
 }
 /* CMP compare memory with accumulator */
 void _6502::CPU::CMP(void)
 {
     const word fetched = read(ins.data);
     const word result = AC - fetched;
-    set_flag(N, result & 0x0080);
-    set_flag(Z, result & 0x0000);
-    set_flag(C, Y >= fetched);
+    set_flag(FLAG::N, result & 0x0080);
+    set_flag(FLAG::Z, result & 0x0000);
+    set_flag(FLAG::C, Y >= fetched);
 }
 /* DEC decrment memory by one */
 void _6502::CPU::DEC(void)
@@ -695,27 +691,27 @@ void _6502::CPU::DEC(void)
     const word fetched = static_cast <word> (read(ins.data));
     const word result = fetched - 1;
     write (ins.data, result);
-    set_flag(N, result & 0x0080);
-    set_flag(Z, (result & 0x00FF) == 0x0000);
+    set_flag(FLAG::N, result & 0x0080);
+    set_flag(FLAG::Z, (result & 0x00FF) == 0x0000);
 }
 /* INY increment index y by 1*/
 void _6502::CPU::INY(void)
 {
     Y += 1;
-    set_flag(N, Y & 0x80);
-    set_flag(Z, Y == 0x00);
+    set_flag(FLAG::N, Y & 0x80);
+    set_flag(FLAG::Z, Y == 0x00);
 }
 /* DEX decrment index x by 1*/
 void _6502::CPU::DEX(void)
 {
     X -= 1;
-    set_flag(N, X & 0x80);
-    set_flag(Z, X == 0x00);
+    set_flag(FLAG::N, X & 0x80);
+    set_flag(FLAG::Z, X == 0x00);
 }
 /* BNE branch on result not zero */
 void _6502::CPU::BNE(void) 
 {
-    if (!(SR & Z))
+    if (!(SR & static_cast <flag_type> (FLAG::Z)))
     {
         ins.cycles++;
         const word addr = PC + ins.data;
@@ -727,16 +723,16 @@ void _6502::CPU::BNE(void)
 /* CLD clear decimal mode */
 void _6502::CPU::CLD(void)
 {
-    SR &= ~D;
+    SR &= ~static_cast <flag_type> (FLAG::D);
 }
 /* CPX compare memory with index x*/
 void _6502::CPU::CPX(void)
 {
     const word fetched = static_cast <word> (read(ins.data));
     const word result = static_cast <word> (X) - fetched;
-    set_flag(C, X >= fetched);
-    set_flag(N, result & 0x0080);
-    set_flag(Z, (result & 0x00FF) == 0x0000);
+    set_flag(FLAG::C, X >= fetched);
+    set_flag(FLAG::N, result & 0x0080);
+    set_flag(FLAG::Z, (result & 0x00FF) == 0x0000);
 
 }
 /* SBC subtract memory from accumulator with borrow */
@@ -744,11 +740,11 @@ void _6502::CPU::SBC(void)
 {
     // https://stackoverflow.com/questions/29193303/6502-emulation-proper-way-to-implement-adc-and-sbc
     const word fetched = static_cast <word> (read(ins.data)) ^ 0x00FF;
-    const word result = static_cast <word> (AC) + fetched + (SR & C);
-    set_flag (N, result & 0x0080);
-    set_flag (Z, (result & 0x00FF) == 0);
-    set_flag (C, result > 0x00FF);
-    set_flag (V, (AC ^ fetched) & (AC ^ result) & 0x0080);
+    const word result = static_cast <word> (AC) + fetched + (SR & static_cast <flag_type> (FLAG::C));
+    set_flag(FLAG::N, result & 0x0080);
+    set_flag(FLAG::Z, (result & 0x00FF) == 0);
+    set_flag(FLAG::C, result > 0x00FF);
+    set_flag(FLAG::V, (AC ^ fetched) & (AC ^ result) & 0x0080);
     AC = result & 0x00FF;
 }
 /* INC increment memory by one */
@@ -757,22 +753,22 @@ void _6502::CPU::INC(void)
     const word fetched = static_cast <word> (read(ins.data));
     const word result = fetched + 1;
     write (ins.data, result);
-    set_flag(N, result & 0x0080);
-    set_flag(Z, (result & 0x00FF) == 0x0000);
+    set_flag(FLAG::N, result & 0x0080);
+    set_flag(FLAG::Z, (result & 0x00FF) == 0x0000);
 }
 /* INX increment index x by 1 */
 void _6502::CPU::INX(void)
 {
     X += 1;
-    set_flag(N, X & 0x80);
-    set_flag(Z, X == 0x00);
+    set_flag(FLAG::N, X & 0x80);
+    set_flag(FLAG::Z, X == 0x00);
 }
 /* NOP no operation */
 void _6502::CPU::NOP(void) {}
 /* BEQ branch on equal */
 void _6502::CPU::BEQ(void)
 {
-    if (SR & Z)
+    if (SR & static_cast <flag_type> (FLAG::Z))
     {
         ins.cycles++;
         const word addr = PC + ins.data;
@@ -784,7 +780,7 @@ void _6502::CPU::BEQ(void)
 /* SED set decimal flag */
 void _6502::CPU::SED(void)
 {
-    SR |= D;
+    SR |= static_cast <flag_type> (FLAG::D);
 }
 
 void _6502::CPU::XXX(void) {}

@@ -28,14 +28,17 @@ namespace
             file.close();
             return fileSize;
         }
-        catch (const std::exception& e) {std::cerr << e.what() << '\n';}
+        catch (const std::exception& e) 
+        {
+            std::cerr << e.what() << '\n';
+        }
         return 0;
     }
 }
 
 _6502::Emulator::Emulator(const char* filePath)
-: bus ()
-, currentFile(filePath)
+: bus {}
+, currentFile {filePath}
 {
     load_rom (filePath, bus.ram.data(), ROM_BEGIN);
     bus.ram[RESET_VECTOR]     = ROM_BEGIN & 0x00FF;
@@ -47,11 +50,11 @@ void _6502::Emulator::run()
     OS_Window window ("Debugger", WINDOW_W, WINDOW_H);
     bus.cpu.reset();
     using namespace std::chrono_literals;
-    UI::debug_v debugData = {bus, 100ms, true, true, false,[&](){reset();}, window};
+    UI::debug_v debugData = {bus, 1ms, true, true, false,[&](){reset();}, window};
     UI::init(window);
     bus.cpu.decompiler();
 
-    static std::thread t ([&](){
+    std::thread t ([&](){
         while (debugData.running)
         {
             if (!debugData.pause)
@@ -86,6 +89,8 @@ void _6502::Emulator::run()
         });
         UI::debug(debugData);
     }
+
+
     t.join();
     UI::end();
 }

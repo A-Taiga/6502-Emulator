@@ -5,7 +5,7 @@
 #include <functional>
 
 
-struct OS_Window;
+class OS_Window;
 
 
 namespace _6502 {class Bus;}
@@ -14,7 +14,7 @@ namespace UI
     struct debug_v
     {
         _6502::Bus& bus;
-        std::chrono::milliseconds delay;
+        std::chrono::nanoseconds delay;
         bool running;
         bool pause;
         bool step;

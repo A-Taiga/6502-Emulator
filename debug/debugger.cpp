@@ -540,7 +540,7 @@ void UI::debug(debug_v& values)
     ImGuiWindowClass window_class;
     window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
     ImGui::SetNextWindowClass(&window_class);
-    ImGui::SetNextWindowSize({static_cast<float>(values.window.width),0});
+    ImGui::SetNextWindowSize({static_cast<float>(values.window.get_width()),0});
     ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
     static int v = 100;

@@ -43,6 +43,8 @@ OS_Window::OS_Window (const char* title, int w, int h)
     glContext = SDL_GL_CreateContext (window);
     SDL_GL_MakeCurrent (window, glContext);
     SDL_GL_SetSwapInterval (1); // enables vsync
+    mWindowID = SDL_GetWindowID( window );
+    printf ("%d\n",mWindowID);
 }
 
 OS_Window::~OS_Window ()
@@ -63,6 +65,7 @@ void OS_Window::render (int a, int b, int x, int y, const SDL_Color& color)
 
 void OS_Window::render (int a, int b, int x, int y, const ImVec4& color)
 {
+    SDL_GL_MakeCurrent (window, glContext);
     glViewport(a, b, x, y);
     glClearColor(color.x * color.w, color.y * color.w, color.z * color.w, color.w);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -73,3 +76,5 @@ SDL_Window* OS_Window::get_window () { return window;}
 SDL_GLContext OS_Window::get_glContext () { return glContext;}
 const char* OS_Window::get_glslVersion () { return glslVersion;}
 std::uint32_t OS_Window::get_windowID () { return SDL_GetWindowID (window);}
+int OS_Window::get_width() {return width;}
+int OS_Window::get_height() {return height;}

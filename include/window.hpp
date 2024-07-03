@@ -1,22 +1,27 @@
 #ifndef WINDOW_HPP
 #define WINDOW_HPP
+
 #include <cstdint>
 #include <SDL2/SDL_events.h>
 #include <functional>
 #include <type_traits>
+
 struct SDL_Window;
 struct SDL_Color;
 struct ImVec4;
 typedef void *SDL_GLContext;
 typedef union SDL_Event SDL_Event;
 
-struct OS_Window 
+class OS_Window 
 {
-    SDL_Window*     window;
-    SDL_GLContext   glContext;
-    int             width;
-    int             height;
-    const char*     glslVersion;
+    private:
+        SDL_Window*     window;
+        SDL_GLContext   glContext;
+        int             width;
+        int             height;
+        const char*     glslVersion;
+        std::uint32_t   mWindowID;
+
     public:
         OS_Window       (const char* title, int w = 0, int h = 0);
         ~OS_Window      ();
@@ -31,6 +36,10 @@ struct OS_Window
         SDL_GLContext   get_glContext ();
         const char*     get_glslVersion ();
         std::uint32_t   get_windowID ();
+        int             get_width();
+        int             get_height();
+
+        
 };
 
 template <class Callable>
@@ -45,12 +54,12 @@ inline void OS_Window::poll (bool& running, Callable callback)
         if (event.window.event == SDL_WINDOWEVENT_RESIZED)
             SDL_GetWindowSize(window, &width, &height);
 
-        if (event.type == SDL_QUIT)
+        if (event.type == SDL_QUIT && event.window.windowID == mWindowID)
         {
             running = false;
             return;
         }
-        if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID (window))
+        if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == mWindowID)
         {
             running = false;
             return;
