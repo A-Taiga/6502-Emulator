@@ -1,21 +1,21 @@
 #include "debugger.hpp"
+#include "SDL_render.h"
+#include "imgui_impl_sdl2.h"
 #include "window.hpp"
-#include <chrono>
 #include <cstdio>
 #include <format>
 #include <imgui.h>
 #include "cpu.hpp"
-#include "imgui_impl_opengl3.h"
-#include "imgui_impl_sdl2.h"
+#include "imgui_impl_sdlrenderer2.h"
 #include "imgui_internal.h"
 #include <cstddef>
 #include <string>
 #include "common.hpp"
-#include "bus.hpp"
 #include "IconsFontAwesome6.h"
 #include <span>
 #include <sys/types.h>
 #include <type_traits>
+#include "imgui.h"
 
 
 
@@ -28,10 +28,14 @@ constexpr std::size_t array_size ()
 
 namespace
 {
-    static ImFont* font;
-    static float textSize;
-    static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
+    static constexpr ImVec4 clear_color {0.45f, 0.55f, 0.60f, 1.00f};
+
+    template <class T>
+    concept is_container = requires {{typename std::decay_t<decltype(*std::declval <T>().begin())>()} -> std::integral;};
+    template <class T>
+    requires is_container <T>
+    struct nested_type {using type = typename std::decay_t <decltype (*std::declval<T>().begin())>;};
 
     template <class ADDRESS_TYPE>
     struct Program_Window
@@ -229,14 +233,6 @@ namespace
 }
 
 /* checks if type is a container and if type is an integral type */
-template <class T>
-concept is_container = requires {{typename std::decay_t<decltype(*std::declval <T>().begin())>()} -> std::integral;};
-
-template <class T>
-requires is_container <T>
-struct nested_type {using type = typename std::decay_t <decltype (*std::declval<T>().begin())>;};
-
-
 
 template <class T, class Address_Type, std::size_t Size>
 requires is_container <T> && std::is_integral_v<Address_Type>
@@ -469,133 +465,234 @@ class Hex_Editor : protected Memory_Window<T, Address_Type, Size>
     }
 };
 
-void UI::init (OS_Window& window)
+UI::Debugger::Debugger (Window_Interface& win)
+: window {win}
 {
+    assert (win.get_window() != nullptr);
+    assert (win.get_renderer() != nullptr);
+    
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
-    // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
+
+    // Setup Dear ImGui style
     ImGui::StyleColorsDark();
-    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-    ImGuiStyle& style = ImGui::GetStyle();
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-    {
-        style.WindowRounding = 0.0f;
-        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-    }
-    ImGui_ImplSDL2_InitForOpenGL(window.get_window(), window.get_glContext());
-    ImGui_ImplOpenGL3_Init(window.get_glslVersion());
+    //ImGui::StyleColorsLight();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplSDL2_InitForSDLRenderer(window.get_window(), window.get_renderer());
+    ImGui_ImplSDLRenderer2_Init(window.get_renderer());
+
     textSize = 15.0f;
     font = io.Fonts->AddFontFromFileTTF("imgui/misc/fonts/ProggyClean.ttf", textSize, nullptr, io.Fonts->GetGlyphRangesDefault());
     float iconFontSize = textSize * 2.0f / 3.0f; // FontAwesome fonts need to have their sizes reduced by 2.0f/3.0f in order to align correctly
-    // merge in icons from Font Awesome
+    // // merge in icons from Font Awesome
     static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_16_FA, 0 };
     ImFontConfig icons_config; 
     icons_config.MergeMode = true; 
     icons_config.PixelSnapH = true; 
     icons_config.GlyphMinAdvanceX = iconFontSize;
     io.Fonts->AddFontFromFileTTF( FONT_ICON_FILE_NAME_FAS, iconFontSize, &icons_config, icons_ranges );
-}
+};
 
-void UI::end ()
+UI::Debugger::~Debugger ()
 {
     puts("UI::end()");
-    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplSDLRenderer2_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 }
 
-void UI::debug(debug_v& values)
+void UI::Debugger::run (void (*callback)(const Window_Interface&), const Window_Interface& window)
 {
-    static ImGuiIO& io = ImGui::GetIO(); (void)io;
-    static Program_Window <word>                                                  programWindow {values.bus.cpu.decompiledCode, values.bus.cpu.PC};
-    static Hex_Editor     <std::array <byte, RAM_SIZE>, std::uint16_t, RAM_SIZE>  HexEditor ("Editor",values.bus.ram.data().begin());
-    static Hex_Editor     <std::array <byte, RAM_SIZE>, word, 256>                zeroPage ("Zero Page", values.bus.ram.data().begin());
-    static Hex_Editor     <std::array <byte, RAM_SIZE>, word, 256>                Page1 ("Page 1", values.bus.ram.data().begin()+0x200);
-    static Registers_Window                                                       registers (values.bus.cpu);
-    
-    ImGui_ImplOpenGL3_NewFrame();
+ 
+    ImGui_ImplSDLRenderer2_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
-    ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ParentViewportId, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 
-    if (ImGui::BeginMainMenuBar())
-    {
-        if (ImGui::BeginMenu("File"))
-        {
-            ImGui::EndMenu();
-        }
-        ImGui::EndMainMenuBar();
-    }
 
-    zeroPage.draw();
-    Page1.draw();
-    programWindow.draw();
-    HexEditor.draw();
-    registers.draw();
+    (*callback)(window);
 
-    ImGuiWindowClass window_class;
-    window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
-    ImGui::SetNextWindowClass(&window_class);
-    ImGui::SetNextWindowSize({static_cast<float>(values.window.get_width()),0});
-    ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-
-    static int v = 100;
-    ImGui::SetNextItemWidth(100);
-    if (ImGui::DragInt("##milliseconds delay", &v, 1, 1, 1000, "%d", ImGuiSliderFlags_AlwaysClamp))
-    {
-        values.delay = std::chrono::milliseconds(v);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button(ICON_FA_ARROW_ROTATE_LEFT))
-    {
-        values.resetCallback();
-        values.pause = true;
-    }
-    ImGui::SameLine();
-    if (ImGui::Button((values.pause ? ICON_FA_PLAY: ICON_FA_PAUSE)))
-    {
-        if (values.pause)
-        {
-            values.pause = false;
-            values.step = false;
-        }
-        else
-            values.pause = true;
-    }
-    ImGui::SameLine();
-    if (ImGui::Button(ICON_FA_ARROW_RIGHT))
-    {
-        values.step = true;
-        if (!values.pause)
-            values.pause = true;
-        values.bus.cpu.run();
-    }
-    ImGui::End();
-
-    ImGui::Begin("info", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-    ImGui::End();
-
-    // Rendering
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
     ImGui::Render();
-    values.window.render(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y, clear_color);
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    SDL_RenderSetScale(window.get_renderer(), io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y);
+    SDL_SetRenderDrawColor(window.get_renderer(), (Uint8)(clear_color.x * 255), (Uint8)(clear_color.y * 255), (Uint8)(clear_color.z * 255), (Uint8)(clear_color.w * 255));
+    SDL_RenderClear(window.get_renderer());
+    ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), window.get_renderer());
+    SDL_RenderPresent(window.get_renderer());
 
-    // Update and Render additional Platform Windows
-    // (Platform functions may change the current OpenGL context, so we save/restore it to make it easier to paste this code elsewhere.
-    //  For this specific demo app we could also call SDL_GL_MakeCurrent(window, gl_context) directly)
-    
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-    {
-        SDL_Window* backup_current_window = SDL_GL_GetCurrentWindow();
-        SDL_GLContext backup_current_context = SDL_GL_GetCurrentContext();
-        ImGui::UpdatePlatformWindows();
-        ImGui::RenderPlatformWindowsDefault();
-        SDL_GL_MakeCurrent(backup_current_window, backup_current_context);
-    }
-    SDL_GL_SwapWindow(values.window.get_window());
 }
+// void UI::Debugger::run ()
+// {
+    // static ImGuiIO& io = ImGui::GetIO(); (void)io;
+    // static Program_Window <word>                                                  programWindow {values.bus.cpu.decompiledCode, values.bus.cpu.PC};
+    // static Hex_Editor     <std::array <byte, RAM_SIZE>, std::uint16_t, RAM_SIZE>  HexEditor ("Editor",values.bus.ram.data().begin());
+    // static Hex_Editor     <std::array <byte, RAM_SIZE>, word, 256>                zeroPage ("Zero Page", values.bus.ram.data().begin());
+    // static Hex_Editor     <std::array <byte, RAM_SIZE>, word, 256>                Page1 ("Page 1", values.bus.ram.data().begin()+0x200);
+    // static Registers_Window                                                       registers (values.bus.cpu);
+    
+    // ImGui_ImplSDL2_NewFrame();
+    // ImGui::NewFrame();
+    // ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ParentViewportId, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
+
+    // if (ImGui::BeginMainMenuBar())
+    // {
+    //     if (ImGui::BeginMenu("File"))
+    //     {
+    //         ImGui::EndMenu();
+    //     }
+    //     ImGui::EndMainMenuBar();
+    // }
+
+    // zeroPage.draw();
+    // Page1.draw();
+    // programWindow.draw();
+    // HexEditor.draw();
+    // registers.draw();
+
+    // ImGuiWindowClass window_class;
+    // window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
+    // ImGui::SetNextWindowClass(&window_class);
+    // ImGui::SetNextWindowSize({static_cast<float>(window.get_width()),0});
+    // ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+
+    // static int v = 100;
+    // ImGui::SetNextItemWidth(100);
+    // if (ImGui::DragInt("##milliseconds delay", &v, 1, 1, 1000, "%d", ImGuiSliderFlags_AlwaysClamp))
+    // {
+    //     values.delay = std::chrono::milliseconds(v);
+    // }
+    // ImGui::SameLine();
+    // if (ImGui::Button(ICON_FA_ARROW_ROTATE_LEFT))
+    // {
+    //     values.resetCallback();
+    //     values.pause = true;
+    // }
+    // ImGui::SameLine();
+    // if (ImGui::Button((values.pause ? ICON_FA_PLAY: ICON_FA_PAUSE)))
+    // {
+    //     if (values.pause)
+    //     {
+    //         values.pause = false;
+    //         values.step = false;
+    //     }
+    //     else
+    //         values.pause = true;
+    // }
+    // ImGui::SameLine();
+    // if (ImGui::Button(ICON_FA_ARROW_RIGHT))
+    // {
+    //     monitor.step = true;
+    //     if (!monitor.pause)
+    //         monitor.pause = true;
+    //     monitor.bus.cpu.run();
+    // }
+    // ImGui::End();
+
+    // ImGui::Begin("info", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    // ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+    // ImGui::End();
+
+    // // Rendering
+    // ImGui::Render();
+    // SDL_RenderSetScale(window.get_renderer(), io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y);
+    // SDL_SetRenderDrawColor(window.get_renderer(), (Uint8)(clear_color.x * 255), (Uint8)(clear_color.y * 255), (Uint8)(clear_color.z * 255), (Uint8)(clear_color.w * 255));
+    // SDL_RenderClear(window.get_renderer());
+    // ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), window.get_renderer());
+    // SDL_RenderPresent(window.get_renderer());
+
+// }
+
+
+// void UI::debug(debug_v& values)
+// {
+//     static ImGuiIO& io = ImGui::GetIO(); (void)io;
+//     static Program_Window <word>                                                  programWindow {values.bus.cpu.decompiledCode, values.bus.cpu.PC};
+//     static Hex_Editor     <std::array <byte, RAM_SIZE>, std::uint16_t, RAM_SIZE>  HexEditor ("Editor",values.bus.ram.data().begin());
+//     static Hex_Editor     <std::array <byte, RAM_SIZE>, word, 256>                zeroPage ("Zero Page", values.bus.ram.data().begin());
+//     static Hex_Editor     <std::array <byte, RAM_SIZE>, word, 256>                Page1 ("Page 1", values.bus.ram.data().begin()+0x200);
+//     static Registers_Window                                                       registers (values.bus.cpu);
+    
+//     ImGui_ImplSDL2_NewFrame();
+//     ImGui::NewFrame();
+//     ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ParentViewportId, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
+
+//     if (ImGui::BeginMainMenuBar())
+//     {
+//         if (ImGui::BeginMenu("File"))
+//         {
+//             ImGui::EndMenu();
+//         }
+//         ImGui::EndMainMenuBar();
+//     }
+
+//     zeroPage.draw();
+//     Page1.draw();
+//     programWindow.draw();
+//     HexEditor.draw();
+//     registers.draw();
+
+//     ImGuiWindowClass window_class;
+//     window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
+//     ImGui::SetNextWindowClass(&window_class);
+//     ImGui::SetNextWindowSize({static_cast<float>(values.window.get_width()),0});
+//     ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+
+//     static int v = 100;
+//     ImGui::SetNextItemWidth(100);
+//     if (ImGui::DragInt("##milliseconds delay", &v, 1, 1, 1000, "%d", ImGuiSliderFlags_AlwaysClamp))
+//     {
+//         values.delay = std::chrono::milliseconds(v);
+//     }
+//     ImGui::SameLine();
+//     if (ImGui::Button(ICON_FA_ARROW_ROTATE_LEFT))
+//     {
+//         values.resetCallback();
+//         values.pause = true;
+//     }
+//     ImGui::SameLine();
+//     if (ImGui::Button((values.pause ? ICON_FA_PLAY: ICON_FA_PAUSE)))
+//     {
+//         if (values.pause)
+//         {
+//             values.pause = false;
+//             values.step = false;
+//         }
+//         else
+//             values.pause = true;
+//     }
+//     ImGui::SameLine();
+//     if (ImGui::Button(ICON_FA_ARROW_RIGHT))
+//     {
+//         values.step = true;
+//         if (!values.pause)
+//             values.pause = true;
+//         values.bus.cpu.run();
+//     }
+//     ImGui::End();
+
+//     ImGui::Begin("info", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+//     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+//     ImGui::End();
+
+//     // Rendering
+
+
+
+//     // Update and Render additional Platform Windows
+//     // (Platform functions may change the current OpenGL context, so we save/restore it to make it easier to paste this code elsewhere.
+//     //  For this specific demo app we could also call SDL_GL_MakeCurrent(window, gl_context) directly)
+    
+//     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+//     {
+//         SDL_Window* backup_current_window = SDL_GL_GetCurrentWindow();
+//         SDL_GLContext backup_current_context = SDL_GL_GetCurrentContext();
+//         ImGui::UpdatePlatformWindows();
+//         ImGui::RenderPlatformWindowsDefault();
+//         SDL_GL_MakeCurrent(backup_current_window, backup_current_context);
+//     }
+//     SDL_GL_SwapWindow(values.window.get_window());
+// }

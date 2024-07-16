@@ -1,35 +1,27 @@
 #ifndef DEBUGGER_HPP
 #define DEBUGGER_HPP
 
-#include <chrono>
-#include <functional>
+#include "window.hpp"
 
 
-class OS_Window;
-
-
+struct ImFont;
 namespace _6502 {class Bus;}
+
 namespace UI
 {
-    struct debug_v
+
+    class Window_Interface;
+    class Debugger
     {
-        _6502::Bus& bus;
-        std::chrono::nanoseconds delay;
-        bool running;
-        bool pause;
-        bool step;
-        std::function<void()> resetCallback;
-        OS_Window& window;
+        Window_Interface& window;
+        ImFont* font;
+        float textSize;
+        
+        public:
+        Debugger (Window_Interface& win);
+        ~Debugger ();
+        void run (void (*callback)(const Window_Interface&), const Window_Interface& window);
     };
-    void init (OS_Window& window);
-    void debug (debug_v& values);
-    void end ();
 }
-
-
-
-
-
-
 
 #endif 
