@@ -335,14 +335,11 @@ void _6502::Emulator::impl_ui (void* uData)
     static Callback_Data* data = static_cast <Callback_Data*> (uData);
 
     static Program_Window <word>    programWindow {data->emu.bus.cpu.decompiledCode, data->emu.bus.cpu.PC};
-    static auto begin = data->emu.bus.ram.data().begin();
 
-    static UI::Hex_Editor <RAM_SIZE, _6502::RAM::type, word>  HexEditor ("Editor", begin);
-    
-    // static UI::Hex_Editor   zeroPage  ("Zero Page", data->emu.bus.ram.data().data(), RAM_SIZE, 0, PAGE_SIZE, sizeof (std::uint8_t));
-    // static UI::Hex_Editor   Page1     ("Page 1", data->emu.bus.ram.data().data(), RAM_SIZE, 0x200, PAGE_SIZE, sizeof (std::uint8_t));
-    // static UI::Hex_Editor   StackPage ("Stack", data->emu.bus.ram.data().data(), RAM_SIZE, 0x100, PAGE_SIZE, sizeof (std::uint8_t));
-    // static Registers_Window registers (data->emu.bus.cpu);
+    static UI::Hex_Editor   zeroPage  ("Zero Page", data->emu.bus.ram.data().data(), RAM_SIZE, 0, PAGE_SIZE, sizeof (std::uint8_t));
+    static UI::Hex_Editor   Page1     ("Page 1", data->emu.bus.ram.data().data(), RAM_SIZE, 0x200, PAGE_SIZE, sizeof (std::uint8_t));
+    static UI::Hex_Editor   StackPage ("Stack", data->emu.bus.ram.data().data(), RAM_SIZE, 0x100, PAGE_SIZE, sizeof (std::uint8_t));
+    static Registers_Window registers (data->emu.bus.cpu);
     
     ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ParentViewportId, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 
@@ -354,11 +351,10 @@ void _6502::Emulator::impl_ui (void* uData)
         }
         ImGui::EndMainMenuBar();
     }
-    // zeroPage.draw();
-    // Page1.draw();
-    // StackPage.draw();
+    zeroPage.draw();
+    Page1.draw();
+    StackPage.draw();
     programWindow.draw();
-    HexEditor.draw();
 
     // registers.draw();
 
