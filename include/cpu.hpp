@@ -101,6 +101,7 @@ namespace _6502
             pin_type pins;
             Bus& bus;
             std::vector<std::pair<word, std::string>>  decompiledCode;
+            bool irq;
 
             struct
             {
@@ -117,6 +118,8 @@ namespace _6502
             byte stack_pop ();
             void set_flag(const FLAG flag, const bool condition);
             void set_pin (const CPU_PINS p);
+
+            void trigger_irq ();
             
             int IMP (); 
             int IMM (); 

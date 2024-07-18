@@ -9,14 +9,15 @@ namespace _6502
     class RAM
     {
         public:
+            using type = typename std::array<byte, RAM_SIZE>;
             std::size_t programSize;
             RAM ();
             void reset();
-            std::array<byte, RAM_SIZE>& data();
-            byte& operator[](word index);
-            const byte& operator[](word index) const;
+            type& data();
+            byte& operator[](const word index);
+            const byte& operator[](const word index) const;
         private:
-            std::array<byte, RAM_SIZE> mem;
+            type mem;
     };
 }
 #endif

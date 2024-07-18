@@ -10,11 +10,11 @@ namespace _6502
     class Bus
     {
         public:
-            mutable RAM ram;
+            RAM ram;
             CPU cpu;
             Bus ();
             ~Bus ();
-            void cpu_write (const word& address, const byte data) const;
+            void cpu_write (const word& address, const byte data);
             byte cpu_read (const word& address) const;
     };
 }

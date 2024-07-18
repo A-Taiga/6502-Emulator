@@ -90,7 +90,7 @@ void UI::Window_Interface::set_height (const int h)
 UI::OS_Window::OS_Window  (const char* title, const int w, const int h, const int x, const int y, std::uint32_t flags)
 : UI::Window_Interface {title, x, y, w, h, flags}
 {
-    this->renderer = SDL_CreateRenderer(this->window, -1, SDL_RENDERER_ACCELERATED);
+    this->renderer = SDL_CreateRenderer(this->window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (this->renderer == nullptr)
         std::runtime_error (SDL_GetError());
 }

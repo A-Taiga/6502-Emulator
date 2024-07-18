@@ -14,14 +14,14 @@ namespace _6502
         private:
             std::string currentFile;
         public:
-            static Bus bus;
-            static bool running;
-            static bool pause;
-            static bool step;
-            void run();
+            Bus bus;
+            bool running;
+            bool pause;
+            bool step;
             Emulator (const char* filePath);
             void reset ();
-            static void impl_ui (const UI::Window_Interface& window);
+            void run();
+            static void impl_ui (void* uData);
     };
 }
 

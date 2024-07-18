@@ -7,12 +7,12 @@ _6502::RAM::RAM()
 
 }
 
-byte& _6502::RAM::operator[](word index)
+byte& _6502::RAM::operator[](const word index)
 {
     return mem[index];
 }
 
-const byte& _6502::RAM::operator[](word index) const
+const byte& _6502::RAM::operator[](const word index) const
 {
     return mem[index];
 }

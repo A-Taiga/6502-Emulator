@@ -67,6 +67,7 @@ namespace
 _6502::CPU::CPU(Bus& bus)
 : bus {bus}
 , decompiledCode {}
+, irq (false)
 {
     ins.fetched  = nullptr;
     ins.data     = 0x0000;
@@ -80,6 +81,7 @@ void _6502::CPU::reset()
     SR = static_cast <flag_type> (FLAG::U);
     SP = 0xFF;
     PC = (bus.ram[RESET_VECTOR+1]  << 8) | bus.ram[RESET_VECTOR];
+    set_flag(FLAG::I, true);
 
 }
 // $FFFE, $FFFF ... IRQ (Interrupt Request) vector
@@ -87,7 +89,7 @@ void _6502::CPU::IRQ ()
 {
     if (SR & static_cast <flag_type> (FLAG::I))
     {
-        stack_push(PC & 0xFF00);
+        stack_push((PC >> 8) & 0x00FF);
         stack_push(PC & 0x00FF);
 		set_flag(FLAG::I, true);
 		set_flag(FLAG::U, true);
@@ -96,15 +98,9 @@ void _6502::CPU::IRQ ()
         const word low  = static_cast <word> (read(IRQ_VECTOR));
         const word high = static_cast <word> (read(IRQ_VECTOR+1));
         PC = (high << 8) | low;
-
-        int cycles = 7;
-        while (cycles > 0)
-        {
-            cycles--;
-        }
     }
-
 }
+
 void _6502::CPU::NMI ()
 {
 
@@ -145,16 +141,20 @@ void _6502::CPU::decompiler()
 
 void _6502::CPU::run()
 {
+    set_flag(FLAG::U, true);
+    auto begin = std::chrono::high_resolution_clock::now();
     ins.fetched = &opcodes[read(PC++)];
     ins.cycles = ins.fetched->cycles + (this->*ins.fetched->mode)();
     (this->*ins.fetched->op)();
+    set_flag(FLAG::U, true);
 
-    while (ins.cycles > 0)
-    {
-        ins.cycles--;
-        if (ins.cycles == 2)
-            IRQ();
-    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+	if (end - begin > std::chrono::nanoseconds(ins.cycles))
+        return;
+
+    std::this_thread::sleep_for(std::chrono::nanoseconds(ins.cycles) - (end - begin));
+
 }
 
 byte _6502::CPU::read(const word address)
@@ -190,6 +190,11 @@ void _6502::CPU::set_flag(const FLAG flag, const bool condition)
 void _6502::CPU::set_pin (const CPU_PINS p)
 {
     pins |= static_cast<pin_type> (p);
+}
+
+void _6502::CPU::trigger_irq ()
+{
+    irq = true;
 }
 
 int _6502::CPU::IMP ()
@@ -431,8 +436,8 @@ void _6502::CPU::RTI(void)
     SR = stack_pop();
     SR &= ~static_cast <flag_type> (FLAG::B);
     SR &= ~static_cast <flag_type> (FLAG::U);
-    word low  = static_cast <word> (stack_pop());
-    word high = static_cast <word> (stack_pop()) << 8;
+    const word low  = static_cast <word> (stack_pop());
+    const word high = static_cast <word> (stack_pop()) << 8;
     PC = high | low;
 }
 /* XOR memory with accumulator */
@@ -485,13 +490,13 @@ void _6502::CPU::BVC(void)
 /* CLI clear interrupt disable bit */
 void _6502::CPU::CLI(void)
 {
-    SR &= ~static_cast <flag_type> (FLAG::I);
+    set_flag(FLAG::I, false);
 }
 /* return from subroutine */
 void _6502::CPU::RTS(void)
 {
-    word low  = static_cast <word> (stack_pop());
-    word high = static_cast <word> (stack_pop()) << 8;
+    const word low  = static_cast <word> (stack_pop());
+    const word high = static_cast <word> (stack_pop()) << 8;
     PC = high | low;
     PC++;
 }
@@ -548,7 +553,7 @@ void _6502::CPU::BVS(void)
 /* SEI set interrupt disable status */
 void _6502::CPU::SEI(void)
 {
-    SR |= static_cast <flag_type> (FLAG::I);
+    set_flag (FLAG::I, true);
 }
 /* store accumulator in memory */
 void _6502::CPU::STA(void)
