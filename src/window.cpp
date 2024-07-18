@@ -128,11 +128,7 @@ bool UI::poll (Window_Interface& window, void (*callback)(SDL_Event*, void*), vo
         if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == window.get_windowID())
             return false;
 
-        if (event.type == SDL_KEYDOWN)
-            window.set_keys(event.key.keysym.scancode, true);
-        
-        if (event.type == SDL_KEYUP)
-            window.set_keys(event.key.keysym.scancode, false);
+
     }
     return true;
 }
