@@ -5,7 +5,6 @@
 #include "window.hpp"
 #include <span>
 #include <type_traits>
-#include <format>
 
 namespace _6502 {class Bus;}
 
@@ -85,16 +84,13 @@ namespace UI
             char buffer[3];
         };
 
-
         public:
-
         Hex_Editor ( const char* windowName
                     , void * const buffer
                     , const std::size_t totalMemSize
                     , const std::size_t begin
                     , const std::size_t end
                     , const std::size_t typeSize);
-
         void draw ();
         static int input_callback(ImGuiInputTextCallbackData* data);
     };

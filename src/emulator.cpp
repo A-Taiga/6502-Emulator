@@ -273,6 +273,47 @@ namespace
         UI::Window_Interface& window;
         _6502::Emulator& emu;
     };
+
+    struct Poll_Data
+    {
+        UI::Window_Interface& window;
+        _6502::Emulator& emu;
+    };
+
+    void ui_callback (SDL_Event *event, void *uData)
+    {
+        ImGui_ImplSDL2_ProcessEvent(event);
+
+        static auto lastInput = std::chrono::high_resolution_clock::now();
+        Poll_Data * data = static_cast <Poll_Data*> (uData);
+        const auto& keys = data->window.get_keys();
+        auto& bus = data->emu.bus;
+
+        if (keys.any())
+        {
+            for (std::size_t i = 0; i < keys.size(); ++i)
+            {
+                if (keys[i])
+                {
+                    if (i == 4)
+                    {
+                    }
+                    ImGui_ImplSDL2_ProcessEvent(event);
+                    bus.cpu.IRQ();
+                    break;
+                }
+            }
+        }
+
+        if (event->type == SDL_KEYDOWN && std::chrono::high_resolution_clock::now() - lastInput > std::chrono::milliseconds(2))
+        {
+            data->window.set_keys(event->key.keysym.scancode, true);
+            lastInput = std::chrono::high_resolution_clock::now();
+        }
+        
+        if (event->type == SDL_KEYUP)
+            data->window.set_keys(event->key.keysym.scancode, false);
+    }
 }
 
 void _6502::Emulator::run()
@@ -281,6 +322,7 @@ void _6502::Emulator::run()
     static UI::OS_Window window ("Debugger", WINDOW_W, WINDOW_H, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SDL_INIT_EVERYTHING);
     UI::Debugger debugger (window);
     Callback_Data callbackData {window, *this};
+    Poll_Data pollData {window, *this};
     bus.cpu.decompiler();
     bus.cpu.reset();
 
@@ -298,24 +340,9 @@ void _6502::Emulator::run()
     
     while (running)
     {
-        UI::poll([&](const SDL_Event& event)
-        {
-            ImGui_ImplSDL2_ProcessEvent(&event);
-            if (event.type == SDL_QUIT)
-                running = false;
-            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == window.get_windowID())
-                running = false;
 
-            if (event.type == SDL_KEYDOWN)
-            {
-                switch (event.key.keysym.scancode)
-                {
-                    case SDL_SCANCODE_0: bus.cpu.IRQ();
-                    default:;
-                }
-            }
-        });
-        debugger.run(&_6502::Emulator::impl_ui, (void*)&callbackData);
+        running = UI::poll(window, ui_callback, &pollData);
+        debugger.run(&_6502::Emulator::impl_ui, &callbackData);
     }
     t.join();
 }
@@ -328,7 +355,6 @@ void _6502::Emulator::reset ()
     bus.ram[RESET_VECTOR + 1] = (byte)0xF0;
     bus.cpu.reset();
 }
-
 
 void _6502::Emulator::impl_ui (void* uData)
 {
@@ -396,6 +422,4 @@ void _6502::Emulator::impl_ui (void* uData)
         data->emu.bus.cpu.run();
     }
     ImGui::End();
-
-
 }

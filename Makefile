@@ -35,7 +35,7 @@ endif
 $(OBJ_DIR)/%.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-$(OBJ_DIR)/%.o: $(IMGUI_DIR)/%.cpp
+$(OBJ_DIR)/%.o: $(IMGUI_DIR)/%.cpp %.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(OBJ_DIR)/%.o: $(IMGUI_DIR)/backends/%.cpp

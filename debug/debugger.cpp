@@ -14,7 +14,6 @@
 
 static constexpr ImVec4 clear_color {0.45f, 0.55f, 0.60f, 1.00f};
 
-
 UI::Memory_Window::Sizes::Sizes (){std::memset(this, 0, sizeof (*this));}
 
 UI::Memory_Window::Memory_Window (void * const buffer, const std::size_t totalMemSize, const std::size_t begin, const std::size_t end, const std::size_t typeSize)

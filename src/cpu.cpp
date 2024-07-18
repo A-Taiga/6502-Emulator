@@ -5,8 +5,8 @@
 #include <cstring>
 #include <format>
 #include <thread>
-/*
 
+/*
 N	Negative
 V	Overflow
 -	ignored
@@ -35,7 +35,6 @@ C	Carry
     $FFFE, $FFFF ... IRQ (Interrupt Request) vector
 
     29kb = free
-    
 */
 
 namespace
