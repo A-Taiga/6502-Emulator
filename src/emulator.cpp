@@ -319,7 +319,7 @@ namespace
 void _6502::Emulator::run()
 {
     bool running = true;
-    static UI::OS_Window window ("Debugger", WINDOW_W, WINDOW_H, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SDL_INIT_EVERYTHING);
+    UI::OS_Window window ("Debugger", WINDOW_W, WINDOW_H, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SDL_INIT_EVERYTHING);
     UI::Debugger debugger (window);
     Callback_Data callbackData {window, *this};
     Poll_Data pollData {window, *this};
