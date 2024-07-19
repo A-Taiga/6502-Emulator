@@ -12,7 +12,6 @@ struct SDL_Window;
 
 namespace UI
 {
-
     class Window_Interface
     {
         protected:

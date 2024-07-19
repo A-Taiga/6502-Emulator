@@ -108,160 +108,157 @@ namespace
         }
     };
 
-    struct Registers_Window
-    {
-        const word &PC;
-        const byte &AC;
-        const byte &X;
-        const byte &Y;
-        const byte &SP;
-        const byte &SR;
+    // struct Registers_Window
+    // {
+    //     // dont like this
+    //     const word &PC;
+    //     const byte &AC;
+    //     const byte &X;
+    //     const byte &Y;
+    //     const byte &SP;
+    //     const byte &SR;
         
-        struct 
-        {
-            ImVec4 set = {0,255,0,255};
-            ImVec4 notSet = {255,255,255,0};
-        } colors;
+    //     struct 
+    //     {
+    //         ImVec4 set = {0,255,0,255};
+    //         ImVec4 notSet = {255,255,255,0};
+    //     } colors;
         
-        Registers_Window (const _6502::CPU& cpu)
-        : PC (cpu.PC)
-        , AC (cpu.AC)
-        , X (cpu.X)
-        , Y (cpu.Y)
-        , SP (cpu.SP)
-        , SR (cpu.SR)
-        {}
+    //     Registers_Window (const _6502::CPU& cpu)
+    //     : PC (cpu.get_PC())
+    //     , AC (cpu.get_AC())
+    //     , X (cpu.get_X())
+    //     , Y (cpu.get_Y())
+    //     , SP (cpu.get_SP())
+    //     , SR (cpu.get_SR())
+    //     {}
 
-        void draw ()
-        {
+    //     void draw ()
+    //     {
+    //         ImGui::Begin ("Registers");
+    //         if (ImGui::BeginTable("Regesters Table", 4, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders | ImGuiTableFlags_NoHostExtendX))
+    //         {
+    //             ImGui::TableNextRow();
+    //             ImGui::TableNextColumn();
+    //             ImGui::TableNextColumn();
 
-            ImGui::Begin ("Registers");
-            if (ImGui::BeginTable("Regesters Table", 4, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders | ImGuiTableFlags_NoHostExtendX))
-            {
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
-                ImGui::TableNextColumn();
+    //             ImGui::TextUnformatted("Hex");
+    //             ImGui::TableNextColumn();
+    //             ImGui::TextUnformatted("Dec");
+    //             ImGui::TableNextColumn();
+    //             ImGui::TextUnformatted("Bin");
 
-                ImGui::TextUnformatted("Hex");
-                ImGui::TableNextColumn();
-                ImGui::TextUnformatted("Dec");
-                ImGui::TableNextColumn();
-                ImGui::TextUnformatted("Bin");
+    //             ImGui::TableNextRow();
+    //             ImGui::TableNextColumn();
+    //             ImGui::TextUnformatted("PC"); 
+    //             ImGui::TableNextColumn(); 
+    //             ImGui::TextUnformatted(std::format ("{:04X}", PC).c_str());
+    //             ImGui::TableNextColumn(); 
+    //             ImGui::TextUnformatted(std::format ("{:d}", PC).c_str()); 
+    //             ImGui::TableNextColumn(); 
+    //             ImGui::TextUnformatted(std::format ("{:08b} {:08b}", PC >> 8, PC & 0xFF).c_str()); 
 
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
-                ImGui::TextUnformatted("PC"); 
-                ImGui::TableNextColumn(); 
-                ImGui::TextUnformatted(std::format ("{:04X}", PC).c_str());
-                ImGui::TableNextColumn(); 
-                ImGui::TextUnformatted(std::format ("{:d}", PC).c_str()); 
-                ImGui::TableNextColumn(); 
-                ImGui::TextUnformatted(std::format ("{:08b} {:08b}", PC >> 8, PC & 0xFF).c_str()); 
-
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
-                ImGui::TextUnformatted("AC"); 
-                ImGui::TableNextColumn(); 
-                ImGui::TextUnformatted(std::format ("{:{}}{:02X}"," ",2,AC).c_str());
-                ImGui::TableNextColumn(); 
-                ImGui::TextUnformatted(std::format ("{:>5d}",AC).c_str()); 
-                ImGui::TableNextColumn(); 
-                ImGui::TextUnformatted(std::format ("{:{}} {:08b}", " ", 8, AC).c_str()); 
+    //             ImGui::TableNextRow();
+    //             ImGui::TableNextColumn();
+    //             ImGui::TextUnformatted("AC"); 
+    //             ImGui::TableNextColumn(); 
+    //             ImGui::TextUnformatted(std::format ("{:{}}{:02X}"," ",2,AC).c_str());
+    //             ImGui::TableNextColumn(); 
+    //             ImGui::TextUnformatted(std::format ("{:>5d}",AC).c_str()); 
+    //             ImGui::TableNextColumn(); 
+    //             ImGui::TextUnformatted(std::format ("{:{}} {:08b}", " ", 8, AC).c_str()); 
             
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
-                ImGui::TextUnformatted("X"); 
-                ImGui::TableNextColumn(); 
-                ImGui::TextUnformatted(std::format ("{:{}}{:02X}"," ",2,X).c_str());
-                ImGui::TableNextColumn(); 
-                ImGui::TextUnformatted(std::format ("{:>5d}",X).c_str()); 
-                ImGui::TableNextColumn(); 
-                ImGui::TextUnformatted(std::format ("{:{}} {:08b}", " ", 8, X).c_str()); 
+    //             ImGui::TableNextRow();
+    //             ImGui::TableNextColumn();
+    //             ImGui::TextUnformatted("X"); 
+    //             ImGui::TableNextColumn(); 
+    //             ImGui::TextUnformatted(std::format ("{:{}}{:02X}"," ",2,X).c_str());
+    //             ImGui::TableNextColumn(); 
+    //             ImGui::TextUnformatted(std::format ("{:>5d}",X).c_str()); 
+    //             ImGui::TableNextColumn(); 
+    //             ImGui::TextUnformatted(std::format ("{:{}} {:08b}", " ", 8, X).c_str()); 
 
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
-                ImGui::TextUnformatted("Y"); 
-                ImGui::TableNextColumn(); 
-                ImGui::TextUnformatted(std::format ("{:{}}{:02X}"," ",2,Y).c_str());
-                ImGui::TableNextColumn(); 
-                ImGui::TextUnformatted(std::format ("{:>5d}",Y).c_str()); 
-                ImGui::TableNextColumn(); 
-                ImGui::TextUnformatted(std::format ("{:{}} {:08b}", " ", 8, Y).c_str()); 
+    //             ImGui::TableNextRow();
+    //             ImGui::TableNextColumn();
+    //             ImGui::TextUnformatted("Y"); 
+    //             ImGui::TableNextColumn(); 
+    //             ImGui::TextUnformatted(std::format ("{:{}}{:02X}"," ",2,Y).c_str());
+    //             ImGui::TableNextColumn(); 
+    //             ImGui::TextUnformatted(std::format ("{:>5d}",Y).c_str()); 
+    //             ImGui::TableNextColumn(); 
+    //             ImGui::TextUnformatted(std::format ("{:{}} {:08b}", " ", 8, Y).c_str()); 
 
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
-                ImGui::TextUnformatted("SP"); 
-                ImGui::TableNextColumn(); 
-                ImGui::TextUnformatted(std::format ("{:{}}{:02X}"," ",2,SP).c_str());
-                ImGui::TableNextColumn(); 
-                ImGui::TextUnformatted(std::format ("{:>5d}",SP).c_str()); 
-                ImGui::TableNextColumn(); 
-                ImGui::TextUnformatted(std::format ("{:{}} {:08b}", " ", 8, Y).c_str()); 
-                ImGui::EndTable();
-            }
+    //             ImGui::TableNextRow();
+    //             ImGui::TableNextColumn();
+    //             ImGui::TextUnformatted("SP"); 
+    //             ImGui::TableNextColumn(); 
+    //             ImGui::TextUnformatted(std::format ("{:{}}{:02X}"," ",2,SP).c_str());
+    //             ImGui::TableNextColumn(); 
+    //             ImGui::TextUnformatted(std::format ("{:>5d}",SP).c_str()); 
+    //             ImGui::TableNextColumn(); 
+    //             ImGui::TextUnformatted(std::format ("{:{}} {:08b}", " ", 8, Y).c_str()); 
+    //             ImGui::EndTable();
+    //         }
 
-            if (ImGui::BeginTable("Flags Table", 8, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders | ImGuiTableFlags_NoHostExtendX))
-            {
-                ImGui::TableNextColumn();
+    //         if (ImGui::BeginTable("Flags Table", 8, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders | ImGuiTableFlags_NoHostExtendX))
+    //         {
+    //             ImGui::TableNextColumn();
 
-                ImGui::Dummy(ImGui::CalcTextSize("C"));
-                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 0) ? colors.set : colors.notSet)));
-                ImGui::TableNextColumn();
-                ImGui::Dummy(ImGui::CalcTextSize("Z"));
-                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 1) ? colors.set : colors.notSet)));
-                ImGui::TableNextColumn();
-                ImGui::Dummy(ImGui::CalcTextSize("I"));
-                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 2) ? colors.set : colors.notSet)));
-                ImGui::TableNextColumn();
-                ImGui::Dummy(ImGui::CalcTextSize("D"));
-                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 3) ? colors.set : colors.notSet)));
-                ImGui::TableNextColumn();
-                ImGui::Dummy(ImGui::CalcTextSize("B"));
-                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 4) ? colors.set : colors.notSet)));
-                ImGui::TableNextColumn();
-                ImGui::Dummy(ImGui::CalcTextSize("-"));
-                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 5) ? colors.set : colors.notSet)));
-                ImGui::TableNextColumn();
-                ImGui::Dummy(ImGui::CalcTextSize("V"));
-                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 6) ? colors.set : colors.notSet)));
-                ImGui::TableNextColumn();
-                ImGui::Dummy(ImGui::CalcTextSize("N"));
-                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 7) ? colors.set : colors.notSet)));
+    //             ImGui::Dummy(ImGui::CalcTextSize("C"));
+    //             ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 0) ? colors.set : colors.notSet)));
+    //             ImGui::TableNextColumn();
+    //             ImGui::Dummy(ImGui::CalcTextSize("Z"));
+    //             ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 1) ? colors.set : colors.notSet)));
+    //             ImGui::TableNextColumn();
+    //             ImGui::Dummy(ImGui::CalcTextSize("I"));
+    //             ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 2) ? colors.set : colors.notSet)));
+    //             ImGui::TableNextColumn();
+    //             ImGui::Dummy(ImGui::CalcTextSize("D"));
+    //             ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 3) ? colors.set : colors.notSet)));
+    //             ImGui::TableNextColumn();
+    //             ImGui::Dummy(ImGui::CalcTextSize("B"));
+    //             ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 4) ? colors.set : colors.notSet)));
+    //             ImGui::TableNextColumn();
+    //             ImGui::Dummy(ImGui::CalcTextSize("-"));
+    //             ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 5) ? colors.set : colors.notSet)));
+    //             ImGui::TableNextColumn();
+    //             ImGui::Dummy(ImGui::CalcTextSize("V"));
+    //             ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 6) ? colors.set : colors.notSet)));
+    //             ImGui::TableNextColumn();
+    //             ImGui::Dummy(ImGui::CalcTextSize("N"));
+    //             ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32((SR & (1 << 7) ? colors.set : colors.notSet)));
 
-                ImGui::TableNextRow();
+    //             ImGui::TableNextRow();
 
-                ImGui::TableNextColumn();
-                ImGui::Text("C");
-                ImGui::TableNextColumn();
-                ImGui::Text("Z");
-                ImGui::TableNextColumn();
-                ImGui::Text("I");
-                ImGui::TableNextColumn();
-                ImGui::Text("D");
-                ImGui::TableNextColumn();
-                ImGui::Text("B");
-                ImGui::TableNextColumn();
-                ImGui::Text("-");
-                ImGui::TableNextColumn();
-                ImGui::Text("V");
-                ImGui::TableNextColumn();
-                ImGui::Text("N");
+    //             ImGui::TableNextColumn();
+    //             ImGui::Text("C");
+    //             ImGui::TableNextColumn();
+    //             ImGui::Text("Z");
+    //             ImGui::TableNextColumn();
+    //             ImGui::Text("I");
+    //             ImGui::TableNextColumn();
+    //             ImGui::Text("D");
+    //             ImGui::TableNextColumn();
+    //             ImGui::Text("B");
+    //             ImGui::TableNextColumn();
+    //             ImGui::Text("-");
+    //             ImGui::TableNextColumn();
+    //             ImGui::Text("V");
+    //             ImGui::TableNextColumn();
+    //             ImGui::Text("N");
         
-                ImGui::EndTable();
-            }
-            ImGui::End();
-        }
-    };
+    //             ImGui::EndTable();
+    //         }
+    //         ImGui::End();
+    //     }
+    // };
 }
 
 _6502::Emulator::Emulator(const char* filePath)
 : currentFile {filePath}
 , bus ()
-, running (false)
-, pause (true)
-, step (false)
 {
-    load_rom (filePath, bus.ram.data(), ROM_BEGIN);
+    load_rom (filePath, bus.ram.get_ram(), ROM_BEGIN);
     bus.ram[RESET_VECTOR]     = ROM_BEGIN & 0x00FF;
     bus.ram[RESET_VECTOR + 1] = (ROM_BEGIN & 0xFF00) >> 8;
 }
@@ -272,6 +269,9 @@ namespace
     {
         UI::Window_Interface& window;
         _6502::Emulator& emu;
+        std::atomic<bool>& running;
+        std::atomic<bool>& pause;
+        std::atomic<bool>& step;
     };
 
     struct Poll_Data
@@ -285,62 +285,59 @@ namespace
         ImGui_ImplSDL2_ProcessEvent(event);
 
         static auto lastInput = std::chrono::high_resolution_clock::now();
-        Poll_Data * data = static_cast <Poll_Data*> (uData);
-        const auto& keys = data->window.get_keys();
-        auto& bus = data->emu.bus;
-
+        static Poll_Data * data = static_cast <Poll_Data*> (uData);
+        static const auto& keys = data->window.get_keys();
+        static auto& bus = data->emu.bus;
         if (keys.any())
         {
             for (std::size_t i = 0; i < keys.size(); ++i)
             {
                 if (keys[i])
                 {
-                    if (i == 4)
-                    {
-                    }
-                    ImGui_ImplSDL2_ProcessEvent(event);
                     bus.cpu.IRQ();
                     break;
                 }
             }
         }
 
-        if (event->type == SDL_KEYDOWN && std::chrono::high_resolution_clock::now() - lastInput > std::chrono::milliseconds(2))
+        if (event->type == SDL_KEYDOWN && std::chrono::high_resolution_clock::now() - lastInput > std::chrono::milliseconds(10))
         {
             data->window.set_keys(event->key.keysym.scancode, true);
             lastInput = std::chrono::high_resolution_clock::now();
         }
         
-        if (event->type == SDL_KEYUP)
-            data->window.set_keys(event->key.keysym.scancode, false);
+        // if (event->type == SDL_KEYUP)
+        //     data->window.set_keys(event->key.keysym.scancode, false);
     }
 }
 
 void _6502::Emulator::run()
 {
-    bool running = true;
+    std::atomic<bool> running = true;
+    std::atomic<bool> pause = true;
+    std::atomic<bool> step = false;
     UI::OS_Window window ("Debugger", WINDOW_W, WINDOW_H, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SDL_INIT_EVERYTHING);
     UI::Debugger debugger (window);
-    Callback_Data callbackData {window, *this};
+    Callback_Data callbackData {window, *this, running, pause, step};
     Poll_Data pollData {window, *this};
     bus.cpu.decompiler();
     bus.cpu.reset();
 
 
     std::thread t ([&](){
+
         while (running)
         {
             if (!pause)
             {
                 bus.cpu.run();
-                // std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                // std::this_thread::sleep_for(std::chrono::milliseconds(5));
             }
         }
     });
     
     while (running)
     {
-
         running = UI::poll(window, ui_callback, &pollData);
         debugger.run(&_6502::Emulator::impl_ui, &callbackData);
     }
@@ -350,7 +347,7 @@ void _6502::Emulator::run()
 void _6502::Emulator::reset ()
 {
     bus.ram.reset();
-    load_rom (currentFile.data(), bus.ram.data(), ROM_BEGIN);
+    load_rom (currentFile.data(), bus.ram.get_ram(), ROM_BEGIN);
     bus.ram[RESET_VECTOR]     = (byte)0x00;
     bus.ram[RESET_VECTOR + 1] = (byte)0xF0;
     bus.cpu.reset();
@@ -359,13 +356,12 @@ void _6502::Emulator::reset ()
 void _6502::Emulator::impl_ui (void* uData)
 {
     static Callback_Data* data = static_cast <Callback_Data*> (uData);
-
+    // static _6502::RAM::type& ram = data->emu.bus.ram.get_ram();
     static Program_Window <word>    programWindow {data->emu.bus.cpu.decompiledCode, data->emu.bus.cpu.PC};
-
-    static UI::Hex_Editor   zeroPage  ("Zero Page", data->emu.bus.ram.data().data(), RAM_SIZE, 0, PAGE_SIZE, sizeof (std::uint8_t));
-    static UI::Hex_Editor   Page1     ("Page 1", data->emu.bus.ram.data().data(), RAM_SIZE, 0x200, PAGE_SIZE, sizeof (std::uint8_t));
-    static UI::Hex_Editor   StackPage ("Stack", data->emu.bus.ram.data().data(), RAM_SIZE, 0x100, PAGE_SIZE, sizeof (std::uint8_t));
-    static Registers_Window registers (data->emu.bus.cpu);
+    static UI::Hex_Editor   zeroPage  ("Zero Page", data->emu.bus.ram.get_ram().data(), RAM_SIZE, 0, PAGE_SIZE, sizeof (std::uint8_t));
+    static UI::Hex_Editor   Page1     ("Page 1", data->emu.bus.ram.get_ram().data(), RAM_SIZE, 0x200, PAGE_SIZE, sizeof (std::uint8_t));
+    static UI::Hex_Editor   StackPage ("Stack", data->emu.bus.ram.get_ram().data(), RAM_SIZE, 0x100, PAGE_SIZE, sizeof (std::uint8_t));
+    // static Registers_Window registers (data->emu.bus.cpu);
     
     ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ParentViewportId, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 
@@ -381,7 +377,6 @@ void _6502::Emulator::impl_ui (void* uData)
     Page1.draw();
     StackPage.draw();
     programWindow.draw();
-
     // registers.draw();
 
     ImGuiWindowClass window_class;
@@ -400,25 +395,24 @@ void _6502::Emulator::impl_ui (void* uData)
     if (ImGui::Button(ICON_FA_ARROW_ROTATE_LEFT))
     {
         data->emu.reset();
-        data->emu.pause = true;
     }
     ImGui::SameLine();
-    if (ImGui::Button((data->emu.pause ? ICON_FA_PLAY: ICON_FA_PAUSE)))
+    if (ImGui::Button((data->pause ? ICON_FA_PLAY: ICON_FA_PAUSE)))
     {
-        if (data->emu.pause)
+        if (data->pause)
         {
-            data->emu.pause = false;
-            data->emu.step = false;
+            data->pause = false;
+            data->step = false;
         }
         else
-            data->emu.pause = true;
+            data->pause = true;
     }
     ImGui::SameLine();
     if (ImGui::Button(ICON_FA_ARROW_RIGHT))
     {
-        data->emu.step = true;
-        if (!data->emu.pause)
-            data->emu.pause = true;
+        data->step = true;
+        if (!data->pause)
+            data->pause = true;
         data->emu.bus.cpu.run();
     }
     ImGui::End();

@@ -127,8 +127,6 @@ bool UI::poll (Window_Interface& window, void (*callback)(SDL_Event*, void*), vo
             return false;
         if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == window.get_windowID())
             return false;
-
-
     }
     return true;
 }

@@ -15,9 +15,6 @@ namespace _6502
             std::string currentFile;
         public:
             Bus bus;
-            bool running;
-            bool pause;
-            bool step;
             Emulator (const char* filePath);
             void reset ();
             void run();

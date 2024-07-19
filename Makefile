@@ -2,14 +2,14 @@ EXE = 6502
 VPATH = src: debug: imgui:
 IMGUI_DIR = imgui
 OBJ_DIR = .obj
-SOURCES = main.cpp cpu.cpp memory.cpp emulator.cpp bus.cpp debugger.cpp window.cpp
+SOURCES = main.cpp cpu.cpp memory.cpp emulator.cpp bus.cpp debugger.cpp window.cpp observer.cpp
 SOURCES += imgui.cpp imgui_demo.cpp imgui_draw.cpp imgui_tables.cpp imgui_widgets.cpp
 SOURCES += backends/imgui_impl_sdl2.cpp backends/imgui_impl_sdlrenderer2.cpp
 OBJS = $(addprefix $(OBJ_DIR)/, $(addsuffix .o, $(basename $(notdir $(SOURCES)))))
 UNAME_S := $(shell uname -s)
 LINUX_GL_LIBS = -lGL
 CXX = clang++
-CXXFLAGS = -std=c++20 -Wall -Wextra -Werror -g -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -Iinclude -Idebug
+CXXFLAGS = -std=c++20 -Wall -Wextra -Werror -fsanitize=thread -g -O0 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -Iinclude -Idebug
 LIBS = 
 
 ifeq ($(UNAME_S), Linux)

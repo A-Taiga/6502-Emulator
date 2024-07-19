@@ -4,20 +4,12 @@
 #include "imgui.h"
 #include "window.hpp"
 #include <span>
-#include <type_traits>
 
 namespace _6502 {class Bus;}
 
-template <class T>
-concept is_container = requires {{typename std::decay_t<decltype(*std::declval <T>().begin())>()} -> std::integral;};
-
-template <class T>
-requires is_container <T>
-struct nested_type {using type = typename std::decay_t <decltype (*std::declval<T>().begin())>;};
-
-
 namespace UI
 {
+
     class Memory_Window
     {
         protected:

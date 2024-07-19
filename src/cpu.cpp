@@ -5,7 +5,7 @@
 #include <cstring>
 #include <format>
 #include <thread>
-
+#include <iostream>
 /*
 N	Negative
 V	Overflow
@@ -66,7 +66,6 @@ namespace
 _6502::CPU::CPU(Bus& bus)
 : bus {bus}
 , decompiledCode {}
-, irq (false)
 {
     ins.fetched  = nullptr;
     ins.data     = 0x0000;
@@ -81,7 +80,6 @@ void _6502::CPU::reset()
     SP = 0xFF;
     PC = (bus.ram[RESET_VECTOR+1]  << 8) | bus.ram[RESET_VECTOR];
     set_flag(FLAG::I, true);
-
 }
 // $FFFE, $FFFF ... IRQ (Interrupt Request) vector
 void _6502::CPU::IRQ ()
@@ -140,20 +138,24 @@ void _6502::CPU::decompiler()
 
 void _6502::CPU::run()
 {
-    set_flag(FLAG::U, true);
-    auto begin = std::chrono::high_resolution_clock::now();
+    auto begin = std::chrono::steady_clock::now();
     ins.fetched = &opcodes[read(PC++)];
     ins.cycles = ins.fetched->cycles + (this->*ins.fetched->mode)();
     (this->*ins.fetched->op)();
     set_flag(FLAG::U, true);
-
-
     auto end = std::chrono::high_resolution_clock::now();
-	if (end - begin > std::chrono::nanoseconds(ins.cycles))
+
+    if (std::chrono::duration_cast<std::chrono::microseconds>(end - begin) > std::chrono::microseconds(ins.cycles))
+    {   
+        // std::cout << std::chrono::duration_cast <std::chrono::microseconds> (end - begin) << std::endl;
         return;
-
-    std::this_thread::sleep_for(std::chrono::nanoseconds(ins.cycles) - (end - begin));
-
+    }
+    else
+    {
+        auto time = std::chrono::microseconds(ins.cycles) - std::chrono::duration_cast<std::chrono::microseconds>(end - begin);
+        std::this_thread::sleep_for (time);
+        // std::cout << std::chrono::duration_cast <std::chrono::microseconds> (time) << std::endl;
+    }
 }
 
 byte _6502::CPU::read(const word address)
@@ -184,16 +186,6 @@ void _6502::CPU::set_flag(const FLAG flag, const bool condition)
         SR |= static_cast <flag_type> (flag);
     else
         SR &= ~static_cast<flag_type>(flag);
-}
-
-void _6502::CPU::set_pin (const CPU_PINS p)
-{
-    pins |= static_cast<pin_type> (p);
-}
-
-void _6502::CPU::trigger_irq ()
-{
-    irq = true;
 }
 
 int _6502::CPU::IMP ()
