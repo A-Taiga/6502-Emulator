@@ -16,6 +16,7 @@ namespace _6502
             ~Bus ();
             void cpu_write (const word& address, const byte data);
             byte cpu_read (const word& address) const;
+
     };
 }
 

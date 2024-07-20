@@ -2,6 +2,7 @@
 #define CPU_HPP
 
 #include "common.hpp"
+#include "observer.hpp"
 #include <string>
 #include <vector>
 
@@ -30,7 +31,6 @@
     Processor Stack
     LIFO, top-down, 8 bit range, 0x0100 - 0x01FF
 */
-
 
 namespace _6502
 {
@@ -64,51 +64,28 @@ namespace _6502
     };
 
     class Bus;
-    class CPU
+    class CPU : public UI::MSG::Subject
     {
-        private:
-
-
-
-            byte read       (const word address);
-            void write      (const word address, const byte data);
-            void stack_push (const byte data);
-            byte stack_pop  ();
-            void set_flag   (const FLAG flag, const bool condition);
-
         public:
-
-            word PC;   /* program counter */
-            byte AC;   /* accumulator */
-            byte X;    /* x register */
-            byte Y;    /* y register */
-            byte SR;   /* status register [NV-BDIZC] (aka flags) */
-            byte SP;   /* stack pointer */
-
-
-            CPU             (Bus& bus);
-            void reset      ();
-            void IRQ        ();
-            void NMI        ();
-            void decompiler ();
-            void run        ();
-
-            // short IF (const byte& op); // opcode fetch returns opcode size
-            /* main registers */
-
             Bus& bus;
             std::vector<std::pair<word, std::string>>  decompiledCode;
 
-            struct
-            {
-                const opcode* fetched;
-                word data;
-                int cycles;
+            CPU             (Bus& bus);
+            ~CPU();
+            void reset      ();
+            void decompiler ();
+            void run        ();
 
-            } ins;
+            word get_PC () const;
+            byte get_AC () const;
+            byte get_X  () const;
+            byte get_Y  () const;
+            byte get_SR () const;
+            byte get_SP () const;
+            void set_irq();
 
-            // fix how we get these 
-
+            
+            // address modes
             int IMP (); 
             int IMM (); 
             int ABS (); 
@@ -122,6 +99,7 @@ namespace _6502
             int IZY (); 
             int REL ();
 
+            // instruction set
             void BRK (void); void ORA (void); void ASL (void); void PHP (void); void BPL (void);
             void CLC (void); void JSR (void); void AND (void); void BIT (void); void ROL (void); 
             void PLP (void); void BMI (void); void SEC (void); void RTI (void); void EOR (void);
@@ -135,7 +113,31 @@ namespace _6502
             void SBC (void); void INC (void); void INX (void); void NOP (void); void BEQ (void); 
             void SED (void); void XXX (void);
 
+            private:
+                word PC;   /* program counter */
+                byte AC;   /* accumulator */
+                byte X;    /* x register */
+                byte Y;    /* y register */
+                byte SR;   /* status register [NV-BDIZC] (aka flags) */
+                byte SP;   /* stack pointer */
 
+                bool irq;
+
+                struct
+                {
+                    const opcode* fetched;
+                    word data;
+                    int cycles;
+
+                } ins;
+
+                byte read       (const word address);
+                void write      (const word address, const byte data);
+                void stack_push (const byte data);
+                byte stack_pop  ();
+                void set_flag   (const FLAG flag, const bool condition);
+                void IRQ        ();
+                void NMI        ();
 
         };
 }

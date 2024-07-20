@@ -5,7 +5,7 @@
 #include <cstring>
 #include <format>
 #include <thread>
-#include <iostream>
+
 /*
 N	Negative
 V	Overflow
@@ -64,11 +64,15 @@ namespace
 }
 
 _6502::CPU::CPU(Bus& bus)
-: bus {bus}
+: Subject {}
+, bus {bus}
 , decompiledCode {}
 {
     ins.fetched  = nullptr;
     ins.data     = 0x0000;
+}
+_6502::CPU::~CPU()
+{
 }
 
 void _6502::CPU::reset()
@@ -79,7 +83,6 @@ void _6502::CPU::reset()
     SR = static_cast <flag_type> (FLAG::U);
     SP = 0xFF;
     PC = (bus.ram[RESET_VECTOR+1]  << 8) | bus.ram[RESET_VECTOR];
-    set_flag(FLAG::I, true);
 }
 // $FFFE, $FFFF ... IRQ (Interrupt Request) vector
 void _6502::CPU::IRQ ()
@@ -95,6 +98,7 @@ void _6502::CPU::IRQ ()
         const word low  = static_cast <word> (read(IRQ_VECTOR));
         const word high = static_cast <word> (read(IRQ_VECTOR+1));
         PC = (high << 8) | low;
+        ins.cycles += 7;
     }
 }
 
@@ -138,25 +142,61 @@ void _6502::CPU::decompiler()
 
 void _6502::CPU::run()
 {
-    auto begin = std::chrono::steady_clock::now();
+    // auto begin = std::chrono::high_resolution_clock::now();
+    set_flag(FLAG::U, true);
     ins.fetched = &opcodes[read(PC++)];
     ins.cycles = ins.fetched->cycles + (this->*ins.fetched->mode)();
     (this->*ins.fetched->op)();
-    set_flag(FLAG::U, true);
-    auto end = std::chrono::high_resolution_clock::now();
 
-    if (std::chrono::duration_cast<std::chrono::microseconds>(end - begin) > std::chrono::microseconds(ins.cycles))
-    {   
-        // std::cout << std::chrono::duration_cast <std::chrono::microseconds> (end - begin) << std::endl;
-        return;
-    }
-    else
+    // auto end = std::chrono::high_resolution_clock::now();
+
+    while (ins.cycles > 0)
     {
-        auto time = std::chrono::microseconds(ins.cycles) - std::chrono::duration_cast<std::chrono::microseconds>(end - begin);
-        std::this_thread::sleep_for (time);
-        // std::cout << std::chrono::duration_cast <std::chrono::microseconds> (time) << std::endl;
+        std::this_thread::sleep_for(std::chrono::microseconds(ins.cycles));
+        ins.cycles--;   
+        if (ins.cycles == 1 && irq)
+        {
+            IRQ();
+            irq = false;
+        }
     }
 }
+
+word _6502::CPU::get_PC () const
+{
+    return PC;
+}
+
+byte _6502::CPU::get_AC () const
+{
+    return AC;
+}
+
+byte _6502::CPU::get_X  () const
+{
+    return X;
+}
+
+byte _6502::CPU::get_Y  () const
+{
+    return  Y;
+}
+
+byte _6502::CPU::get_SR () const
+{
+    return SR;
+}
+
+byte _6502::CPU::get_SP () const
+{
+    return SP;
+}
+
+void _6502::CPU::set_irq()
+{
+    irq = true;
+}
+
 
 byte _6502::CPU::read(const word address)
 {

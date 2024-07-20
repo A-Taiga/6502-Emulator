@@ -11,7 +11,7 @@ _6502::RAM::RAM()
 
 byte& _6502::RAM::operator[](const word index)
 {
-    std::lock_guard lk(m);
+    std::lock_guard<std::mutex> lk(m);
     return ram[index];
 }
 

@@ -4,14 +4,20 @@
 
 #include "SDL2/SDL_events.h"
 #include "SDL2/SDL_scancode.h"
+#include <chrono>
 #include <cstdint>
-#include <bitset>
 
 struct SDL_Renderer;
 struct SDL_Window;
 
 namespace UI
 {
+    struct Key_State
+    {
+        std::chrono::time_point<std::chrono::high_resolution_clock> time;
+        bool state;
+    };
+
     class Window_Interface
     {
         protected:
@@ -23,7 +29,7 @@ namespace UI
         SDL_Renderer*   renderer;
         std::uint32_t   windowID;
 
-        std::bitset <SDL_NUM_SCANCODES> keys;
+        std::array <Key_State, SDL_NUM_SCANCODES> keys;
         
 
         public:
@@ -36,14 +42,13 @@ namespace UI
         int           get_width     () const;
         int           get_height    () const;
 
-        const std::bitset <SDL_NUM_SCANCODES>& get_keys() const;
+        const std::array <Key_State, SDL_NUM_SCANCODES>& get_keys() const;
 
         std::uint32_t get_windowID  () const;
         void          set_xPos      (const int x);
         void          set_yPos      (const int y);
         void          set_width     (const int w);
         void          set_height    (const int h);
-
         void          set_keys      (const std::size_t index, const bool state);
         virtual void update () const = 0;
 
@@ -62,7 +67,7 @@ namespace UI
         void update () const;
 
     };
-
+    char to_ASCII (const SDL_Scancode);
     bool poll (Window_Interface& window, void (*)(SDL_Event*,void*), void* uData);
 }
 
