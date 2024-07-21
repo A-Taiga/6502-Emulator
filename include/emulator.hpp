@@ -6,17 +6,19 @@
 using byte = std::uint8_t;
 using word = std::uint16_t;
 
+namespace UI{class Window_Interface;}
 namespace _6502
 {
     class Emulator
     {
         private:
-            Bus bus;
             std::string currentFile;
         public:
-            void run();
+            Bus bus;
             Emulator (const char* filePath);
             void reset ();
+            void run();
+            static void impl_ui (void* uData);
     };
 }
 

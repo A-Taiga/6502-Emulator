@@ -12,7 +12,7 @@ _6502::Bus::~Bus()
 {
 }
 
-void _6502::Bus::cpu_write (const word& address, const byte data) const
+void _6502::Bus::cpu_write (const word& address, const byte data)
 {
     ram[address] = data;
 }

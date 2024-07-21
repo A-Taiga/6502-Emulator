@@ -1,29 +1,38 @@
 #include "memory.hpp"
 #include "common.hpp"
+#include <mutex>
+
 
 _6502::RAM::RAM()
-: mem{0}
+: ram{0}
+, m{}
 {
-
 }
 
-byte& _6502::RAM::operator[](word index)
+byte& _6502::RAM::operator[](const word index)
 {
-    return mem[index];
+    std::lock_guard<std::mutex> lk(m);
+    return ram[index];
 }
 
-const byte& _6502::RAM::operator[](word index) const
+byte _6502::RAM::operator[](const word index) const
 {
-    return mem[index];
+    return ram[index];
 }
 
-void _6502::RAM::reset()
+void _6502::RAM::reset ()
 {
-    mem = {0};
+    ram = {0};
 }
 
-std::array<byte, RAM_SIZE>& _6502::RAM::data()
+_6502::RAM::type& _6502::RAM::get_ram ()
 {
-    return mem;
+    return ram;
 }
+
+
+// _6502::RAM::type& _6502::RAM::data()
+// {
+//     return ram;
+// }
 

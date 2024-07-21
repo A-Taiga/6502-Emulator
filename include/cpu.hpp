@@ -2,6 +2,7 @@
 #define CPU_HPP
 
 #include "common.hpp"
+#include "observer.hpp"
 #include <string>
 #include <vector>
 
@@ -31,24 +32,8 @@
     LIFO, top-down, 8 bit range, 0x0100 - 0x01FF
 */
 
-
 namespace _6502
 {
-    using pin_type = std::uint16_t;
-    enum class CPU_PINS : pin_type
-    {
-        RDY   = 1 << 0,   // ReaDY. When going LOW, the CPU waits after next read cycle for this line going HIGH again
-        OUT1  = 1 << 1,   // Phi1 out. (system clock)
-        IRQ   = 1 << 2,   // Interrupt requested 
-        NMI   = 1 << 3,   // Non Maskable Interrupt
-        SYNC  = 1 << 4,   // Synchronization. Becomes HIGH whenever the CPU fetches an opcode
-        RES   = 1 << 5,   // RESet. When going LOW, the CPU resets and waits for a LOW-HIGH transistion to load the PC with the value stored in $fffc/$fffd
-        OUT2  = 1 << 6,   // Phi2 out (system clock)
-        O     = 1 << 7,   // Set Overflow
-        IN    = 1 << 8,   // Phi 0 in. (system clock)
-        RW    = 1 << 9,   // Read/-Write. With this line, the CPU controls whether the next DRAM access will be a read or write cycle. LOW=write, HIGH=read
-    };
-
     using flag_type = std::uint8_t;
     enum class FLAG : flag_type
     {
@@ -79,45 +64,28 @@ namespace _6502
     };
 
     class Bus;
-    class CPU
+    class CPU : public UI::MSG::Subject
     {
         public:
-            CPU (Bus& bus);
-            void reset ();
-            void IRQ ();
-            void NMI ();
-            void decompiler ();
-            void run ();
-            const word& get_pc ();
-            // short IF (const byte& op); // opcode fetch returns opcode size
-            /* main registers */
-            word PC;   /* program counter */
-            byte AC;   /* accumulator */
-            byte X;    /* x register */
-            byte Y;    /* y register */
-            byte SR;   /* status register [NV-BDIZC] (aka flags) */
-            byte SP;   /* stack pointer */
-
-            pin_type pins;
             Bus& bus;
             std::vector<std::pair<word, std::string>>  decompiledCode;
 
-            struct
-            {
-                const opcode* fetched;
-                word data;
-                int cycles;
+            CPU             (Bus& bus);
+            ~CPU();
+            void reset      ();
+            void decompiler ();
+            void run        ();
 
-            } ins;
+            word get_PC () const;
+            byte get_AC () const;
+            byte get_X  () const;
+            byte get_Y  () const;
+            byte get_SR () const;
+            byte get_SP () const;
+            void set_irq();
 
-
-            byte read (const word address);
-            void write (const word address, const byte data);
-            void stack_push (const byte data);
-            byte stack_pop ();
-            void set_flag(const FLAG flag, const bool condition);
-            void set_pin (const CPU_PINS p);
             
+            // address modes
             int IMP (); 
             int IMM (); 
             int ABS (); 
@@ -131,6 +99,7 @@ namespace _6502
             int IZY (); 
             int REL ();
 
+            // instruction set
             void BRK (void); void ORA (void); void ASL (void); void PHP (void); void BPL (void);
             void CLC (void); void JSR (void); void AND (void); void BIT (void); void ROL (void); 
             void PLP (void); void BMI (void); void SEC (void); void RTI (void); void EOR (void);
@@ -143,6 +112,32 @@ namespace _6502
             void INY (void); void DEX (void); void BNE (void); void CLD (void); void CPX (void); 
             void SBC (void); void INC (void); void INX (void); void NOP (void); void BEQ (void); 
             void SED (void); void XXX (void);
+
+            private:
+                word PC;   /* program counter */
+                byte AC;   /* accumulator */
+                byte X;    /* x register */
+                byte Y;    /* y register */
+                byte SR;   /* status register [NV-BDIZC] (aka flags) */
+                byte SP;   /* stack pointer */
+
+                bool irq;
+
+                struct
+                {
+                    const opcode* fetched;
+                    word data;
+                    int cycles;
+
+                } ins;
+
+                byte read       (const word address);
+                void write      (const word address, const byte data);
+                void stack_push (const byte data);
+                byte stack_pop  ();
+                void set_flag   (const FLAG flag, const bool condition);
+                void IRQ        ();
+                void NMI        ();
 
         };
 }

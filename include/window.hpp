@@ -1,69 +1,74 @@
 #ifndef WINDOW_HPP
 #define WINDOW_HPP
 
+
+#include "SDL2/SDL_events.h"
+#include "SDL2/SDL_scancode.h"
+#include <chrono>
 #include <cstdint>
-#include <SDL2/SDL_events.h>
-#include <functional>
-#include <type_traits>
 
+struct SDL_Renderer;
 struct SDL_Window;
-struct SDL_Color;
-struct ImVec4;
-typedef void *SDL_GLContext;
-typedef union SDL_Event SDL_Event;
 
-class OS_Window 
+namespace UI
 {
-    private:
-        SDL_Window*     window;
-        SDL_GLContext   glContext;
+    struct Key_State
+    {
+        std::chrono::time_point<std::chrono::high_resolution_clock> time;
+        bool state;
+    };
+
+    class Window_Interface
+    {
+        protected:
+        int             xPos;
+        int             yPos;
         int             width;
         int             height;
-        const char*     glslVersion;
-        std::uint32_t   mWindowID;
+        SDL_Window*     window;
+        SDL_Renderer*   renderer;
+        std::uint32_t   windowID;
 
-    public:
-        OS_Window       (const char* title, int w = 0, int h = 0);
-        ~OS_Window      ();
-        void            render (int, int, int, int, const SDL_Color& color);
-        void            render (int, int, int, int, const ImVec4& color);
-
-        template <class Callable>
-        requires std::is_invocable_v<Callable, const SDL_Event&>
-        void            poll (bool& running, Callable callback);
-        SDL_Window*     get_window ();
-        void            swap_window ();
-        SDL_GLContext   get_glContext ();
-        const char*     get_glslVersion ();
-        std::uint32_t   get_windowID ();
-        int             get_width();
-        int             get_height();
-
+        std::array <Key_State, SDL_NUM_SCANCODES> keys;
         
-};
 
-template <class Callable>
-requires std::is_invocable_v<Callable, const SDL_Event&>
-inline void OS_Window::poll (bool& running, Callable callback)
-{
-    SDL_Event event;
-    while (SDL_PollEvent(&event))
+        public:
+        Window_Interface (const char* title, const int x, const int y, const int w, const int h, const std::uint32_t flags);
+        ~Window_Interface ();
+        SDL_Window*   get_window    () const;
+        SDL_Renderer* get_renderer  () const;
+        int           get_xPos      () const;
+        int           get_yPos      () const;
+        int           get_width     () const;
+        int           get_height    () const;
+
+        const std::array <Key_State, SDL_NUM_SCANCODES>& get_keys() const;
+
+        std::uint32_t get_windowID  () const;
+        void          set_xPos      (const int x);
+        void          set_yPos      (const int y);
+        void          set_width     (const int w);
+        void          set_height    (const int h);
+        void          set_keys      (const std::size_t index, const bool state);
+        virtual void update () const = 0;
+
+    };
+
+    class OS_Window : public Window_Interface
     {
-        std::invoke(callback, event);
+        public:
+        OS_Window  (const char* title
+                    , const int w
+                    , const int h
+                    , const int x
+                    , const int y
+                    , const std::uint32_t flag);
+        ~OS_Window ();
+        void update () const;
 
-        if (event.window.event == SDL_WINDOWEVENT_RESIZED)
-            SDL_GetWindowSize(window, &width, &height);
-
-        if (event.type == SDL_QUIT && event.window.windowID == mWindowID)
-        {
-            running = false;
-            return;
-        }
-        if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == mWindowID)
-        {
-            running = false;
-            return;
-        }
-    }
+    };
+    char to_ASCII (const SDL_Scancode);
+    bool poll (Window_Interface& window, void (*)(SDL_Event*,void*), void* uData);
 }
+
 #endif

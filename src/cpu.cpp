@@ -5,8 +5,8 @@
 #include <cstring>
 #include <format>
 #include <thread>
-/*
 
+/*
 N	Negative
 V	Overflow
 -	ignored
@@ -35,7 +35,6 @@ C	Carry
     $FFFE, $FFFF ... IRQ (Interrupt Request) vector
 
     29kb = free
-    
 */
 
 namespace
@@ -65,11 +64,15 @@ namespace
 }
 
 _6502::CPU::CPU(Bus& bus)
-: bus {bus}
+: Subject {}
+, bus {bus}
 , decompiledCode {}
 {
     ins.fetched  = nullptr;
     ins.data     = 0x0000;
+}
+_6502::CPU::~CPU()
+{
 }
 
 void _6502::CPU::reset()
@@ -80,14 +83,13 @@ void _6502::CPU::reset()
     SR = static_cast <flag_type> (FLAG::U);
     SP = 0xFF;
     PC = (bus.ram[RESET_VECTOR+1]  << 8) | bus.ram[RESET_VECTOR];
-
 }
 // $FFFE, $FFFF ... IRQ (Interrupt Request) vector
 void _6502::CPU::IRQ ()
 {
     if (SR & static_cast <flag_type> (FLAG::I))
     {
-        stack_push(PC & 0xFF00);
+        stack_push((PC >> 8) & 0x00FF);
         stack_push(PC & 0x00FF);
 		set_flag(FLAG::I, true);
 		set_flag(FLAG::U, true);
@@ -96,15 +98,10 @@ void _6502::CPU::IRQ ()
         const word low  = static_cast <word> (read(IRQ_VECTOR));
         const word high = static_cast <word> (read(IRQ_VECTOR+1));
         PC = (high << 8) | low;
-
-        int cycles = 7;
-        while (cycles > 0)
-        {
-            cycles--;
-        }
+        ins.cycles += 7;
     }
-
 }
+
 void _6502::CPU::NMI ()
 {
 
@@ -145,17 +142,61 @@ void _6502::CPU::decompiler()
 
 void _6502::CPU::run()
 {
+    // auto begin = std::chrono::high_resolution_clock::now();
+    set_flag(FLAG::U, true);
     ins.fetched = &opcodes[read(PC++)];
     ins.cycles = ins.fetched->cycles + (this->*ins.fetched->mode)();
     (this->*ins.fetched->op)();
 
+    // auto end = std::chrono::high_resolution_clock::now();
+
     while (ins.cycles > 0)
     {
-        ins.cycles--;
-        if (ins.cycles == 2)
+        std::this_thread::sleep_for(std::chrono::microseconds(ins.cycles));
+        ins.cycles--;   
+        if (ins.cycles == 1 && irq)
+        {
             IRQ();
+            irq = false;
+        }
     }
 }
+
+word _6502::CPU::get_PC () const
+{
+    return PC;
+}
+
+byte _6502::CPU::get_AC () const
+{
+    return AC;
+}
+
+byte _6502::CPU::get_X  () const
+{
+    return X;
+}
+
+byte _6502::CPU::get_Y  () const
+{
+    return  Y;
+}
+
+byte _6502::CPU::get_SR () const
+{
+    return SR;
+}
+
+byte _6502::CPU::get_SP () const
+{
+    return SP;
+}
+
+void _6502::CPU::set_irq()
+{
+    irq = true;
+}
+
 
 byte _6502::CPU::read(const word address)
 {
@@ -185,11 +226,6 @@ void _6502::CPU::set_flag(const FLAG flag, const bool condition)
         SR |= static_cast <flag_type> (flag);
     else
         SR &= ~static_cast<flag_type>(flag);
-}
-
-void _6502::CPU::set_pin (const CPU_PINS p)
-{
-    pins |= static_cast<pin_type> (p);
 }
 
 int _6502::CPU::IMP ()
@@ -431,8 +467,8 @@ void _6502::CPU::RTI(void)
     SR = stack_pop();
     SR &= ~static_cast <flag_type> (FLAG::B);
     SR &= ~static_cast <flag_type> (FLAG::U);
-    word low  = static_cast <word> (stack_pop());
-    word high = static_cast <word> (stack_pop()) << 8;
+    const word low  = static_cast <word> (stack_pop());
+    const word high = static_cast <word> (stack_pop()) << 8;
     PC = high | low;
 }
 /* XOR memory with accumulator */
@@ -485,13 +521,13 @@ void _6502::CPU::BVC(void)
 /* CLI clear interrupt disable bit */
 void _6502::CPU::CLI(void)
 {
-    SR &= ~static_cast <flag_type> (FLAG::I);
+    set_flag(FLAG::I, false);
 }
 /* return from subroutine */
 void _6502::CPU::RTS(void)
 {
-    word low  = static_cast <word> (stack_pop());
-    word high = static_cast <word> (stack_pop()) << 8;
+    const word low  = static_cast <word> (stack_pop());
+    const word high = static_cast <word> (stack_pop()) << 8;
     PC = high | low;
     PC++;
 }
@@ -548,7 +584,7 @@ void _6502::CPU::BVS(void)
 /* SEI set interrupt disable status */
 void _6502::CPU::SEI(void)
 {
-    SR |= static_cast <flag_type> (FLAG::I);
+    set_flag (FLAG::I, true);
 }
 /* store accumulator in memory */
 void _6502::CPU::STA(void)

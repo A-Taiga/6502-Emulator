@@ -3,20 +3,24 @@
 
 #include "common.hpp"
 #include <array>
+#include <mutex>
 
 namespace _6502
 {
     class RAM
     {
         public:
-            std::size_t programSize;
+            using type = typename std::array<byte, RAM_SIZE>;
+            std::size_t programSize; // remove this and place it in the emulator
             RAM ();
             void reset();
-            std::array<byte, RAM_SIZE>& data();
-            byte& operator[](word index);
-            const byte& operator[](word index) const;
+            // type& data();
+            type& get_ram();
+            byte& operator[](const word index);
+            byte operator[](const word index) const;
         private:
-            std::array<byte, RAM_SIZE> mem;
+            type ram;
+            std::mutex m;
     };
 }
 #endif
