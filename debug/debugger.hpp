@@ -21,20 +21,20 @@ namespace UI
         protected:
             struct Sizes
             {
-                float glyphWidth;
-                float glyphHeight;
-                float addressTextWidth;
-                float byteTextWidth;
-                float dataColWidth;
-                float asciiColWidth;
-                float addressEnd;
-                float minWindowWidth;
-                float minWindowHeight;
-                float scrollBarWidth;
-                float windowSize;
-                float colSpacing;
-                int   rowWidth;
-                int   addressPadding;
+                float glyph_width;
+                float glyph_height;
+                float address_text_width;
+                float byte_text_width;
+                float data_col_width;
+                float ascii_col_width;
+                float address_end;
+                float min_window_width;
+                float min_window_height;
+                float scroll_bar_width;
+                float window_size;
+                float col_spacing;
+                int   row_width;
+                int   address_padding;
                 Sizes ();
             } sizes;
             void calc ();
@@ -47,10 +47,10 @@ namespace UI
         public:
             Hex_editor ( const char* windowName
                         , void * const buffer
-                        , const std::size_t totalMemSize
+                        , const std::size_t total_mem_size
                         , const std::size_t begin
                         , const std::size_t end
-                        , const std::size_t typeSize);
+                        , const std::size_t type_size);
             void draw ();
             static int input_callback(ImGuiInputTextCallbackData* data);
         private:
@@ -61,7 +61,7 @@ namespace UI
             std::size_t selected_index;
             static const ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_CallbackAlways;
             static const ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
-            std::vector <char> lookupBuffer;
+            std::vector <char> lookup_buffer;
 
             struct Colors
             {
