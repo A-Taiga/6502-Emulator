@@ -15,9 +15,9 @@
 
 static constexpr ImVec4 clear_color {0.45f, 0.55f, 0.60f, 1.00f};
 
-UI::Memory_Window::Sizes::Sizes (){std::memset(this, 0, sizeof (*this));}
+UI::Memory_window::Sizes::Sizes (){std::memset(this, 0, sizeof (*this));}
 
-UI::Memory_Window::Memory_Window (void * const buffer, const std::size_t totalMemSize, const std::size_t begin, const std::size_t end, const std::size_t typeSize)
+UI::Memory_window::Memory_window (void * const buffer, const std::size_t totalMemSize, const std::size_t begin, const std::size_t end, const std::size_t typeSize)
 : sizes {}
 {
     offset = begin;
@@ -29,7 +29,7 @@ UI::Memory_Window::Memory_Window (void * const buffer, const std::size_t totalMe
 
 }
 
-void UI::Memory_Window::calc ()
+void UI::Memory_window::calc ()
 {
     sizes.glyphWidth       = ImGui::CalcTextSize("F").x + 1; // monospace 
     sizes.glyphHeight      = ImGui::GetTextLineHeight();
@@ -40,7 +40,7 @@ void UI::Memory_Window::calc ()
     sizes.minWindowWidth   =  sizes.windowSize = sizes.addressTextWidth +  sizes.dataColWidth  + sizes.asciiColWidth + (sizes.scrollBarWidth*3);
 }
 
-void UI::Memory_Window::draw_column_labels ()
+void UI::Memory_window::draw_column_labels ()
 {
     ImGui::BeginGroup();
     ImVec2 pos = ImGui::GetCursorPos();
@@ -59,8 +59,8 @@ void UI::Memory_Window::draw_column_labels ()
     ImGui::Separator();
 }
 
-UI::Hex_Editor::Hex_Editor (const char * windowName, void * const buffer, const std::size_t totalMemSize, const std::size_t begin, const std::size_t end, const std::size_t typeSize)
-: Memory_Window {buffer, totalMemSize, begin, end, typeSize}
+UI::Hex_editor::Hex_editor (const char * windowName, void * const buffer, const std::size_t totalMemSize, const std::size_t begin, const std::size_t end, const std::size_t typeSize)
+: Memory_window {buffer, totalMemSize, begin, end, typeSize}
 , name {windowName}
 {
 
@@ -68,15 +68,15 @@ UI::Hex_Editor::Hex_Editor (const char * windowName, void * const buffer, const 
     
     this->sizes.rowWidth = 16;
     this->sizes.scrollBarWidth = 20.f;
-    selectedValue = 0;
+    selected_value = 0;
 }
 
-void UI::Hex_Editor::draw ()
+void UI::Hex_editor::draw ()
 {
     [[maybe_unused]] static float scrollY = 0.0f;
     this->calc();
     ImGui::SetNextWindowSize({this->sizes.minWindowWidth, 0});
-    ImGui::Begin(name, &isShowing, windowFlags);
+    ImGui::Begin(name, &is_showing, window_flags);
     this->draw_column_labels();
     ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, colors.scrollbar_backGroundColor);
     ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, colors.scrollbar_grabber);
@@ -114,18 +114,18 @@ void UI::Hex_Editor::draw ()
                 ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0,0});
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0,0,0,0));
 
-                User_Data uData;
+                User_data uData;
                 snprintf(uData.buffer, sizeof(uData.buffer), "%02X", value);
                 ImGui::PushStyleColor(ImGuiCol_Text, this->view[index] == 0x00 ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled) : colors.white);
-                if(ImGui::InputText("##input", uData.buffer, sizeof(uData.buffer), inpuTextFlags, Hex_Editor::input_callback, &uData))
+                if(ImGui::InputText("##input", uData.buffer, sizeof(uData.buffer), input_text_flags, Hex_editor::input_callback, &uData))
                 {
                     auto value = std::strtol(uData.buffer, NULL, 16);
                     this->view[row * this->sizes.rowWidth + col] = value;
                 }
                 if(uData.set)
                 {
-                    selectedValue = this->view[index];
-                    selectedIndex = index;
+                    selected_value = this->view[index];
+                    selected_index = index;
                     ImGui::PopStyleColor();
                 }
                 ImGui::PopStyleColor();
@@ -156,12 +156,12 @@ void UI::Hex_Editor::draw ()
         lookup = true;
     }
     ImGui::NewLine();
-    ImGui::TextUnformatted(std::format ("Hex     {:{}}{:02X}", " ", 5, selectedValue).c_str());
-    ImGui::TextUnformatted(std::format ("Binary  {:{}}{:08b}", " ", 5, selectedValue).c_str());
-    ImGui::TextUnformatted(std::format ("Octal   {:{}}{:o}", " ", 5, selectedValue).c_str());
-    ImGui::TextUnformatted(std::format ("uint8   {:{}}{:}", " ", 5, selectedValue).c_str());
-    ImGui::TextUnformatted(std::format ("int8    {:{}}{:}", " ", 5, (std::int8_t)selectedValue).c_str());
-    if (selectedIndex + 1 >= view.size())
+    ImGui::TextUnformatted(std::format ("Hex     {:{}}{:02X}", " ", 5, selected_value).c_str());
+    ImGui::TextUnformatted(std::format ("Binary  {:{}}{:08b}", " ", 5, selected_value).c_str());
+    ImGui::TextUnformatted(std::format ("Octal   {:{}}{:o}", " ", 5, selected_value).c_str());
+    ImGui::TextUnformatted(std::format ("uint8   {:{}}{:}", " ", 5, selected_value).c_str());
+    ImGui::TextUnformatted(std::format ("int8    {:{}}{:}", " ", 5, (std::int8_t)selected_value).c_str());
+    if (selected_index + 1 >= view.size())
     {
         ImGui::TextUnformatted(std::format ("uint16  {:{}}EOF", " ", 5).c_str());
         ImGui::TextUnformatted(std::format ("int16   {:{}}EOF", " ", 5).c_str());
@@ -169,18 +169,18 @@ void UI::Hex_Editor::draw ()
     else
     {
         /* the 6502 is little-endian so display the values that way */
-        std::uint16_t u16v = (this->view[selectedIndex+1] << 8) | (selectedValue );
-        std::int16_t  i16v = (this->view[selectedIndex+1] << 8) | (selectedValue );
+        std::uint16_t u16v = (this->view[selected_index+1] << 8) | (selected_value );
+        std::int16_t  i16v = (this->view[selected_index+1] << 8) | (selected_value );
         ImGui::TextUnformatted(std::format ("uint16  {:{}}{:}", " ", 5, u16v).c_str());
         ImGui::TextUnformatted(std::format ("int16   {:{}}{:}", " ", 5, i16v).c_str());
     }
-    ImGui::TextUnformatted(std::format ("ACII    {:{}}{:}", " ", 5, (char)selectedValue).c_str());
+    ImGui::TextUnformatted(std::format ("ACII    {:{}}{:}", " ", 5, (char)selected_value).c_str());
     ImGui::End();
 }
 
-int UI::Hex_Editor::input_callback(ImGuiInputTextCallbackData* data)
+int UI::Hex_editor::input_callback(ImGuiInputTextCallbackData* data)
 {
-    User_Data* uData = (User_Data*)data->UserData;
+    User_data* uData = (User_data*)data->UserData;
     uData->set = ImGui::IsItemActive();
     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(255, 255, 255, 255));
     if (data->SelectionStart == 0 && data->SelectionEnd == data->BufTextLen)
@@ -194,7 +194,7 @@ int UI::Hex_Editor::input_callback(ImGuiInputTextCallbackData* data)
     return 0;
 }
 
-UI::Debugger::Debugger (Window_Interface& win)
+UI::Debugger::Debugger (UI::Window_interface& win)
 : window {win}
 {
     assert (win.get_window() != nullptr);
@@ -213,9 +213,9 @@ UI::Debugger::Debugger (Window_Interface& win)
     ImGui_ImplSDL2_InitForSDLRenderer(window.get_window(), window.get_renderer());
     ImGui_ImplSDLRenderer2_Init(window.get_renderer());
 
-    textSize = 20.0f;
-    font = io.Fonts->AddFontFromFileTTF("imgui/misc/fonts/ProggyClean.ttf", textSize, nullptr, io.Fonts->GetGlyphRangesDefault());
-    float iconFontSize = textSize * 2.0f / 3.0f; // FontAwesome fonts need to have their sizes reduced by 2.0f/3.0f in order to align correctly
+    text_size = 15.0f;
+    font = io.Fonts->AddFontFromFileTTF("imgui/misc/fonts/ProggyClean.ttf", text_size, nullptr, io.Fonts->GetGlyphRangesDefault());
+    float iconFontSize = text_size * 2.0f / 3.0f; // FontAwesome fonts need to have their sizes reduced by 2.0f/3.0f in order to align correctly
     // // merge in icons from Font Awesome
     static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_16_FA, 0 };
     ImFontConfig icons_config; 

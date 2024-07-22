@@ -11,13 +11,13 @@ namespace _6502
     {
         public:
             using type = typename std::array<byte, RAM_SIZE>;
-            std::size_t programSize; // remove this and place it in the emulator
+            std::size_t program_size; // remove this and place it in the emulator
             RAM ();
             void reset();
             // type& data();
             type& get_ram();
             byte& operator[](const word index);
-            byte operator[](const word index) const;
+            byte  operator[](const word index) const;
         private:
             type ram;
             std::mutex m;

@@ -28,7 +28,7 @@ namespace
 {
     struct callback_data
     {
-        UI::Window_Interface& window;
+        UI::Window_interface& window;
         _6502::Emulator& emu;
     };
 
@@ -303,7 +303,7 @@ namespace
 {
     struct Callback_Data
     {
-        UI::Window_Interface& window;
+        UI::Window_interface& window;
         _6502::Emulator& emu;
         bool& running;
         bool& pause;
@@ -312,7 +312,7 @@ namespace
 
     struct Poll_Data
     {
-        UI::Window_Interface& window;
+        UI::Window_interface& window;
         _6502::Emulator& emu;
     };
 
@@ -350,7 +350,7 @@ void _6502::Emulator::run()
     bool running = true;
     bool pause = true;
     bool step = false;
-    UI::OS_Window window ("Debugger", WINDOW_W, WINDOW_H, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SDL_INIT_EVERYTHING);
+    UI::OS_window window ("Debugger", WINDOW_W, WINDOW_H, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SDL_INIT_EVERYTHING);
     UI::Debugger debugger (window);
     Callback_Data callbackData {window, *this, running, pause, step};
     Poll_Data pollData {window, *this};
@@ -383,10 +383,10 @@ void _6502::Emulator::impl_ui (void* uData)
 {
     static Callback_Data* data = static_cast <Callback_Data*> (uData);
     static Program_Window   programWindow {data->emu.bus.cpu.decompiledCode, &data->emu.bus.cpu};
-    static UI::Hex_Editor   Memory        {"RAM", data->emu.bus.ram.get_ram().data(), RAM_SIZE, 0, RAM_SIZE, sizeof(std::uint8_t)};
-    static UI::Hex_Editor   zeroPage      {"Zero Page", data->emu.bus.ram.get_ram().data(), RAM_SIZE, 0, PAGE_SIZE, sizeof (std::uint8_t)};
-    static UI::Hex_Editor   Page1         {"Page 1", data->emu.bus.ram.get_ram().data(), RAM_SIZE, 0x200, PAGE_SIZE, sizeof (std::uint8_t)};
-    static UI::Hex_Editor   StackPage     {"Stack", data->emu.bus.ram.get_ram().data(), RAM_SIZE, 0x100, PAGE_SIZE, sizeof (std::uint8_t)};
+    static UI::Hex_editor   Memory        {"RAM", data->emu.bus.ram.get_ram().data(), RAM_SIZE, 0, RAM_SIZE, sizeof(std::uint8_t)};
+    static UI::Hex_editor   zeroPage      {"Zero Page", data->emu.bus.ram.get_ram().data(), RAM_SIZE, 0, PAGE_SIZE, sizeof (std::uint8_t)};
+    static UI::Hex_editor   Page1         {"Page 1", data->emu.bus.ram.get_ram().data(), RAM_SIZE, 0x200, PAGE_SIZE, sizeof (std::uint8_t)};
+    static UI::Hex_editor   StackPage     {"Stack", data->emu.bus.ram.get_ram().data(), RAM_SIZE, 0x100, PAGE_SIZE, sizeof (std::uint8_t)};
     static Registers_Window registers     {&data->emu.bus.cpu};
     
     ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ParentViewportId, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);

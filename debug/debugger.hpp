@@ -2,19 +2,17 @@
 #define DEBUGGER_HPP
 
 #include "imgui.h"
-#include "window.hpp"
 #include <span>
 #include <vector>
 
 
 namespace _6502 {class Bus;}
-
 namespace UI
 {
-    class Memory_Window
+    class Memory_window
     {
         public:
-            Memory_Window ( void * const buffer
+            Memory_window ( void * const buffer
                             , const std::size_t totalMemSize
                             , const std::size_t begin
                             , const std::size_t end
@@ -44,10 +42,10 @@ namespace UI
             std::size_t offset;
     };
 
-    class Hex_Editor : public Memory_Window
+    class Hex_editor : public Memory_window
     {
         public:
-            Hex_Editor ( const char* windowName
+            Hex_editor ( const char* windowName
                         , void * const buffer
                         , const std::size_t totalMemSize
                         , const std::size_t begin
@@ -58,11 +56,11 @@ namespace UI
         private:
             const char* name;
             bool lookup;
-            bool isShowing;
-            std::uint8_t selectedValue;
-            std::size_t selectedIndex;
-            static const ImGuiInputTextFlags inpuTextFlags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_CallbackAlways;
-            static const ImGuiWindowFlags windowFlags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
+            bool is_showing;
+            std::uint8_t selected_value;
+            std::size_t selected_index;
+            static const ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_CallbackAlways;
+            static const ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
             std::vector <char> lookupBuffer;
 
             struct Colors
@@ -75,23 +73,22 @@ namespace UI
 
             } colors;
 
-            struct User_Data
+            struct User_data
             {
                 bool set = false;
                 bool selected;
                 char buffer[3];
             };
     };
-
-    class Window_Interface;
+    class Window_interface;
     class Debugger
     {
-        Window_Interface& window;
+        UI::Window_interface& window;
         ImFont* font;
-        float textSize;
+        float text_size;
         
         public:
-        Debugger (Window_Interface& win);
+        Debugger (Window_interface& win);
         ~Debugger ();
         void run (void (*callback)(void*), void* uData);
     };

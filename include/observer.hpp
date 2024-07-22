@@ -7,7 +7,7 @@ namespace UI
 {
     namespace MSG 
     {
-        using KeyType = const char*;
+        using Key_type = const char*;
         class Subject;
         class Observer
         {
@@ -15,7 +15,7 @@ namespace UI
                 virtual ~Observer   ();
                 virtual void Update (Subject*) = 0;
             protected:
-                KeyType _id;
+                Key_type id;
                 Observer ();
         };
 
@@ -23,13 +23,13 @@ namespace UI
         {
             public:
                 virtual ~Subject    ();
-                virtual void Attach (KeyType const id, Observer* observer);
-                virtual void Detach (KeyType const id);
+                virtual void Attach (Key_type const id, Observer* observer);
+                virtual void Detach (Key_type const id);
                 virtual void Notify ();
             protected:
                 Subject ();
             private:
-                std::unordered_map<KeyType, Observer*> _observers;
+                std::unordered_map<Key_type, Observer*> observers;
         };
     }
 }

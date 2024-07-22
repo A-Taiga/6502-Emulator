@@ -6,25 +6,25 @@ UI::MSG::Observer::~Observer () {}
 UI::MSG::Observer::Observer () {}
 
 UI::MSG::Subject::Subject ()
-: _observers {}
+: observers {}
 {}
 
 UI::MSG::Subject::~Subject () {}
 
-void UI::MSG::Subject::Attach (UI::MSG::KeyType const id, Observer* observer)
+void UI::MSG::Subject::Attach (UI::MSG::Key_type const id, Observer* observer)
 {
     assert (observer != nullptr);
-    _observers[id] = observer;
+    observers[id] = observer;
 }
 
-void UI::MSG::Subject::Detach (UI::MSG::KeyType const id)
+void UI::MSG::Subject::Detach (UI::MSG::Key_type const id)
 {
-    _observers.erase(id);
+    observers.erase(id);
 }
 
 void UI::MSG::Subject::Notify ()
 {
-    for (auto& i : _observers)
+    for (auto& i : observers)
     {
         i.second->Update(this);
     }
