@@ -5,7 +5,7 @@
 #include "memory.hpp"
 #include "common.hpp"
 
-namespace _6502 
+namespace MOS_6502 
 {
     class Bus
     {
@@ -16,7 +16,6 @@ namespace _6502
             ~Bus ();
             void cpu_write (const word& address, const byte data);
             byte cpu_read (const word& address) const;
-
     };
 }
 

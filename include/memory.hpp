@@ -3,9 +3,8 @@
 
 #include "common.hpp"
 #include <array>
-#include <mutex>
 
-namespace _6502
+namespace MOS_6502
 {
     class RAM
     {
@@ -14,13 +13,11 @@ namespace _6502
             std::size_t program_size; // remove this and place it in the emulator
             RAM ();
             void reset();
-            // type& data();
             type& get_ram();
             byte& operator[](const word index);
             byte  operator[](const word index) const;
         private:
             type ram;
-            std::mutex m;
     };
 }
 #endif

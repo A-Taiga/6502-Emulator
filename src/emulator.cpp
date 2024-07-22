@@ -29,7 +29,7 @@ namespace
     struct callback_data
     {
         UI::Window_interface& window;
-        _6502::Emulator& emu;
+        MOS_6502::Emulator& emu;
     };
 
     template<std::size_t N>
@@ -68,7 +68,7 @@ namespace
         using ADDRESS_TYPE = std::uint16_t;
         using programBuffer = std::vector<std::pair<ADDRESS_TYPE, std::string>>;
         const programBuffer& buffer;
-        _6502::CPU* _cpu;
+        MOS_6502::CPU* _cpu;
         ADDRESS_TYPE pc;
         ImVec2 windowSize;
         char findBuffer[array_size<ADDRESS_TYPE>()];
@@ -81,7 +81,7 @@ namespace
             ADDRESS_TYPE current_row;
         } db;
 
-        Program_Window (const programBuffer& pb, _6502::CPU* cpu)
+        Program_Window (const programBuffer& pb, MOS_6502::CPU* cpu)
         : Observer {}
         , buffer {pb}
         , _cpu {cpu}
@@ -131,7 +131,7 @@ namespace
     class Registers_Window : public UI::MSG::Observer
     {
         public:
-        Registers_Window (_6502::CPU* cpu)
+        Registers_Window (MOS_6502::CPU* cpu)
         : UI::MSG::Observer ()
         , _cpu {cpu}
         {
@@ -261,7 +261,7 @@ namespace
             ImGui::End();
         }
         private:
-        _6502::CPU* _cpu;
+        MOS_6502::CPU* _cpu;
         word PC;
         byte AC;
         byte X;
@@ -290,7 +290,7 @@ namespace
     };
 }
 
-_6502::Emulator::Emulator(const char* filePath)
+MOS_6502::Emulator::Emulator(const char* filePath)
 : currentFile {filePath}
 , bus ()
 {
@@ -304,7 +304,7 @@ namespace
     struct Callback_Data
     {
         UI::Window_interface& window;
-        _6502::Emulator& emu;
+        MOS_6502::Emulator& emu;
         bool& running;
         bool& pause;
         bool& step;
@@ -313,7 +313,7 @@ namespace
     struct Poll_Data
     {
         UI::Window_interface& window;
-        _6502::Emulator& emu;
+        MOS_6502::Emulator& emu;
     };
 
     void ui_callback (SDL_Event *event, void *uData)
@@ -345,7 +345,7 @@ namespace
     }
 }
 
-void _6502::Emulator::run()
+void MOS_6502::Emulator::run()
 {
     bool running = true;
     bool pause = true;
@@ -361,7 +361,7 @@ void _6502::Emulator::run()
     {
         running = UI::poll(window, ui_callback, &pollData);
         bus.cpu.run();
-        debugger.run(&_6502::Emulator::impl_ui, &callbackData);
+        debugger.run(&MOS_6502::Emulator::impl_ui, &callbackData);
         if (!pause)
         {
             bus.cpu.run();
@@ -370,7 +370,7 @@ void _6502::Emulator::run()
     }
 }
 
-void _6502::Emulator::reset ()
+void MOS_6502::Emulator::reset ()
 {
     bus.ram.reset();
     load_rom (currentFile.data(), bus.ram.get_ram(), ROM_BEGIN);
@@ -379,10 +379,10 @@ void _6502::Emulator::reset ()
     bus.cpu.reset();
 }
 
-void _6502::Emulator::impl_ui (void* uData)
+void MOS_6502::Emulator::impl_ui (void* uData)
 {
     static Callback_Data* data = static_cast <Callback_Data*> (uData);
-    static Program_Window   programWindow {data->emu.bus.cpu.decompiledCode, &data->emu.bus.cpu};
+    static Program_Window   programWindow {data->emu.bus.cpu.decompiled_code, &data->emu.bus.cpu};
     static UI::Hex_editor   Memory        {"RAM", data->emu.bus.ram.get_ram().data(), RAM_SIZE, 0, RAM_SIZE, sizeof(std::uint8_t)};
     static UI::Hex_editor   zeroPage      {"Zero Page", data->emu.bus.ram.get_ram().data(), RAM_SIZE, 0, PAGE_SIZE, sizeof (std::uint8_t)};
     static UI::Hex_editor   Page1         {"Page 1", data->emu.bus.ram.get_ram().data(), RAM_SIZE, 0x200, PAGE_SIZE, sizeof (std::uint8_t)};

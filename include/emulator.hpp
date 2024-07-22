@@ -7,7 +7,7 @@ using byte = std::uint8_t;
 using word = std::uint16_t;
 
 namespace UI{class Window_interface;}
-namespace _6502
+namespace MOS_6502
 {
     class Emulator
     {

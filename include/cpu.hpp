@@ -32,10 +32,10 @@
     LIFO, top-down, 8 bit range, 0x0100 - 0x01FF
 */
 
-namespace _6502
+namespace MOS_6502
 {
     using flag_type = std::uint8_t;
-    enum class FLAG : flag_type
+    enum class Flag : flag_type
     {
         C = 1 << 0, // carry
         Z = 1 << 1, // zero 
@@ -57,8 +57,8 @@ namespace _6502
     struct opcode
     {
         const char* mnemonic;
-        void (_6502::CPU::*op)(void);
-        int (_6502::CPU::*mode)(void);
+        void (MOS_6502::CPU::*op)(void);
+        int (MOS_6502::CPU::*mode)(void);
         Address_Type addrType;
         std::size_t cycles;
     };
@@ -68,7 +68,7 @@ namespace _6502
     {
         public:
             Bus& bus;
-            std::vector<std::pair<word, std::string>>  decompiledCode;
+            std::vector<std::pair<word, std::string>>  decompiled_code;
 
             CPU             (Bus& bus);
             ~CPU();
@@ -135,7 +135,7 @@ namespace _6502
                 void write      (const word address, const byte data);
                 void stack_push (const byte data);
                 byte stack_pop  ();
-                void set_flag   (const FLAG flag, const bool condition);
+                void set_flag   (const Flag Flag, const bool condition);
                 void IRQ        ();
                 void NMI        ();
 
