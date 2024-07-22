@@ -23,9 +23,9 @@ namespace UI
         {
             public:
                 virtual ~Subject    ();
-                virtual void Attach (Key_type const id, Observer* observer);
-                virtual void Detach (Key_type const id);
-                virtual void Notify ();
+                virtual void attach (Key_type const id, Observer* observer);
+                virtual void detach (Key_type const id);
+                virtual void notify ();
             protected:
                 Subject ();
             private:

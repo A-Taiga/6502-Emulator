@@ -1,5 +1,7 @@
 #include "observer.hpp"
 #include <cassert>
+#include <cstddef>
+#include <iostream>
 
 UI::MSG::Observer::~Observer () {}
 
@@ -11,21 +13,24 @@ UI::MSG::Subject::Subject ()
 
 UI::MSG::Subject::~Subject () {}
 
-void UI::MSG::Subject::Attach (UI::MSG::Key_type const id, Observer* observer)
+void UI::MSG::Subject::attach (UI::MSG::Key_type const id, Observer* observer)
 {
     assert (observer != nullptr);
     observers[id] = observer;
 }
 
-void UI::MSG::Subject::Detach (UI::MSG::Key_type const id)
+void UI::MSG::Subject::detach (UI::MSG::Key_type const id)
 {
     observers.erase(id);
 }
 
-void UI::MSG::Subject::Notify ()
+void UI::MSG::Subject::notify ()
 {
     for (auto& i : observers)
     {
-        i.second->Update(this);
+        if (i.second != nullptr)
+            i.second->Update(this);
+        else
+            std::cerr << "observer with ID : " << i.first << " was nullptr" << std::endl;
     }
 }

@@ -6,6 +6,7 @@
 #include "common.hpp"
 #include <chrono>
 #include <cstddef>
+#include <cstdlib>
 #include <iostream>
 #include <cstring>
 #include "cpu.hpp"
@@ -33,7 +34,7 @@ namespace
     };
 
     template<std::size_t N>
-    std::size_t load_rom (const char* path, const std::array<byte, N>& buffer, const std::size_t offset)
+    std::size_t load_rom (const char* path, const std::array<byte, N>& buffer, const std::size_t offset) noexcept
     {
         try
         {
@@ -47,6 +48,7 @@ namespace
         catch (const std::exception& e) 
         {
             std::cerr << e.what() << '\n';
+            std::exit (EXIT_FAILURE);
         }
         return 0;
     }
@@ -57,18 +59,12 @@ namespace
         return sizeof(ADDRESS_TYPE) * 8 / 4;
     }
 
-    template <class T>
-    concept is_container = requires {{typename std::decay_t<decltype(*std::declval <T>().begin())>()} -> std::integral;};
-    template <class T>
-    requires is_container <T>
-    struct nested_type {using type = typename std::decay_t <decltype (*std::declval<T>().begin())>;};
-
     struct Program_Window : public UI::MSG::Observer
     {
         using ADDRESS_TYPE = std::uint16_t;
         using programBuffer = std::vector<std::pair<ADDRESS_TYPE, std::string>>;
         const programBuffer& buffer;
-        MOS_6502::CPU* _cpu;
+        MOS_6502::CPU* cpu;
         ADDRESS_TYPE pc;
         ImVec2 windowSize;
         char findBuffer[array_size<ADDRESS_TYPE>()];
@@ -84,15 +80,15 @@ namespace
         Program_Window (const programBuffer& pb, MOS_6502::CPU* cpu)
         : Observer {}
         , buffer {pb}
-        , _cpu {cpu}
+        , cpu {cpu}
         , pc (0)
         {
-            _cpu->Attach("Program_Window", this);
+            cpu->attach("Program_Window", this);
             sizes.addressPadding = sizeof(ADDRESS_TYPE) * 8 / 4;
         }
         ~Program_Window()
         {
-            _cpu->Detach("Program_Window");
+            cpu->detach("Program_Window");
         }
     
         void draw ()
@@ -121,9 +117,9 @@ namespace
 
         virtual void Update (UI::MSG::Subject* subject)
         {
-            if (subject == _cpu)
+            if (subject == cpu)
             {
-                pc = _cpu->get_PC();
+                pc = cpu->get_PC();
             }
         }
     };
@@ -133,13 +129,13 @@ namespace
         public:
         Registers_Window (MOS_6502::CPU* cpu)
         : UI::MSG::Observer ()
-        , _cpu {cpu}
+        , cpu {cpu}
         {
-            cpu->Attach("registers", this);
+            cpu->attach("registers", this);
         } 
         ~Registers_Window() 
         {
-            _cpu->Detach("registers");
+            cpu->detach("registers");
         }
 
         void draw ()
@@ -261,7 +257,7 @@ namespace
             ImGui::End();
         }
         private:
-        MOS_6502::CPU* _cpu;
+        MOS_6502::CPU* cpu;
         word PC;
         byte AC;
         byte X;
@@ -275,16 +271,16 @@ namespace
             ImVec4 notSet = {255,255,255,0};
         } colors;
 
-        virtual void Update (UI::MSG::Subject* subject)
+        void Update (UI::MSG::Subject* subject) override
         {
-            if (subject == _cpu)
+            if (subject == cpu)
             {
-                PC = _cpu->get_PC ();
-                AC = _cpu->get_AC ();
-                X  = _cpu->get_X  ();
-                Y  = _cpu->get_Y  ();
-                SR = _cpu->get_SR ();
-                SP = _cpu->get_SP ();
+                PC = cpu->get_PC ();
+                AC = cpu->get_AC ();
+                X  = cpu->get_X  ();
+                Y  = cpu->get_Y  ();
+                SR = cpu->get_SR ();
+                SP = cpu->get_SP ();
             }
         }
     };
@@ -365,7 +361,7 @@ void MOS_6502::Emulator::run()
         if (!pause)
         {
             bus.cpu.run();
-            bus.cpu.Notify();   
+            bus.cpu.notify();   
         }
     }
 }
