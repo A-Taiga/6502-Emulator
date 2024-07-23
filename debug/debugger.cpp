@@ -15,7 +15,7 @@
 
 static constexpr ImVec4 clear_color {0.45f, 0.55f, 0.60f, 1.00f};
 
-UI::Memory_window::Sizes::Sizes (){std::memset(this, 0, sizeof (*this));}
+UI::Memory_window::Sizes::Sizes () {std::memset(this, 0, sizeof (*this));}
 
 UI::Memory_window::Memory_window (void * const buffer, const std::size_t total_mem_size, const std::size_t begin, const std::size_t end, const std::size_t type_size)
 : sizes {}
@@ -59,9 +59,9 @@ void UI::Memory_window::draw_column_labels ()
     ImGui::Separator();
 }
 
-UI::Hex_editor::Hex_editor (const char * windowName, void * const buffer, const std::size_t totalMemSize, const std::size_t begin, const std::size_t end, const std::size_t typeSize)
-: Memory_window {buffer, totalMemSize, begin, end, typeSize}
-, name {windowName}
+UI::Hex_editor::Hex_editor (const char * window_name, void * const buffer, const std::size_t total_mem_size, const std::size_t begin, const std::size_t end, const std::size_t type_size)
+: Memory_window {buffer, total_mem_size, begin, end, type_size}
+, name {window_name}
 {
 
     lookup_buffer = std::vector<char> (sizes.address_padding);

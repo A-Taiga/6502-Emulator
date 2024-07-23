@@ -3,6 +3,7 @@
 
 #include "bus.hpp"
 
+
 using byte = std::uint8_t;
 using word = std::uint16_t;
 

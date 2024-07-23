@@ -1,10 +1,10 @@
 #include "emulator.hpp"
 #include "SDL2/SDL.h"
+#include "SDL2/SDL_events.h"
 #include "SDL_scancode.h"
 #include "SDL_video.h"
 #include "bus.hpp"
 #include "common.hpp"
-#include <chrono>
 #include <cstddef>
 #include <cstdlib>
 #include <iostream>
@@ -315,29 +315,31 @@ namespace
     void ui_callback (SDL_Event *event, void *uData)
     {
         ImGui_ImplSDL2_ProcessEvent(event);
-        static word index = 0x200;
-        static Poll_Data * data = static_cast <Poll_Data*> (uData);
-        static const auto& keys = data->window.get_keys();
-        static auto& bus = data->emu.bus;
+        static word index = KEY_BEGIN+2;
+        Poll_Data * data = static_cast <Poll_Data*> (uData);
+        UI::Window_interface &window = data->window;
 
-        for (std::size_t i = 0; i < keys.size(); ++i)
-        {
-            if (keys[i].state)
-            {
-                if (std::chrono::duration_cast <std::chrono::milliseconds> (std::chrono::high_resolution_clock::now() - keys[i].time) > std::chrono::milliseconds(30))
-                {
-                    bus.cpu.set_irq();
-                    bus.ram [index++] = UI::to_ASCII ((SDL_Scancode)i);
-                    data->window.set_keys(i, false);
-                }
-            }
-        }
-        
         if (event->type == SDL_KEYDOWN)
-            data->window.set_keys(event->key.keysym.scancode, true);
+        {
+            const char key = window.to_ASCII(event->key.keysym.scancode);
+            if (key == 8 && index)
+            {
+                index -= 1;
+                if (index == KEY_BEGIN+1)
+                    index = KEY_BEGIN+2;
+                data->emu.bus.ram[KEY_BEGIN] = index & 0x00FF;
+                data->emu.bus.ram[KEY_BEGIN+1] =  (index >> 8) & 0x00FF;
+                data->emu.bus.ram[index] = 0x0000;
+            }
+            else
+            {
+                data->emu.bus.ram[KEY_BEGIN] = index & 0x00FF;
+                data->emu.bus.ram[KEY_BEGIN+1] =  (index >> 8) & 0x00FF;
+                data->emu.bus.ram[index++] = key;
+            }
 
-        if (index > 0x200 + PAGE_SIZE)
-            index = 0x200;
+            data->emu.bus.cpu.set_irq_pin();
+        }
     }
 }
 
@@ -381,8 +383,8 @@ void MOS_6502::Emulator::impl_ui (void* uData)
     static Program_Window   programWindow {data->emu.bus.cpu.decompiled_code, &data->emu.bus.cpu};
     static UI::Hex_editor   Memory        {"RAM", data->emu.bus.ram.get_ram().data(), RAM_SIZE, 0, RAM_SIZE, sizeof(std::uint8_t)};
     static UI::Hex_editor   zeroPage      {"Zero Page", data->emu.bus.ram.get_ram().data(), RAM_SIZE, 0, PAGE_SIZE, sizeof (std::uint8_t)};
-    static UI::Hex_editor   Page1         {"Page 1", data->emu.bus.ram.get_ram().data(), RAM_SIZE, 0x200, PAGE_SIZE, sizeof (std::uint8_t)};
-    static UI::Hex_editor   StackPage     {"Stack", data->emu.bus.ram.get_ram().data(), RAM_SIZE, 0x100, PAGE_SIZE, sizeof (std::uint8_t)};
+    static UI::Hex_editor   Page1         {"Page 1", data->emu.bus.ram.get_ram().data(), RAM_SIZE, 0x0200, PAGE_SIZE, sizeof (std::uint8_t)};
+    static UI::Hex_editor   StackPage     {"Stack", data->emu.bus.ram.get_ram().data(), RAM_SIZE, 0x0100, PAGE_SIZE, sizeof (std::uint8_t)};
     static Registers_Window registers     {&data->emu.bus.cpu};
     
     ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ParentViewportId, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);

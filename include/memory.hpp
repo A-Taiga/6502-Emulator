@@ -14,8 +14,10 @@ namespace MOS_6502
             RAM ();
             void reset();
             type& get_ram();
+
             byte& operator[](const word index);
-            byte  operator[](const word index) const;
+            const byte&  operator[](const word index) const;
+
         private:
             type ram;
     };

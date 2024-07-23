@@ -1,0 +1,46 @@
+* = $F000
+LDA #$22
+STA $FFFE
+LDA #$F0
+STA $FFFF
+; store key io location
+LDA #$02
+STA $01
+LDA #$00
+STA $00
+
+; main loop
+
+LOOP:
+SEI
+CLI
+JMP LOOP
+JMP LOOP
+
+* = $F022
+CLI
+
+STA $02
+LDA #13
+
+STX $03
+LDX $04
+
+SBC ($00),X
+INC $04
+
+BNE NOT
+JMP END
+
+NOT:
+LDA $0200
+LDX $04
+STA ($05),X
+
+LDA $02
+LDX $03
+
+
+END:
+RTI
+.END

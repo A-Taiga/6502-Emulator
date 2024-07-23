@@ -1,7 +1,7 @@
 #include "window.hpp"
 #include "SDL2/SDL_events.h"
+#include "SDL2/SDL_scancode.h"
 #include <cassert>
-#include <chrono>
 #include <stdexcept>
 #include <SDL2/SDL.h>
 
@@ -10,12 +10,14 @@
 #endif
 
 UI::Window_interface::Window_interface (const char* title, const int x, const int y, const int w, const int h, const std::uint32_t flags)
-: x_pos   (x)
-, y_pos   (y)
+: x_pos  (x)
+, y_pos  (y)
 , width  (w)
 , height (h)
+, keys {false}
+, left_shift (false)
+, right_shift (false)
 {
-    keys.fill({std::chrono::high_resolution_clock::now(),false});
 
     if (SDL_Init(flags) < 0)
         throw std::runtime_error (SDL_GetError());
@@ -68,12 +70,7 @@ std::uint32_t UI::Window_interface::get_window_ID  () const
     return window_ID;
 }
 
-// const std::bitset <SDL_NUM_SCANCODES>& UI::Window_interface::get_keys() const
-// {
-//     return keys;
-// }
-
-const std::array <UI::Key_state, SDL_NUM_SCANCODES>& UI::Window_interface::get_keys() const
+const std::array <bool, SDL_NUM_SCANCODES>& UI::Window_interface::get_keys() const
 {
     return keys;
 }
@@ -100,9 +97,12 @@ void UI::Window_interface::set_height (const int h)
 
 void UI::Window_interface::set_keys (const std::size_t index, const bool state)
 {
-
-        keys[index].time = std::chrono::high_resolution_clock::now();
-        keys[index].state = state;
+    keys[index] = state;
+    switch (index)
+    {
+        case SDL_SCANCODE_LSHIFT: left_shift = state;
+        case SDL_SCANCODE_RSHIFT: right_shift = state;
+    }
 }
 
 UI::OS_window::OS_window  (const char* title, const int w, const int h, const int x, const int y, std::uint32_t flags)
@@ -126,50 +126,6 @@ void UI::OS_window::update () const
 	SDL_RenderClear(this->renderer);
 }
 
-char UI::to_ASCII (const SDL_Scancode code)
-{
-    switch (code)
-    {
-        case SDL_SCANCODE_A:     return 'a';
-        case SDL_SCANCODE_B:     return 'b';
-        case SDL_SCANCODE_C:     return 'c';
-        case SDL_SCANCODE_D:     return 'd';
-        case SDL_SCANCODE_E:     return 'e';
-        case SDL_SCANCODE_F:     return 'f';
-        case SDL_SCANCODE_G:     return 'g';
-        case SDL_SCANCODE_H:     return 'h';
-        case SDL_SCANCODE_I:     return 'i';
-        case SDL_SCANCODE_J:     return 'j';
-        case SDL_SCANCODE_K:     return 'k';
-        case SDL_SCANCODE_L:     return 'l';
-        case SDL_SCANCODE_M:     return 'm';
-        case SDL_SCANCODE_N:     return 'n';
-        case SDL_SCANCODE_O:     return 'o';
-        case SDL_SCANCODE_P:     return 'p';
-        case SDL_SCANCODE_Q:     return 'q';
-        case SDL_SCANCODE_R:     return 'r';
-        case SDL_SCANCODE_S:     return 's';
-        case SDL_SCANCODE_T:     return 't';
-        case SDL_SCANCODE_U:     return 'u';
-        case SDL_SCANCODE_V:     return 'v';
-        case SDL_SCANCODE_W:     return 'w';
-        case SDL_SCANCODE_X:     return 'x';
-        case SDL_SCANCODE_Y:     return 'y';
-        case SDL_SCANCODE_Z:     return 'z';
-        case SDL_SCANCODE_1:     return '1';
-        case SDL_SCANCODE_2:     return '2';
-        case SDL_SCANCODE_3:     return '3';
-        case SDL_SCANCODE_4:     return '4';
-        case SDL_SCANCODE_5:     return '5';
-        case SDL_SCANCODE_6:     return '6';
-        case SDL_SCANCODE_7:     return '7';
-        case SDL_SCANCODE_8:     return '8';
-        case SDL_SCANCODE_9:     return '9';
-        case SDL_SCANCODE_0:     return '0';
-        case SDL_SCANCODE_SPACE: return ' ';
-        default: return '0';
-    }
-}
 
 bool UI::poll (Window_interface& window, void (*callback)(SDL_Event*, void*), void* uData)
 {
@@ -184,4 +140,62 @@ bool UI::poll (Window_interface& window, void (*callback)(SDL_Event*, void*), vo
             return false;
     }
     return true;
+}
+
+char UI::Window_interface::to_ASCII (const SDL_Scancode code)
+{
+    switch (code)
+    {
+        case SDL_SCANCODE_A:     return (left_shift || right_shift) ? 'A' : 'a';
+        case SDL_SCANCODE_B:     return (left_shift || right_shift) ? 'B' : 'b';
+        case SDL_SCANCODE_C:     return (left_shift || right_shift) ? 'C' : 'c';
+        case SDL_SCANCODE_D:     return (left_shift || right_shift) ? 'D' : 'd';
+        case SDL_SCANCODE_E:     return (left_shift || right_shift) ? 'E' : 'e';
+        case SDL_SCANCODE_F:     return (left_shift || right_shift) ? 'F' : 'f';
+        case SDL_SCANCODE_G:     return (left_shift || right_shift) ? 'G' : 'g';
+        case SDL_SCANCODE_H:     return (left_shift || right_shift) ? 'H' : 'h';
+        case SDL_SCANCODE_I:     return (left_shift || right_shift) ? 'I' : 'i';
+        case SDL_SCANCODE_J:     return (left_shift || right_shift) ? 'J' : 'j';
+        case SDL_SCANCODE_K:     return (left_shift || right_shift) ? 'K' : 'k';
+        case SDL_SCANCODE_L:     return (left_shift || right_shift) ? 'L' : 'l';
+        case SDL_SCANCODE_M:     return (left_shift || right_shift) ? 'M' : 'm';
+        case SDL_SCANCODE_N:     return (left_shift || right_shift) ? 'N' : 'n';
+        case SDL_SCANCODE_O:     return (left_shift || right_shift) ? 'O' : 'o';
+        case SDL_SCANCODE_P:     return (left_shift || right_shift) ? 'P' : 'p';
+        case SDL_SCANCODE_Q:     return (left_shift || right_shift) ? 'Q' : 'q';
+        case SDL_SCANCODE_R:     return (left_shift || right_shift) ? 'R' : 'r';
+        case SDL_SCANCODE_S:     return (left_shift || right_shift) ? 'S' : 's';
+        case SDL_SCANCODE_T:     return (left_shift || right_shift) ? 'T' : 't';
+        case SDL_SCANCODE_U:     return (left_shift || right_shift) ? 'U' : 'u';
+        case SDL_SCANCODE_V:     return (left_shift || right_shift) ? 'V' : 'v';
+        case SDL_SCANCODE_W:     return (left_shift || right_shift) ? 'W' : 'w';
+        case SDL_SCANCODE_X:     return (left_shift || right_shift) ? 'X' : 'x';
+        case SDL_SCANCODE_Y:     return (left_shift || right_shift) ? 'Y' : 'y';
+        case SDL_SCANCODE_Z:     return (left_shift || right_shift) ? 'Z' : 'z';
+        case SDL_SCANCODE_1:     return (left_shift || right_shift) ? '!' : '1';
+        case SDL_SCANCODE_2:     return (left_shift || right_shift) ? '@' : '2';
+        case SDL_SCANCODE_3:     return (left_shift || right_shift) ? '#' : '3';
+        case SDL_SCANCODE_4:     return (left_shift || right_shift) ? '$' : '4';
+        case SDL_SCANCODE_5:     return (left_shift || right_shift) ? '%' : '5';
+        case SDL_SCANCODE_6:     return (left_shift || right_shift) ? '^' : '6';
+        case SDL_SCANCODE_7:     return (left_shift || right_shift) ? '&' : '7';
+        case SDL_SCANCODE_8:     return (left_shift || right_shift) ? '*' : '8';
+        case SDL_SCANCODE_9:     return (left_shift || right_shift) ? '(' : '9';
+        case SDL_SCANCODE_0:     return (left_shift || right_shift) ? ')' : '0';
+
+        case SDL_SCANCODE_SPACE:  return ' ';
+        case SDL_SCANCODE_RETURN: return '\r';
+
+        
+        case SDL_SCANCODE_LSHIFT:
+            left_shift = true;
+            return static_cast <char> (14);
+        case SDL_SCANCODE_RSHIFT: 
+            right_shift = true;
+            return static_cast <char> (15);
+            
+        case SDL_SCANCODE_BACKSPACE: return static_cast <char> (8);
+        
+        default: return '.';
+    }
 }

@@ -45,7 +45,7 @@ namespace UI
     class Hex_editor : public Memory_window
     {
         public:
-            Hex_editor ( const char* windowName
+            Hex_editor ( const char* window_name
                         , void * const buffer
                         , const std::size_t total_mem_size
                         , const std::size_t begin

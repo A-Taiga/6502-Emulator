@@ -5,7 +5,6 @@
 #include <cstring>
 #include <format>
 #include <thread>
-
 /*
 N	Negative
 V	Overflow
@@ -41,25 +40,24 @@ namespace
 {
 
     using CPU = MOS_6502::CPU;
-    using x = MOS_6502::Address_Type;
     constinit std::array <MOS_6502::opcode,256> opcodes
     ({
-        {"BRK", &CPU::BRK, &CPU::IMP, x::IMP, 7}, {"ORA", &CPU::ORA, &CPU::IZX, x::IZX, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"ORA", &CPU::ORA, &CPU::ZPG, x::ZPG, 3}, {"ASL", &CPU::ASL, &CPU::ZPG, x::ZPG, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"PHP", &CPU::PHP, &CPU::IMP, x::IMP, 3}, {"ORA", &CPU::ORA, &CPU::IMM, x::IMM, 2}, {"ASL", &CPU::ASL, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"ORA", &CPU::ORA, &CPU::ABS, x::ABS, 4}, {"ASL", &CPU::ASL, &CPU::ABS, x::ABS, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
-        {"BPL", &CPU::BPL, &CPU::REL, x::REL, 2}, {"ORA", &CPU::ORA, &CPU::IZY, x::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"ORA", &CPU::ORA, &CPU::ZPX, x::ZPX, 3}, {"ASL", &CPU::ASL, &CPU::ZPX, x::ZPX, 7}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"CLC", &CPU::CLC, &CPU::IMP, x::IMP, 2}, {"ORA", &CPU::ORA, &CPU::ABY, x::ABY, 4}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"ORA", &CPU::ORA, &CPU::ABX, x::ABX, 4}, {"ASL", &CPU::ASL, &CPU::ABX, x::ABX, 7}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
-        {"JSR", &CPU::JSR, &CPU::ABS, x::ABS, 6}, {"AND", &CPU::AND, &CPU::IZX, x::IZX, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"BIT", &CPU::BIT, &CPU::ZPG, x::ZPG, 3}, {"AND", &CPU::AND, &CPU::ZPG, x::ZPG, 3}, {"ROL", &CPU::ROL, &CPU::ZPG, x::ZPG, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"PLP", &CPU::PLP, &CPU::IMP, x::IMP, 4}, {"AND", &CPU::AND, &CPU::IMM, x::IMM, 2}, {"ROL", &CPU::ROL, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"BIT", &CPU::BIT, &CPU::ABS, x::ABS, 4}, {"AND", &CPU::AND, &CPU::ABS, x::ABS, 4}, {"ROL", &CPU::ROL, &CPU::ABS, x::ABS, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
-        {"BMI", &CPU::BMI, &CPU::REL, x::REL, 2}, {"AND", &CPU::AND, &CPU::IZY, x::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"AND", &CPU::AND, &CPU::ZPX, x::ZPX, 4}, {"ROL", &CPU::ROL, &CPU::ZPX, x::ZPX, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"SEC", &CPU::SEC, &CPU::IMP, x::IMP, 2}, {"AND", &CPU::AND, &CPU::ABY, x::ABY, 4}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"AND", &CPU::AND, &CPU::ABX, x::ABX, 4}, {"ROL", &CPU::ROL, &CPU::ABX, x::ABX, 7}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
-        {"RTI", &CPU::RTI, &CPU::IMP, x::IMP, 6}, {"EOR", &CPU::EOR, &CPU::IZX, x::IZX, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"EOR", &CPU::EOR, &CPU::ZPG, x::ZPG, 3}, {"LSR", &CPU::LSR, &CPU::ZPG, x::ZPG, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"PHA", &CPU::PHA, &CPU::IMP, x::IMP, 3}, {"EOR", &CPU::EOR, &CPU::IMM, x::IMM, 2}, {"LSR", &CPU::LSR, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"JMP", &CPU::JMP, &CPU::ABS, x::ABS, 3}, {"EOR", &CPU::EOR, &CPU::ABS, x::ABS, 4}, {"LSR", &CPU::LSR, &CPU::ABS, x::ABS, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
-        {"BVC", &CPU::BVC, &CPU::REL, x::REL, 2}, {"EOR", &CPU::EOR, &CPU::IZY, x::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"EOR", &CPU::EOR, &CPU::ZPX, x::ZPX, 4}, {"LSR", &CPU::LSR, &CPU::ZPX, x::ZPX, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"CLI", &CPU::CLI, &CPU::IMP, x::IMP, 2}, {"EOR", &CPU::EOR, &CPU::ABY, x::ABY, 4}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"EOR", &CPU::EOR, &CPU::ABX, x::ABX, 4}, {"LSR", &CPU::LSR, &CPU::ABX, x::ABX, 7}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
-        {"RTS", &CPU::RTS, &CPU::IMP, x::IMP, 6}, {"ADC", &CPU::ADC, &CPU::IZX, x::IZX, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"ADC", &CPU::ADC, &CPU::ZPG, x::ZPG, 3}, {"ROR", &CPU::ROR, &CPU::ZPG, x::ZPG, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"PLA", &CPU::PLA, &CPU::IMP, x::IMP, 4}, {"ADC", &CPU::ADC, &CPU::IMM, x::IMM, 2}, {"ROR", &CPU::ROR, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"JMP", &CPU::JMP, &CPU::IND, x::IND, 5}, {"ADC", &CPU::ADC, &CPU::ABS, x::ABS, 4}, {"ROR", &CPU::ROR, &CPU::ABS, x::ABS, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
-        {"BVS", &CPU::BVS, &CPU::REL, x::REL, 2}, {"ADC", &CPU::ADC, &CPU::IZY, x::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"ADC", &CPU::ADC, &CPU::ZPX, x::ZPX, 4}, {"ROR", &CPU::ROR, &CPU::ZPX, x::ZPX, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"SEI", &CPU::SEI, &CPU::IMP, x::IMP, 2}, {"ADC", &CPU::ADC, &CPU::ABY, x::ABY, 4}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"ADC", &CPU::ADC, &CPU::ABX, x::ABX, 4}, {"ROR", &CPU::ROR, &CPU::ABX, x::ABX, 7}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
-        {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"STA", &CPU::STA, &CPU::IZX, x::IZX, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"STY", &CPU::STY, &CPU::ZPG, x::ZPG, 3}, {"STA", &CPU::STA, &CPU::ZPG, x::ZPG, 3}, {"STX", &CPU::STX, &CPU::ZPG, x::ZPG, 3}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"DEY", &CPU::DEY, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"TXA", &CPU::TXA, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"STY", &CPU::STY, &CPU::ABS, x::ABS, 4}, {"STA", &CPU::STA, &CPU::ABS, x::ABS, 4}, {"STX", &CPU::STX, &CPU::ABS, x::ABS, 4}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
-        {"BCC", &CPU::BCC, &CPU::REL, x::REL, 2}, {"STA", &CPU::STA, &CPU::IZY, x::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"STY", &CPU::STY, &CPU::ZPX, x::ZPX, 4}, {"STA", &CPU::STA, &CPU::ZPX, x::ZPX, 4}, {"STX", &CPU::STX, &CPU::ZPY, x::ZPY, 4}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"TYA", &CPU::TYA, &CPU::IMP, x::IMP, 2}, {"STA", &CPU::STA, &CPU::ABY, x::ABY, 5}, {"TXS", &CPU::TXS, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"STA", &CPU::STA, &CPU::ABX, x::ABX, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
-        {"LDY", &CPU::LDY, &CPU::IMM, x::IMM, 2}, {"LDA", &CPU::LDA, &CPU::IZX, x::IZX, 6}, {"LDX", &CPU::LDX, &CPU::IMM, x::IMM, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"LDY", &CPU::LDY, &CPU::ZPG, x::ZPG, 3}, {"LDA", &CPU::LDA, &CPU::ZPG, x::ZPG, 3}, {"LDX", &CPU::LDX, &CPU::ZPG, x::ZPG, 3}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"TAY", &CPU::TAY, &CPU::IMP, x::IMP, 2}, {"LDA", &CPU::LDA, &CPU::IMM, x::IMM, 2}, {"TAX", &CPU::TAX, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"LDY", &CPU::LDY, &CPU::ABS, x::ABS, 4}, {"LDA", &CPU::LDA, &CPU::ABS, x::ABS, 4}, {"LDX", &CPU::LDX, &CPU::ABS, x::ABS, 4}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
-        {"BCS", &CPU::BCS, &CPU::REL, x::REL, 2}, {"LDA", &CPU::LDA, &CPU::IZY, x::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"LDY", &CPU::LDY, &CPU::ZPX, x::ZPX, 4}, {"LDA", &CPU::LDA, &CPU::ZPX, x::ZPX, 4}, {"LDX", &CPU::LDX, &CPU::ZPY, x::ZPY, 4}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"CLV", &CPU::CLV, &CPU::IMP, x::IMP, 2}, {"LDA", &CPU::LDA, &CPU::ABY, x::ABY, 4}, {"TSX", &CPU::TSX, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"LDY", &CPU::LDY, &CPU::ABX, x::ABX, 4}, {"LDA", &CPU::LDA, &CPU::ABX, x::ABX, 4}, {"LDX", &CPU::LDX, &CPU::ABY, x::ABY, 4}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
-        {"CPY", &CPU::CPY, &CPU::IMM, x::IMM, 2}, {"CMP", &CPU::CMP, &CPU::IZX, x::IZX, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"CPY", &CPU::CPY, &CPU::ZPG, x::ZPG, 3}, {"CMP", &CPU::CMP, &CPU::ZPG, x::ZPG, 3}, {"DEC", &CPU::DEC, &CPU::ZPG, x::ZPG, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"INY", &CPU::INY, &CPU::IMP, x::IMP, 2}, {"CMP", &CPU::CMP, &CPU::IMM, x::IMM, 2}, {"DEX", &CPU::DEX, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"CPY", &CPU::CPY, &CPU::ABS, x::ABS, 4}, {"CMP", &CPU::CMP, &CPU::ABS, x::ABS, 4}, {"DEC", &CPU::DEC, &CPU::ABS, x::ABS, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
-        {"BNE", &CPU::BNE, &CPU::REL, x::REL, 2}, {"CMP", &CPU::CMP, &CPU::IZY, x::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"CMP", &CPU::CMP, &CPU::ZPX, x::ZPX, 4}, {"DEC", &CPU::DEC, &CPU::ZPX, x::ZPX, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"CLD", &CPU::CLD, &CPU::IMP, x::IMP, 2}, {"CMP", &CPU::CMP, &CPU::ABY, x::ABY, 4}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"CMP", &CPU::CMP, &CPU::ABX, x::ABX, 4}, {"DEC", &CPU::DEC, &CPU::ABX, x::ABX, 7}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
-        {"CPX", &CPU::CPX, &CPU::IMM, x::IMM, 2}, {"SBC", &CPU::SBC, &CPU::IZX, x::IZX, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"CPX", &CPU::CPX, &CPU::ZPG, x::ZPG, 3}, {"SBC", &CPU::SBC, &CPU::ZPG, x::ZPG, 3}, {"INC", &CPU::INC, &CPU::ZPG, x::ZPG, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"INX", &CPU::INX, &CPU::IMP, x::IMP, 2}, {"SBC", &CPU::SBC, &CPU::IMM, x::IMM, 2}, {"NOP", &CPU::NOP, &CPU::IMP, x::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"CPX", &CPU::CPX, &CPU::ABS, x::ABS, 4}, {"SBC", &CPU::SBC, &CPU::ABS, x::ABS, 4}, {"INC", &CPU::INC, &CPU::ABS, x::ABS, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0},
-        {"BEQ", &CPU::BEQ, &CPU::REL, x::REL, 2}, {"SBC", &CPU::SBC, &CPU::IZY, x::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"SBC", &CPU::SBC, &CPU::ZPX, x::ZPX, 4}, {"INC", &CPU::INC, &CPU::ZPX, x::ZPX, 6}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"SED", &CPU::SED, &CPU::IMP, x::IMP, 2}, {"SBC", &CPU::SBC, &CPU::ABY, x::ABY, 4}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}, {"SBC", &CPU::SBC, &CPU::ABX, x::ABX, 4}, {"INC", &CPU::INC, &CPU::ABX, x::ABX, 7}, {"???", &CPU::XXX, &CPU::IMM, x::IMM, 0}
+        {"BRK", &CPU::BRK, &CPU::IMP, 7}, {"ORA", &CPU::ORA, &CPU::IZX, 6}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"ORA", &CPU::ORA, &CPU::ZPG, 3}, {"ASL", &CPU::ASL, &CPU::ZPG, 5}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"PHP", &CPU::PHP, &CPU::IMP, 3}, {"ORA", &CPU::ORA, &CPU::IMM, 2}, {"ASL", &CPU::ASL, &CPU::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"ORA", &CPU::ORA, &CPU::ABS, 4}, {"ASL", &CPU::ASL, &CPU::ABS, 6}, {"???", &CPU::XXX, &CPU::IMM, 0},
+        {"BPL", &CPU::BPL, &CPU::REL, 2}, {"ORA", &CPU::ORA, &CPU::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"ORA", &CPU::ORA, &CPU::ZPX, 3}, {"ASL", &CPU::ASL, &CPU::ZPX, 7}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"CLC", &CPU::CLC, &CPU::IMP, 2}, {"ORA", &CPU::ORA, &CPU::ABY, 4}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"ORA", &CPU::ORA, &CPU::ABX, 4}, {"ASL", &CPU::ASL, &CPU::ABX, 7}, {"???", &CPU::XXX, &CPU::IMM, 0},
+        {"JSR", &CPU::JSR, &CPU::ABS, 6}, {"AND", &CPU::AND, &CPU::IZX, 6}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"BIT", &CPU::BIT, &CPU::ZPG, 3}, {"AND", &CPU::AND, &CPU::ZPG, 3}, {"ROL", &CPU::ROL, &CPU::ZPG, 5}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"PLP", &CPU::PLP, &CPU::IMP, 4}, {"AND", &CPU::AND, &CPU::IMM, 2}, {"ROL", &CPU::ROL, &CPU::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"BIT", &CPU::BIT, &CPU::ABS, 4}, {"AND", &CPU::AND, &CPU::ABS, 4}, {"ROL", &CPU::ROL, &CPU::ABS, 6}, {"???", &CPU::XXX, &CPU::IMM, 0},
+        {"BMI", &CPU::BMI, &CPU::REL, 2}, {"AND", &CPU::AND, &CPU::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"AND", &CPU::AND, &CPU::ZPX, 4}, {"ROL", &CPU::ROL, &CPU::ZPX, 6}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"SEC", &CPU::SEC, &CPU::IMP, 2}, {"AND", &CPU::AND, &CPU::ABY, 4}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"AND", &CPU::AND, &CPU::ABX, 4}, {"ROL", &CPU::ROL, &CPU::ABX, 7}, {"???", &CPU::XXX, &CPU::IMM, 0},
+        {"RTI", &CPU::RTI, &CPU::IMP, 6}, {"EOR", &CPU::EOR, &CPU::IZX, 6}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"EOR", &CPU::EOR, &CPU::ZPG, 3}, {"LSR", &CPU::LSR, &CPU::ZPG, 5}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"PHA", &CPU::PHA, &CPU::IMP, 3}, {"EOR", &CPU::EOR, &CPU::IMM, 2}, {"LSR", &CPU::LSR, &CPU::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"JMP", &CPU::JMP, &CPU::ABS, 3}, {"EOR", &CPU::EOR, &CPU::ABS, 4}, {"LSR", &CPU::LSR, &CPU::ABS, 6}, {"???", &CPU::XXX, &CPU::IMM, 0},
+        {"BVC", &CPU::BVC, &CPU::REL, 2}, {"EOR", &CPU::EOR, &CPU::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"EOR", &CPU::EOR, &CPU::ZPX, 4}, {"LSR", &CPU::LSR, &CPU::ZPX, 6}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"CLI", &CPU::CLI, &CPU::IMP, 2}, {"EOR", &CPU::EOR, &CPU::ABY, 4}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"EOR", &CPU::EOR, &CPU::ABX, 4}, {"LSR", &CPU::LSR, &CPU::ABX, 7}, {"???", &CPU::XXX, &CPU::IMM, 0},
+        {"RTS", &CPU::RTS, &CPU::IMP, 6}, {"ADC", &CPU::ADC, &CPU::IZX, 6}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"ADC", &CPU::ADC, &CPU::ZPG, 3}, {"ROR", &CPU::ROR, &CPU::ZPG, 5}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"PLA", &CPU::PLA, &CPU::IMP, 4}, {"ADC", &CPU::ADC, &CPU::IMM, 2}, {"ROR", &CPU::ROR, &CPU::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"JMP", &CPU::JMP, &CPU::IND, 5}, {"ADC", &CPU::ADC, &CPU::ABS, 4}, {"ROR", &CPU::ROR, &CPU::ABS, 6}, {"???", &CPU::XXX, &CPU::IMM, 0},
+        {"BVS", &CPU::BVS, &CPU::REL, 2}, {"ADC", &CPU::ADC, &CPU::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"ADC", &CPU::ADC, &CPU::ZPX, 4}, {"ROR", &CPU::ROR, &CPU::ZPX, 6}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"SEI", &CPU::SEI, &CPU::IMP, 2}, {"ADC", &CPU::ADC, &CPU::ABY, 4}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"ADC", &CPU::ADC, &CPU::ABX, 4}, {"ROR", &CPU::ROR, &CPU::ABX, 7}, {"???", &CPU::XXX, &CPU::IMM, 0},
+        {"???", &CPU::XXX, &CPU::IMM, 0}, {"STA", &CPU::STA, &CPU::IZX, 6}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"STY", &CPU::STY, &CPU::ZPG, 3}, {"STA", &CPU::STA, &CPU::ZPG, 3}, {"STX", &CPU::STX, &CPU::ZPG, 3}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"DEY", &CPU::DEY, &CPU::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"TXA", &CPU::TXA, &CPU::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"STY", &CPU::STY, &CPU::ABS, 4}, {"STA", &CPU::STA, &CPU::ABS, 4}, {"STX", &CPU::STX, &CPU::ABS, 4}, {"???", &CPU::XXX, &CPU::IMM, 0},
+        {"BCC", &CPU::BCC, &CPU::REL, 2}, {"STA", &CPU::STA, &CPU::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"STY", &CPU::STY, &CPU::ZPX, 4}, {"STA", &CPU::STA, &CPU::ZPX, 4}, {"STX", &CPU::STX, &CPU::ZPY, 4}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"TYA", &CPU::TYA, &CPU::IMP, 2}, {"STA", &CPU::STA, &CPU::ABY, 5}, {"TXS", &CPU::TXS, &CPU::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"STA", &CPU::STA, &CPU::ABX, 5}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0},
+        {"LDY", &CPU::LDY, &CPU::IMM, 2}, {"LDA", &CPU::LDA, &CPU::IZX, 6}, {"LDX", &CPU::LDX, &CPU::IMM, 2}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"LDY", &CPU::LDY, &CPU::ZPG, 3}, {"LDA", &CPU::LDA, &CPU::ZPG, 3}, {"LDX", &CPU::LDX, &CPU::ZPG, 3}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"TAY", &CPU::TAY, &CPU::IMP, 2}, {"LDA", &CPU::LDA, &CPU::IMM, 2}, {"TAX", &CPU::TAX, &CPU::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"LDY", &CPU::LDY, &CPU::ABS, 4}, {"LDA", &CPU::LDA, &CPU::ABS, 4}, {"LDX", &CPU::LDX, &CPU::ABS, 4}, {"???", &CPU::XXX, &CPU::IMM, 0},
+        {"BCS", &CPU::BCS, &CPU::REL, 2}, {"LDA", &CPU::LDA, &CPU::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"LDY", &CPU::LDY, &CPU::ZPX, 4}, {"LDA", &CPU::LDA, &CPU::ZPX, 4}, {"LDX", &CPU::LDX, &CPU::ZPY, 4}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"CLV", &CPU::CLV, &CPU::IMP, 2}, {"LDA", &CPU::LDA, &CPU::ABY, 4}, {"TSX", &CPU::TSX, &CPU::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"LDY", &CPU::LDY, &CPU::ABX, 4}, {"LDA", &CPU::LDA, &CPU::ABX, 4}, {"LDX", &CPU::LDX, &CPU::ABY, 4}, {"???", &CPU::XXX, &CPU::IMM, 0},
+        {"CPY", &CPU::CPY, &CPU::IMM, 2}, {"CMP", &CPU::CMP, &CPU::IZX, 6}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"CPY", &CPU::CPY, &CPU::ZPG, 3}, {"CMP", &CPU::CMP, &CPU::ZPG, 3}, {"DEC", &CPU::DEC, &CPU::ZPG, 5}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"INY", &CPU::INY, &CPU::IMP, 2}, {"CMP", &CPU::CMP, &CPU::IMM, 2}, {"DEX", &CPU::DEX, &CPU::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"CPY", &CPU::CPY, &CPU::ABS, 4}, {"CMP", &CPU::CMP, &CPU::ABS, 4}, {"DEC", &CPU::DEC, &CPU::ABS, 6}, {"???", &CPU::XXX, &CPU::IMM, 0},
+        {"BNE", &CPU::BNE, &CPU::REL, 2}, {"CMP", &CPU::CMP, &CPU::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"CMP", &CPU::CMP, &CPU::ZPX, 4}, {"DEC", &CPU::DEC, &CPU::ZPX, 6}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"CLD", &CPU::CLD, &CPU::IMP, 2}, {"CMP", &CPU::CMP, &CPU::ABY, 4}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"CMP", &CPU::CMP, &CPU::ABX, 4}, {"DEC", &CPU::DEC, &CPU::ABX, 7}, {"???", &CPU::XXX, &CPU::IMM, 0},
+        {"CPX", &CPU::CPX, &CPU::IMM, 2}, {"SBC", &CPU::SBC, &CPU::IZX, 6}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"CPX", &CPU::CPX, &CPU::ZPG, 3}, {"SBC", &CPU::SBC, &CPU::ZPG, 3}, {"INC", &CPU::INC, &CPU::ZPG, 5}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"INX", &CPU::INX, &CPU::IMP, 2}, {"SBC", &CPU::SBC, &CPU::IMM, 2}, {"NOP", &CPU::NOP, &CPU::IMP, 2}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"CPX", &CPU::CPX, &CPU::ABS, 4}, {"SBC", &CPU::SBC, &CPU::ABS, 4}, {"INC", &CPU::INC, &CPU::ABS, 6}, {"???", &CPU::XXX, &CPU::IMM, 0},
+        {"BEQ", &CPU::BEQ, &CPU::REL, 2}, {"SBC", &CPU::SBC, &CPU::IZY, 5}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"SBC", &CPU::SBC, &CPU::ZPX, 4}, {"INC", &CPU::INC, &CPU::ZPX, 6}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"SED", &CPU::SED, &CPU::IMP, 2}, {"SBC", &CPU::SBC, &CPU::ABY, 4}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"???", &CPU::XXX, &CPU::IMM, 0}, {"SBC", &CPU::SBC, &CPU::ABX, 4}, {"INC", &CPU::INC, &CPU::ABX, 7}, {"???", &CPU::XXX, &CPU::IMM, 0}
     });
 }
 
@@ -114,50 +112,89 @@ void MOS_6502::CPU::decompiler()
     {
         word index = ROM_BEGIN+i;
         const opcode& current = opcodes[read(i+ROM_BEGIN)];
-        switch (current.addrType)
+        if (current.mode == &MOS_6502::CPU::IMP) 
+        { 
+            decompiled_code.emplace_back(index, std::format ("{:04X}: {:02X} {:>9}", index, read(index), current.mnemonic));
+            i+=1;
+        }
+        else if (current.mode == &MOS_6502::CPU::IMM) 
+        { 
+            decompiled_code.emplace_back(index, std::format ("{:04X}: {:02X} {:02X} {:>6} #${:02X}", index, read(index), read(index+1), current.mnemonic, read(index+1)));
+            i+=2;
+        }
+        else if (current.mode == &MOS_6502::CPU::ABS) 
+        { 
+            decompiled_code.emplace_back(index, std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X} ", index, read(index), read(index+1), read(index+2), current.mnemonic, (read(index+2) << 8) | read(index+1)));
+            i+=3;
+        }
+        else if (current.mode == &MOS_6502::CPU::ZPG) 
+        { 
+            decompiled_code.emplace_back(index, std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current.mnemonic, read(index+1)));
+            i+=2;
+        }
+        else if (current.mode == &MOS_6502::CPU::ABX) 
+        { 
+            decompiled_code.emplace_back(index, std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X}, X", index, read(index), read(index+1), read(index+2), current.mnemonic, (read(index+2) << 8) | read(index+1)));
+            i+=3;
+        }
+        else if (current.mode == &MOS_6502::CPU::ABY) 
+        { 
+            decompiled_code.emplace_back(index, std::format ("{:04X}: {:02X} {:02X} {:02X} {:}", index, read(index), read(index+1), read(index+2), current.mnemonic));
+            i+=3;
+        }
+        else if (current.mode == &MOS_6502::CPU::ZPX) 
+        { 
+            decompiled_code.emplace_back(index, std::format ("{:04X}: {:02X} {:>6} ${:02X}", index, read(index+1), current.mnemonic, read(index+1)));
+            i+=2;
+        }
+        else if (current.mode == &MOS_6502::CPU::ZPY) 
+        { 
+            decompiled_code.emplace_back(index, std::format ("{:04X}: {:02X} {:02X} {:>6}", index, read(index), read(index+1), current.mnemonic));
+            i+=2;
+        }
+        else if (current.mode == &MOS_6502::CPU::IND) 
+        { 
+            decompiled_code.emplace_back(index, std::format ("{:04X}: {:02X} {:02X} {:02X} {:}", index, read(index), read(index+1), read(index+2), current.mnemonic));
+            i+=3;
+        }
+        else if (current.mode == &MOS_6502::CPU::IZX) 
+        { 
+            decompiled_code.emplace_back(index, std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current.mnemonic, read(index+1)));
+            i+=2;
+        }
+        else if (current.mode == &MOS_6502::CPU::IZY) 
+        { 
+            decompiled_code.emplace_back(index, std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current.mnemonic, read(index+1)));
+            i+=2;
+        }
+        else if (current.mode == &MOS_6502::CPU::REL)
         {
-            case MOS_6502::Address_Type::IMP: decompiled_code.emplace_back(index,std::format ("{:04X}: {:02X} {:>9}", index, read(index), current.mnemonic));  i+=1; break;
-            case MOS_6502::Address_Type::IMM: decompiled_code.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} #${:02X}", index, read(index), read(index+1), current.mnemonic, read(index+1)));  i+=2; break;
-            case MOS_6502::Address_Type::ABS: decompiled_code.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X} ", index, read(index), read(index+1), read(index+2), current.mnemonic, (read(index+2) << 8) | read(index+1)));  i+=3; break;
-            case MOS_6502::Address_Type::ZPG: decompiled_code.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current.mnemonic, read(index+1)));  i+=2; break;
-            case MOS_6502::Address_Type::ABX: decompiled_code.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X}, X", index, read(index), read(index+1), read(index+2), current.mnemonic, (read(index+2) << 8) | read(index+1)));  i+=3; break;
-            case MOS_6502::Address_Type::ABY: decompiled_code.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:}", index, read(index), read(index+1), read(index+2), current.mnemonic));  i+=3; break;
-            case MOS_6502::Address_Type::ZPX: decompiled_code.emplace_back(index,std::format ("{:04X}: {:02X} {:>6} ${:02X}", index, read(index+1), current.mnemonic, read(index+1)));  i+=2; break;
-            case MOS_6502::Address_Type::ZPY: decompiled_code.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6}", index, read(index), read(index+1), current.mnemonic));  i+=2; break;
-            case MOS_6502::Address_Type::IND: decompiled_code.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:}", index, read(index), read(index+1), read(index+2), current.mnemonic));  i+=3; break;
-            case MOS_6502::Address_Type::IZX: decompiled_code.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current.mnemonic, read(index+1)));  i+=2; break;
-            case MOS_6502::Address_Type::IZY: decompiled_code.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, read(index), read(index+1), current.mnemonic, read(index+1)));  i+=2; break;
-            case MOS_6502::Address_Type::REL:
-                if (std::strcmp(current.mnemonic, "CPX"))
-                {
-                    word result = read (index+1);
-                    if (result & 0x80) result |= 0xFF00;
-                    word addr = index+2 + result;
-                    decompiled_code.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:04X}", index, read(index), read(index+1), current.mnemonic, addr)); i+=2;
-                }
-            break;
+            if (std::strcmp(current.mnemonic, "CPX"))
+            {
+                word result = read (index+1);
+                if (result & 0x80) result |= 0xFF00;
+                word addr = index+2 + result;
+                decompiled_code.emplace_back(index,std::format ("{:04X}: {:02X} {:02X} {:>6} ${:04X}", index, read(index), read(index+1), current.mnemonic, addr)); i+=2;
+            }
         }
     }
 }
 
 void MOS_6502::CPU::run()
 {
-    // auto begin = std::chrono::high_resolution_clock::now();
     set_flag(Flag::U, true);
     ins.fetched = &opcodes[read(PC++)];
     ins.cycles = ins.fetched->cycles + (this->*ins.fetched->mode)();
     (this->*ins.fetched->op)();
 
-    // auto end = std::chrono::high_resolution_clock::now();
-
     while (ins.cycles > 0)
     {
         std::this_thread::sleep_for(std::chrono::microseconds(ins.cycles));
         ins.cycles--;   
-        if (ins.cycles == 1 && irq)
+        if (ins.cycles == 1 && irq_pin)
         {
             IRQ();
-            irq = false;
+            irq_pin = false;
         }
     }
 }
@@ -192,11 +229,25 @@ byte MOS_6502::CPU::get_SP () const
     return SP;
 }
 
-void MOS_6502::CPU::set_irq()
+void MOS_6502::CPU::set_io_ready_pin ()
 {
-    irq = true;
+    io_ready_pin = true;
 }
 
+void MOS_6502::CPU::set_irq_pin()
+{
+    irq_pin = true;
+}
+
+void MOS_6502::CPU::set_data_pin (const byte data)
+{
+    data_pin = data;
+}
+
+void MOS_6502::CPU::set_address_pin (const word address)
+{
+    address_pin = address;
+}
 
 byte MOS_6502::CPU::read(const word address)
 {
@@ -349,7 +400,7 @@ void MOS_6502::CPU::ASL(void)
 {
     const word result = ([&]()
     {
-        if (ins.fetched->addrType == Address_Type::IMP)
+        if (ins.fetched->mode == &MOS_6502::CPU::IMP)
             return static_cast <word> (AC);
         else
             return static_cast <word> (read (ins.data));
@@ -360,7 +411,7 @@ void MOS_6502::CPU::ASL(void)
     set_flag(Flag::Z, (result & 0x00FF) == 0);
     set_flag(Flag::C, result > 0x00FF);
 
-    if (ins.fetched->addrType == Address_Type::IMP)
+    if (ins.fetched->mode == &MOS_6502::CPU::IMP)
         AC = result;
     else
         write (ins.data, result & 0x00FF);
@@ -420,7 +471,7 @@ void MOS_6502::CPU::ROL(void)
 {
     const word result = static_cast<word >(([&]()
     {
-        if (ins.fetched->addrType == Address_Type::IMP)
+        if (ins.fetched->mode == &MOS_6502::CPU::IMP)
             return AC;
         else
             return read (ins.data);
@@ -430,7 +481,7 @@ void MOS_6502::CPU::ROL(void)
     set_flag(Flag::Z, (result & 0x00FF) == 0x00);
     set_flag(Flag::C, result & 0xFF00);
 
-    if (ins.fetched->addrType == Address_Type::IMP)
+    if (ins.fetched->mode == &MOS_6502::CPU::IMP)
         AC = result & 0x00FF;
     else
         write (ins.data, result & 0x00FF);
@@ -484,14 +535,14 @@ void MOS_6502::CPU::LSR(void)
     set_flag(Flag::C, ins.data & 0x0001);
     const word result = ([&]()
     {
-        if (ins.fetched->addrType == Address_Type::IMP)
+        if (ins.fetched->mode == &MOS_6502::CPU::IMP)
             return static_cast <word> (AC);
         else
             return static_cast <word> (read (ins.data));
     })() >> 1;
     set_flag(Flag::N, result & 0x80);
     set_flag(Flag::Z, result == 0x00);
-    if (ins.fetched->addrType == Address_Type::IMP)
+    if (ins.fetched->mode == &MOS_6502::CPU::IMP)
         AC = result;
     else
         write (ins.data, result & 0x00FF);
@@ -556,7 +607,7 @@ void MOS_6502::CPU::ROR(void)
 {
     const word result = static_cast<word >(([&]()
     {
-        if (ins.fetched->addrType == Address_Type::IMP)
+        if (ins.fetched->mode == &MOS_6502::CPU::IMP)
             return AC;
         else
             return read (ins.data);
@@ -564,7 +615,7 @@ void MOS_6502::CPU::ROR(void)
     set_flag(Flag::N, result & 0x0080);
     set_flag(Flag::Z, (result & 0x0080) == 0);
     set_flag(Flag::C, ins.data & 0x01);
-    if (ins.fetched->addrType == Address_Type::IMP)
+    if (ins.fetched->mode == &MOS_6502::CPU::IMP)
         AC = result & 0x00FF;
     else
         write (ins.data, result & 0x00FF);

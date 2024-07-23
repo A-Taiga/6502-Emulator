@@ -2,7 +2,7 @@
 
 int main()
 {
-    MOS_6502::Emulator emu("testBins/isr_test.bin");
+    MOS_6502::Emulator emu("testBins/key_input.bin");
     emu.run();
     return 0;
 }

@@ -12,7 +12,7 @@ byte& MOS_6502::RAM::operator[](const word index)
     return ram[index];
 }
 
-byte MOS_6502::RAM::operator[](const word index) const
+const byte& MOS_6502::RAM::operator[](const word index) const
 {
     return ram[index];
 }

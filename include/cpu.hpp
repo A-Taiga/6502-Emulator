@@ -32,6 +32,9 @@
     LIFO, top-down, 8 bit range, 0x0100 - 0x01FF
 */
 
+#define READ  1
+#define WRITE 0
+
 namespace MOS_6502
 {
     using flag_type = std::uint8_t;
@@ -47,11 +50,11 @@ namespace MOS_6502
         N = 1 << 7, // negative
     };
 
-    enum class Address_Type
-    {
-        IMP, IMM, ABS, ZPG, ABX, ABY,
-        ZPX, ZPY, IND, IZX, IZY, REL
-    };
+    // enum class Address_Type
+    // {
+    //     IMP, IMM, ABS, ZPG, ABX, ABY,
+    //     ZPX, ZPY, IND, IZX, IZY, REL
+    // };
 
     class CPU;
     struct opcode
@@ -59,7 +62,7 @@ namespace MOS_6502
         const char* mnemonic;
         void (MOS_6502::CPU::*op)(void);
         int (MOS_6502::CPU::*mode)(void);
-        Address_Type addrType;
+        // Address_Type addrType;
         std::size_t cycles;
     };
 
@@ -82,9 +85,12 @@ namespace MOS_6502
             byte get_Y  () const;
             byte get_SR () const;
             byte get_SP () const;
-            void set_irq();
 
-            
+            void set_io_ready_pin ();
+            void set_irq_pin      ();
+            void set_data_pin     (const byte data);
+            void set_address_pin  (const word address);
+
             // address modes
             int IMP (); 
             int IMM (); 
@@ -121,7 +127,11 @@ namespace MOS_6502
                 byte SR;   /* status register [NV-BDIZC] (aka flags) */
                 byte SP;   /* stack pointer */
 
-                bool irq;
+                bool io_ready_pin;
+                bool irq_pin;
+                byte data_pin;
+                word address_pin;
+
 
                 struct
                 {
