@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <functional>
 #include <string>
-#include <iterator>
+
 /*
 
 https://www.nesdev.org/wiki/Instruction_reference

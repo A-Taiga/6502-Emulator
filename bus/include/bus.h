@@ -3,9 +3,6 @@
 
 #include <cstdint>
 #include <array>
-#include <filesystem>
-#include <iostream>
-#include <fstream>
 
 using u16 = std::uint16_t;
 using u8  = std::uint8_t;
