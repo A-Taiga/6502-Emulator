@@ -173,7 +173,7 @@ void Hex_Editor::present (void)
         ImGui::TextUnformatted(std::format ("int16   {:{}}{:}", " ", 5, (this->view[selected_index+1] << 8) | (selected_value )).c_str());
     }
     
-    ImGui::TextUnformatted(std::format ("ACII    {:{}}{:}", " ", 5, (char)selected_value).c_str());
+    ImGui::TextUnformatted(std::format ("ASCII    {:{}}{:}", " ", 5, (char)selected_value).c_str());
     ImGui::End();
 }
 
