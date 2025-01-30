@@ -1,49 +1,31 @@
 #include "bus.h"
-#include <fstream>
-#include <iostream>
+#include "mem.h"
 
 
-namespace
+Bus::Bus (Memory::ROM& _rom, Memory::RAM& _ram)
+: rom {_rom}
+, ram {_ram}
 {
-    void read_rom (const char* file_path, std::array <std::uint8_t, 65534>& memory)
-    {
-        std::ifstream file (file_path);
-        if (!file.is_open())
-        {
-            std::cerr << "File could not be opened" << std::endl;
-            std::exit(EXIT_FAILURE);
-        }
-        file.read(reinterpret_cast<char*>(memory.data()+0xF000), memory.size());
-    }
-}
-
-Bus::Bus ()
-: memory {}
-{
-    read_rom ("/home/anthony/Workspace/cpp/6502/roms/jmp_test.bin", memory);
 }
 
 Bus::~Bus ()
 {
-
 }
 
-void Bus::write (const u16 address , const u8 data)
+void Bus::write (const std::uint16_t address, const std::uint8_t data)
 {
-    memory[address] = data;
+    if (address > Memory::ram_size)
+        return;
+    ram.write (address, data);
 }
 
-u8 Bus::read  (const u16 address)
+std::uint8_t Bus::read  (const std::uint16_t address)
 {
-    return memory[address];
+    if (address > Memory::ram_size)
+        return rom.read(0x7FFF & address);
+    return ram.read(address);
 }
 
-void load_rom ()
-{
-
-}
-
-std::array <u8, 65534>& Bus::get_memory () {return memory;}
 
 
 

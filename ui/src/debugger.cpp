@@ -6,12 +6,10 @@
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_opengl3.h"
 #include <SDL.h>
-#include <filesystem>
 #include <immintrin.h>
 #include <mutex>
 #include "hex_editor.h"
 #include "imgui_internal.h"
-#include "mos6502.h"
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL_opengles2.h>
 #else
@@ -19,46 +17,37 @@
 #endif
 
 
-void registers (const emulator_data& data)
+void registers (const Emulator_state& data)
 {
     
-    static constexpr std::array<const char*, 14> cols = {"PC", "AC", "XR", "YR", "SP", " ", "C", "Z", "I", "D", "B", "_", "V", "N"};
     static constexpr int table_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
-    
+    const auto n = data.register_names.size();
     ImGui::Begin("Registers");
-    const std::uint8_t SR = data.cpu.get_SR();
+    // const std::uint8_t SR = data.cpu.get_SR();
 
-    ImGui::BeginTable("Registers Table", cols.size(), table_flags);
-    ImGui::TableNextRow();
-    for (std::size_t i = 0; i < cols.size(); ++i)
+    if (ImGui::BeginTable("Registers Table", n, table_flags))
     {
-        ImGui::TableSetColumnIndex(i);
-        ImGui::Text("%s", cols[i]);
+        ImGui::TableNextRow();
+        for (std::size_t i = 0; i < n; ++i)
+        {
+            ImGui::TableSetColumnIndex(i);
+            ImGui::Text("%s", data.register_names[i]);
+        }
+
+        ImGui::TableNextRow();
+
+        for (std::size_t i = 0; i < n; ++i)
+        {
+            ImGui::TableSetColumnIndex(i);
+            ImGui::Text(data.format_strings[i], data.register_callbacks[i]());
+        }
+
+        ImGui::EndTable();
     }
-    ImGui::TableNextRow();
-    ImGui::TableSetColumnIndex(0);
-    ImGui::Text("%04X", data.cpu.get_PC());
-    ImGui::TableSetColumnIndex(1);
-    ImGui::Text("%02X", data.cpu.get_AC());
-    ImGui::TableSetColumnIndex(2);
-    ImGui::Text("%02X", data.cpu.get_XR());
-    ImGui::TableSetColumnIndex(3);
-    ImGui::Text("%02X", data.cpu.get_YR());
-    ImGui::TableSetColumnIndex(4);
-    ImGui::Text("%02X", data.cpu.get_SP());
-    
-    int bit = 0;
-    for (std::size_t i = 6; i < cols.size(); ++i)
-    {
-        ImGui::TableSetColumnIndex(i);
-        ImGui::Text("%d", (SR >> bit) & 1);
-        ++bit;
-    }
-    ImGui::EndTable();
     ImGui::End();
 }
 
-void code_window (const emulator_data& data)
+void code_window (const Emulator_state& data)
 {
     ImGui::Begin("code", 0);
     ImGuiListClipper clipper;
@@ -75,7 +64,7 @@ void code_window (const emulator_data& data)
     ImGui::End();
 }
 
-void trace_window (const emulator_data& data)
+void trace_window (const Emulator_state& data)
 {
 
     static std::size_t prev_size = 0;
@@ -83,42 +72,42 @@ void trace_window (const emulator_data& data)
     static constexpr std::array <const char*, 6> columns = {" PC ", " AC ", " XR ", " YR ", " SP ", " Code "};
     ImGui::Begin("trace", 0, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoScrollbar);
     
-    ImGui::BeginTable("##trace table", 6, ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg);
-
+    if (ImGui::BeginTable("##trace table", 6, ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
+    {
+    
     ImGui::TableSetupScrollFreeze(0, 1); // Make top row always visible
     for (const auto& c : columns)
     {
         ImGui::TableSetupColumn(c);
     }
-    
     ImGui::TableHeadersRow();
     ImGuiListClipper clipper;
     clipper.Begin(data.trace.size());
-                // ImGui::Text("%04X %02X %02X %02X %02X | %s", t.PC, t.AC, t.XR, t.YR, t.SP, t.code.c_str());
     while (clipper.Step())
     {
         for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
         {
             const auto& t = data.trace[row];
+            // auto a =data.trace[row][0];
             ImGui::TableNextRow();
 
             ImGui::TableSetColumnIndex(0);
-            ImGui::Text(" %04X ", t.PC);
+            ImGui::TextUnformatted(t[0].c_str());
 
             ImGui::TableSetColumnIndex(1);
-            ImGui::Text(" %02X ", t.AC);
+            ImGui::TextUnformatted(t[1].c_str());
 
             ImGui::TableSetColumnIndex(2);
-            ImGui::Text(" %02X ", t.XR);
+            ImGui::TextUnformatted(t[2].c_str());
 
             ImGui::TableSetColumnIndex(3);
-            ImGui::Text(" %02X ", t.YR);
+            ImGui::TextUnformatted(t[3].c_str());
 
             ImGui::TableSetColumnIndex(4);
-            ImGui::Text(" %02X ", t.SP);
+            ImGui::TextUnformatted(t[4].c_str());
 
             ImGui::TableSetColumnIndex(5);
-            ImGui::Text(" %s", t.code.c_str());
+            ImGui::TextUnformatted(t[5].c_str());
         }
     }
 
@@ -130,31 +119,32 @@ void trace_window (const emulator_data& data)
         prev_size = data.trace.size();
     }
     
-    ImGui::EndTable();
+        ImGui::EndTable();
+    }
     ImGui::End();
 }
 
 
-// void rom_select_box (emulator_data& data)
-// {
-//     const std::string preview_value = !data.current_rom ? "" : data.current_rom->path().filename();
-//     if (ImGui::BeginCombo("##", preview_value.c_str(), ImGuiComboFlags_PopupAlignLeft))
-//     {
-//         for (auto& entry : data.roms)
-//         {
-//             if (ImGui::Selectable(entry.path().filename().c_str(), &entry == data.current_rom))
-//             {
-//                 data.current_rom = &entry;
-//             }
+void rom_select_box (Emulator_state& data)
+{
+    const std::string preview_value = !data.current_rom ? "" : data.current_rom->file_name;
+    if (ImGui::BeginCombo("##", preview_value.c_str(), ImGuiComboFlags_PopupAlignLeft))
+    {
+        for (auto& entry : data.roms)
+        {
+            if (ImGui::Selectable(entry.file_name.c_str(), &entry == data.current_rom))
+            {
+                data.current_rom = &entry;
+            }
 
-//             if (&entry == data.current_rom)
-//                 ImGui::SetItemDefaultFocus();
-//         }
-//         ImGui::EndCombo();
-//     }
-// }
+            if (&entry == data.current_rom)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+}
 
-void action_bar (GUI& gui, [[maybe_unused]] emulator_data& data)
+void action_bar (GUI& gui, Emulator_state& data)
 {
     static std::string button_label = "PLAY";
     ImGuiWindowClass window_class;
@@ -162,7 +152,7 @@ void action_bar (GUI& gui, [[maybe_unused]] emulator_data& data)
     ImGui::SetNextWindowClass(&window_class);
     ImGui::Begin("action bar", 0,ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
     
-    // rom_select_box(data);
+    rom_select_box(data);
 
     ImGui::SameLine();
 
@@ -193,22 +183,10 @@ void action_bar (GUI& gui, [[maybe_unused]] emulator_data& data)
     ImGui::End();
 }
 
-GUI::GUI (const char* title, const int width, const int height, emulator_data data)
+GUI::GUI (const char* title, const int width, const int height, Emulator_state& data)
 : window {title, width, height}
 , emu_data {data}
 {
-    std::string roms_folder_path {std::filesystem::current_path().string() + "/roms"};
-
-    if (!std::filesystem::exists(roms_folder_path))
-    {
-        printf("no roms folder found\n");
-        std::exit (EXIT_FAILURE);
-    }
-
-    for (const auto & entry : std::filesystem::directory_iterator(roms_folder_path))
-        emu_data.roms.push_back (entry);
-        
-
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -229,9 +207,14 @@ void GUI::run ()
     ImGui_ImplOpenGL3_Init(window.get_glsl_version ().c_str());
 
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    
 
-    Hex_Editor rom_data ("Memory", emu_data.memory.size(), 0, emu_data.memory.size(), sizeof(std::uint8_t), emu_data.memory.data());
+    const auto rom_n = emu_data.rom.size();
+    const auto ram_n = emu_data.ram.size();
 
+    Hex_Editor rom_data ("ROM", rom_n, 0, rom_n, sizeof(std::uint8_t), emu_data.rom.data());
+    Hex_Editor ram_data ("RAM", ram_n, 0, ram_n, sizeof(std::uint8_t), emu_data.ram.data());
+    
     while (window.is_running())
     {
         window.poll ([&] (auto& event) {
@@ -252,10 +235,10 @@ void GUI::run ()
 
         action_bar(*this, emu_data);
         rom_data.present();
+        ram_data.present();
         code_window(emu_data);
         registers(emu_data);
         trace_window(emu_data);
-
 
 
         // Rendering

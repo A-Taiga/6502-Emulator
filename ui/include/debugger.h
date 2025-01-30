@@ -1,25 +1,31 @@
 #ifndef DEBUGGER_H
 #define DEBUGGER_H
 
-#include "mos6502.h"
 #include "window.h"
-#include <array>
 #include <condition_variable>
-#include <cstdint>
-#include <filesystem>
 
 
-namespace MOS_6502 {class CPU;}
 
-struct emulator_data
+struct File_info
 {
-    std::array <std::uint8_t, 65534>& memory;
-    MOS_6502::CPU& cpu;
-    MOS_6502::CPU_Trace& trace;
-    std::vector <std::string> code;
+    std::string file_name;
+    std::string file_path;
+    std::size_t file_size;
+};
 
-    std::filesystem::directory_entry* current_rom = nullptr;
-    std::vector <std::filesystem::directory_entry> roms{};
+struct Emulator_state
+{
+    std::span <File_info>    roms;
+    std::span <std::uint8_t> rom;
+    std::span <std::uint8_t> ram;
+    std::span <std::string>  code;
+    std::span <const char*>  register_names;
+    std::span <const char*>  format_strings;
+
+    std::span <std::function<std::uint8_t(void)>> register_callbacks;
+    std::vector<std::vector<std::string>>& trace;
+    File_info* current_rom = nullptr;
+
 };
 
 class GUI
@@ -32,13 +38,13 @@ public:
     bool step = false;
 
 
-    GUI (const char* title, const int width, const int height, emulator_data data);
+    GUI (const char* title, const int width, const int height, Emulator_state& data);
     void run ();
     bool is_running() {return window.is_running();}
 
 private:
     Window window;
-    emulator_data emu_data;
+    Emulator_state& emu_data;
 
 };
 

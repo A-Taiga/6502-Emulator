@@ -11,8 +11,10 @@ add_executable(Emulator main.cpp)
 
 add_subdirectory(cpu)
 add_subdirectory(bus)
+add_subdirectory(memory)
 add_subdirectory(ui)
 
 target_link_libraries(Emulator BUS)
 target_link_libraries(Emulator CPU)
 target_link_libraries(Emulator GUI)
+target_link_libraries(Emulator MEMORY)

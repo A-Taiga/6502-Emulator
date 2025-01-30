@@ -3,6 +3,7 @@
 #include <cstring>
 #include <cstdio>
 #include <format>
+#include "mem.h"
 
 MOS_6502::CPU::CPU (read_cb read, write_cb write)
 : read{read}
@@ -771,39 +772,39 @@ const MOS_6502::Current& MOS_6502::CPU::get_current () const {return current;}
 const std::array<MOS_6502::Instruction, 256>& MOS_6502::CPU::get_instruction_table () {return instruction_table;}
 
 
-MOS_6502::CPU_Trace::CPU_Trace (MOS_6502::CPU& _cpu, std::array <std::uint8_t, 65534>& _memory)
+MOS_6502::CPU_Trace::CPU_Trace (MOS_6502::CPU& _cpu, const std::span<std::uint8_t> _rom)
 : cpu {_cpu}
-, memory {_memory}
+, rom {_rom}
 {}
 
 void MOS_6502::CPU_Trace::trace ()
 {
     std::string line {};
     const auto& current = cpu.get_current();
-    MOS_6502::disassemble_line(line, memory, current.pc);
-    traces.emplace_back
-    (
-        cpu.get_PC(),
-        cpu.get_AC(),
-        cpu.get_XR(),
-        cpu.get_YR(),
-        cpu.get_SR(),
-        cpu.get_SP(),
+    MOS_6502::disassemble_line(line, rom, 0x7FFF & current.pc);
+    std::vector <std::string> temp = 
+    {
+        std::format ("{:04X}", cpu.get_PC()),
+        std::format ("{:02X}", cpu.get_AC()),
+        std::format ("{:02X}", cpu.get_XR()),
+        std::format ("{:02X}", cpu.get_YR()),
+        std::format ("{:02X}", cpu.get_SP()),
         std::move(line)
-    );
+    };
+    traces.push_back (std::move (temp));
 }
 
-const MOS_6502::Trace& MOS_6502::CPU_Trace::operator [] (std::uint16_t index) const
+std::vector<MOS_6502::CPU_Trace::trace_type>& MOS_6502::CPU_Trace::get_trace_v ()
 {
-    return traces.at(index);
+    return traces;
 }
 
-std::vector <std::string> MOS_6502::disassembler (const std::array <std::uint8_t, 65534>& memory, std::uint16_t offset)
+std::vector <std::string> MOS_6502::disassembler (const std::span<std::uint8_t>& memory, std::uint16_t offset)
 {
     std::vector <std::string> result {};
     std::uint16_t rom_index = offset;
 
-    while (rom_index < memory.size())
+    while (rom_index < Memory::rom_size)
     {
         std::string line{};
         rom_index = disassemble_line(line, memory, rom_index);
@@ -812,10 +813,10 @@ std::vector <std::string> MOS_6502::disassembler (const std::array <std::uint8_t
     return result;
 }
 
-std::uint16_t MOS_6502::disassemble_line (std::string& result, const std::array <std::uint8_t, 65534>& memory, std::uint16_t rom_index)
+std::uint16_t MOS_6502::disassemble_line (std::string& result, const std::span<std::uint8_t>& memory, std::uint16_t rom_index)
 {
     const auto&         ins      = MOS_6502::CPU::instruction_table[static_cast<std::size_t>(memory[rom_index])];
-    const std::uint16_t index    = rom_index;
+    const std::uint16_t index    = rom_index + Memory::rom_size;
     const char*         mnemonic = MOS_6502::mnemonic_map.at(ins.mnemonic);
     const std::uint8_t  b0       = memory[rom_index];
     const std::uint8_t  b1       = rom_index + 1 < memory.size() ? memory[rom_index+1] : 0;

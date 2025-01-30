@@ -4,7 +4,9 @@
 #include <array>
 #include <cstdint>
 #include <functional>
+#include <span>
 #include <string>
+
 
 /*
 
@@ -25,6 +27,9 @@ SP	stack pointer	(8 bit)
 
 using byte = std::uint8_t;
 using word = std::uint16_t;
+
+
+namespace Memory{class ROM;}
 
 namespace MOS_6502
 {
@@ -195,19 +200,17 @@ namespace MOS_6502
     class CPU_Trace
     {
     public:
-        CPU_Trace(CPU& _cpu, std::array <std::uint8_t, 65534>& _memory);
+        using trace_type = std::vector<std::string>;
+        CPU_Trace(CPU& _cpu, const std::span<std::uint8_t> _rom);
         ~CPU_Trace(){};
-        
         void trace();
-        const Trace& operator [] (std::uint16_t index) const;
-        auto begin() const {return traces.cbegin();};
-        auto end  () const {return traces.cend();};
         std::size_t size() const {return traces.size();}
+        std::vector<trace_type>& get_trace_v ();
         
     private:
         CPU& cpu;
-        std::array <std::uint8_t, 65534>& memory;
-        std::vector <Trace> traces;
+        std::span<std::uint8_t> rom;
+        std::vector <trace_type> traces;
 
     };
 
@@ -244,9 +247,53 @@ namespace MOS_6502
         {Mode::ZPY, "ZPY"},
     };
 
-    std::vector <std::string> disassembler (const std::array <std::uint8_t, 65534>& memory, std::uint16_t offset = 0);
-    std::uint16_t disassemble_line (std::string& result, const std::array <std::uint8_t, 65534>& rom, std::uint16_t rom_index);
+    std::vector <std::string> disassembler (const std::span<std::uint8_t>& memory, std::uint16_t offset = 0);
+    std::uint16_t disassemble_line (std::string& result, const std::span<std::uint8_t>& memory, std::uint16_t rom_index);
 }
 
-
 #endif
+
+
+
+// 6502 Test #00
+// Heather Justice 3/11/08
+// Tests instructions LDA/LDX/LDY & STA/STX/STY with all addressing modes.
+//
+// EXPECTED RESULTS:
+//  $022A = 0x55 (decimal 85)
+//  A = 0x55, X = 0x2A, Y = 0x73
+
+// LDA #85 
+// LDX #42 
+// LDY #115 
+// STA $81 
+// LDA #$01 
+// STA $61 
+// LDA $81 
+// STA $0910 
+// LDA $0910 
+// STA $56,X 
+// LDA $56,X 
+// STY $60 
+// STA ($60),Y 
+// LDA ($60),Y 
+// STA $07ff,X 
+// LDA $07ff,X 
+// STA $07ff,Y 
+// LDA $07ff,Y 
+// STA ($36,X) 
+// LDA ($36,X) 
+// STX $50 
+// LDX $60 
+// LDY $50 
+// STX $0913 
+// LDX $0913 
+// STY $0914 
+// LDY $0914 
+// STY $2D,X 
+// STX $77,Y 
+// LDY $2D,X 
+// LDX $77,Y 
+// LDY $08A0,X 
+// LDX $08A1,Y 
+// STA $0200,X 

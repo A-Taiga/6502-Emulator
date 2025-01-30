@@ -4,29 +4,76 @@
 #include "debugger.h"
 #include <chrono>
 #include <condition_variable>
+#include <filesystem>
 #include <mutex>
 #include <thread>
-
+#include "mem.h"
 
 int main()
 {
 
-    Bus bus;
+    /* I don't like these */
+    Memory::RAM ram{};
+    Memory::ROM rom{};
+
+    Bus bus (rom, ram);
+
+
+    std::vector <File_info> roms{};
+
+    for (const auto& entry : std::filesystem::recursive_directory_iterator("roms/"))
+    {
+        roms.emplace_back (
+                            entry.path().filename().string(), 
+                            entry.path().string(), 
+                            entry.file_size()
+                          );
+    }
+
+    rom.load(roms.back().file_path, roms.back().file_size);
+
     MOS_6502::CPU cpu (
         [&bus] (const auto address) {return bus.read(address);},
         [&bus] (const auto address, const auto data) {bus.write(address, data);}
     );
 
-    MOS_6502::CPU_Trace trace (cpu, bus.get_memory());
+    std::array <const char*, 14> register_names = {"PC", "AC", "XR", "YR", "SP", " ", "C", "Z", "I", "D", "B", "_", "V", "N"};
+    std::array <const char*, 14> format_strings = {"%04X", "%02X", "%02X", "%02X", "%02X", "%c", "%d", "%d", "%d", "%d", "%d", "%d", "%d", "%d"};
+    std::array <std::function<std::uint8_t(void)>, 14> register_callbacks
+    {
+        [&cpu](){return cpu.get_PC();},
+        [&cpu](){return cpu.get_AC();},
+        [&cpu](){return cpu.get_XR();},
+        [&cpu](){return cpu.get_YR();},
+        [&cpu](){return cpu.get_SP();},
+        [](){return 32;},
+        [&cpu](){return (cpu.get_SR() >> 0) & 1;},
+        [&cpu](){return (cpu.get_SR() >> 1) & 1;},
+        [&cpu](){return (cpu.get_SR() >> 2) & 1;},
+        [&cpu](){return (cpu.get_SR() >> 3) & 1;},
+        [&cpu](){return (cpu.get_SR() >> 4) & 1;},
+        [&cpu](){return (cpu.get_SR() >> 5) & 1;},
+        [&cpu](){return (cpu.get_SR() >> 6) & 1;},
+        [&cpu](){return (cpu.get_SR() >> 7) & 1;},
+    };
 
-    GUI gui ("6502 Debugger", 1920, 1080, 
-                {
-                    bus.get_memory(),
-                    cpu,
-                    trace,
-                    MOS_6502::disassembler(bus.get_memory(), cpu.get_PC())
-                }
-            );
+    std::vector <std::string> code = MOS_6502::disassembler(rom.get_rom(), 0x7000);
+    MOS_6502::CPU_Trace trace (cpu, rom.get_rom());
+    static Emulator_state emu_state = 
+    {
+        roms,
+        rom.get_rom(),
+        ram.get_ram(),
+        code,
+        register_names,
+        format_strings,
+        register_callbacks,
+        trace.get_trace_v(),
+        &roms.back(),
+
+    };
+
+    GUI gui ("6502 Emulator", 1920, 1080, emu_state);
 
     std::thread cpu_thread ([&]()
     {

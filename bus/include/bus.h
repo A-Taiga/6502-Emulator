@@ -2,28 +2,27 @@
 #define BUS_H
 
 #include <cstdint>
-#include <array>
-
-using u16 = std::uint16_t;
-using u8  = std::uint8_t;
 
 
+namespace Memory
+{
+    class ROM;
+    class RAM;
+}
 
 class Bus
 {
 
 public:
-    Bus ();
+    Bus (Memory::ROM& _rom, Memory::RAM& _ram);
     ~Bus ();
-    void write (const u16 address, const u8 data);
-    u8   read  (const u16 address);
 
-    void load_rom ();
-
-    std::array <u8, 65534>& get_memory ();
+    void write (const std::uint16_t address, const std::uint8_t data);
+    std::uint8_t   read  (const std::uint16_t address);
 
 private:
-    std::array<u8, 65534> memory;
+    Memory::ROM& rom;
+    Memory::RAM& ram;
 };
 
 
