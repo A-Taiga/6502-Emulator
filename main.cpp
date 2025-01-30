@@ -12,6 +12,7 @@
 
 
 void cpu_handler (MOS_6502::CPU& cpu, MOS_6502::CPU_Trace& trace, GUI& gui);
+void cpu_step_handler (MOS_6502::CPU& cpu, MOS_6502::CPU_Trace& trace, GUI& gui);
 
 int main()
 {
@@ -50,7 +51,7 @@ int main()
         [&cpu](){return cpu.get_XR();},
         [&cpu](){return cpu.get_YR();},
         [&cpu](){return cpu.get_SP();},
-        [](){return 32;},
+        [](){return ' ';},
         [&cpu](){return (cpu.get_SR() >> 0) & 1;},
         [&cpu](){return (cpu.get_SR() >> 1) & 1;},
         [&cpu](){return (cpu.get_SR() >> 2) & 1;},
@@ -78,39 +79,9 @@ int main()
 
     GUI gui ("6502 Emulator", 1920, 1080, emu_state);
 
-    // std::thread cpu_thread (cpu_handler, std::ref(cpu), std::ref(trace), std::ref(gui));
-    std::thread cpu_thread ([&]()
-    {
-        while (gui.is_running())
-        {   
-            {
-                std::unique_lock <std::mutex> lock (gui.mu);
-                gui.cv.wait(lock, [&gui](){return !gui.is_paused;});
-            }
-            cpu.update();
-            trace.trace();
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        }
-    });
+    std::thread cpu_thread (cpu_handler, std::ref(cpu), std::ref(trace), std::ref(gui));
+    std::thread cpu_step_thread (cpu_step_handler, std::ref(cpu), std::ref(trace), std::ref(gui));
 
-    std::thread cpu_step_thread ([&]()
-    {
-        while (gui.is_running())
-        {
-            {
-                std::unique_lock <std::mutex> lock (gui.mu);
-                gui.cv.wait(lock, [&gui](){return gui.step;});
-            }
-            cpu.update();
-            trace.trace();
-            {
-                std::lock_guard <std::mutex> lock(gui.mu);
-                gui.step = false;
-            }
-            gui.cv.notify_all();
-
-        }
-    });
 
     gui.run();
     cpu_thread.join();
@@ -131,5 +102,24 @@ void cpu_handler (MOS_6502::CPU& cpu, MOS_6502::CPU_Trace& trace, GUI& gui)
         cpu.update();
         trace.trace();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+}
+
+void cpu_step_handler (MOS_6502::CPU& cpu, MOS_6502::CPU_Trace& trace, GUI& gui)
+{
+    while (gui.is_running())
+    {
+        {
+            std::unique_lock <std::mutex> lock (gui.mu);
+            gui.cv.wait(lock, [&gui](){return gui.step;});
+        }
+        cpu.update();
+        trace.trace();
+        {
+            std::lock_guard <std::mutex> lock(gui.mu);
+            gui.step = false;
+        }
+        gui.cv.notify_all();
+
     }
 }
