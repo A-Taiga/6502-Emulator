@@ -794,6 +794,11 @@ void MOS_6502::CPU_Trace::trace ()
     traces.push_back (std::move (temp));
 }
 
+void MOS_6502::CPU_Trace::reset ()
+{
+    traces = {};
+}
+
 std::vector<MOS_6502::CPU_Trace::trace_type>& MOS_6502::CPU_Trace::get_trace_v ()
 {
     return traces;

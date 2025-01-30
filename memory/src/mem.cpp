@@ -40,6 +40,7 @@ Memory::ROM::~ROM(){}
 
 bool Memory::ROM::load (const std::string& path, const std::size_t size)
 {
+    loaded = false;
     std::fstream file (path);
     if (!file.is_open())
     {
@@ -51,12 +52,13 @@ bool Memory::ROM::load (const std::string& path, const std::size_t size)
     if (size > Memory::rom_size)
     {
         std::cerr << path << " is larger that max rom size" << std::endl;
-        loaded = true;
+        loaded = false;
         return false;
     }
 
     file.read (reinterpret_cast<char*> (rom.data()), Memory::rom_size);
     file.close();
+    loaded = true;
     return true;
 }
 

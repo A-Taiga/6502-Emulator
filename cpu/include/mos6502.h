@@ -100,6 +100,7 @@ namespace MOS_6502
         CPU (read_cb, write_cb);
 
         void update (void);
+        void reset (void);
 
     private:
 
@@ -112,11 +113,10 @@ namespace MOS_6502
         byte SR;    // status register
         byte SP;    // stack pointer
 
-        void reset (void);
+
         void set_flag (const Flag, const bool);
         void stack_push (const byte val);
         byte stack_pop (void);
-
 
         Current current;
 
@@ -186,17 +186,6 @@ namespace MOS_6502
         static const std::array<Instruction, 256>& get_instruction_table (); 
     };
 
-    struct Trace
-    {
-        std::uint16_t PC;
-        std::uint8_t  AC;
-        std::uint8_t  XR;
-        std::uint8_t  YR;
-        std::uint8_t  SR;
-        std::uint8_t  SP;
-        std::string   code;
-    };
-
     class CPU_Trace
     {
     public:
@@ -204,14 +193,14 @@ namespace MOS_6502
         CPU_Trace(CPU& _cpu, const std::span<std::uint8_t> _rom);
         ~CPU_Trace(){};
         void trace();
+        void reset ();
         std::size_t size() const {return traces.size();}
         std::vector<trace_type>& get_trace_v ();
-        
+
     private:
         CPU& cpu;
         std::span<std::uint8_t> rom;
         std::vector <trace_type> traces;
-
     };
 
     inline const std::unordered_map <Mnemonic, const char*> mnemonic_map = 

@@ -42,6 +42,9 @@ int main()
         [&bus] (const auto address, const auto data) {bus.write(address, data);}
     );
 
+    std::vector <std::string> code = MOS_6502::disassembler(rom.get_rom(), 0x7000);
+    MOS_6502::CPU_Trace trace (cpu, rom.get_rom());
+
     std::array <const char*, 14> register_names = {"PC", "AC", "XR", "YR", "SP", " ", "C", "Z", "I", "D", "B", "_", "V", "N"};
     std::array <const char*, 14> format_strings = {"%04X", "%02X", "%02X", "%02X", "%02X", "%c", "%d", "%d", "%d", "%d", "%d", "%d", "%d", "%d"};
     std::array <std::function<std::uint16_t(void)>, 14> register_callbacks
@@ -62,9 +65,40 @@ int main()
         [&cpu](){return (cpu.get_SR() >> 7) & 1;},
     };
 
-    std::vector <std::string> code = MOS_6502::disassembler(rom.get_rom(), 0x7000);
-    MOS_6502::CPU_Trace trace (cpu, rom.get_rom());
-    static Emulator_state emu_state = 
+    auto reset_cpu = [&cpu]()
+    {
+        cpu.reset();
+    };
+
+    auto reset_rom = [&rom]()
+    {
+        rom.reset();
+    };
+
+    auto reset_ram = [&ram]()
+    {
+        ram.reset();
+    };
+
+    auto load_rom = [&](const std::string &path, const std::size_t size)
+    {
+        rom.load(path, size);
+    };
+
+    auto reset_trace = [&trace] ()
+    {
+        trace.reset();
+    };
+
+    auto dissasemble = [&code, &rom] ()
+    {
+        if (rom.is_loaded())
+            code = MOS_6502::disassembler(rom.get_rom(), 0x7000);
+        else
+            printf("ERROR\n");
+    };
+
+    Emulator_state emu_state = 
     {
         roms,
         rom.get_rom(),
@@ -72,6 +106,12 @@ int main()
         code,
         register_names,
         format_strings,
+        reset_cpu,
+        reset_rom,
+        reset_ram,
+        reset_trace,
+        dissasemble,
+        load_rom,
         register_callbacks,
         trace.get_trace_v(),
         &roms.back(),

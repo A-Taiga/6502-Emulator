@@ -154,6 +154,18 @@ void action_bar (GUI& gui, Emulator_state& data)
 
     ImGui::SameLine();
 
+    if (ImGui::Button("Reset"))
+    {
+        data.rom_reset();
+        data.ram_reset();
+        data.load_rom(data.current_rom->file_path, data.current_rom->file_size);
+        data.cpu_reset();
+        data.trace_reset();
+        data.disassemble();
+    }
+
+    ImGui::SameLine();
+
 
     if(ImGui::Button(button_label.c_str()))
     {
