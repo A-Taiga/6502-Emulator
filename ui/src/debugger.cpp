@@ -23,7 +23,6 @@ void registers (const Emulator_state& data)
     static constexpr int table_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
     const auto n = data.register_names.size();
     ImGui::Begin("Registers");
-    // const std::uint8_t SR = data.cpu.get_SR();
 
     if (ImGui::BeginTable("Registers Table", n, table_flags))
     {
@@ -35,7 +34,6 @@ void registers (const Emulator_state& data)
         }
 
         ImGui::TableNextRow();
-
         for (std::size_t i = 0; i < n; ++i)
         {
             ImGui::TableSetColumnIndex(i);

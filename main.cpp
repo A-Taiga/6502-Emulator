@@ -9,6 +9,10 @@
 #include <thread>
 #include "mem.h"
 
+
+
+void cpu_handler (MOS_6502::CPU& cpu, MOS_6502::CPU_Trace& trace, GUI& gui);
+
 int main()
 {
 
@@ -39,7 +43,7 @@ int main()
 
     std::array <const char*, 14> register_names = {"PC", "AC", "XR", "YR", "SP", " ", "C", "Z", "I", "D", "B", "_", "V", "N"};
     std::array <const char*, 14> format_strings = {"%04X", "%02X", "%02X", "%02X", "%02X", "%c", "%d", "%d", "%d", "%d", "%d", "%d", "%d", "%d"};
-    std::array <std::function<std::uint8_t(void)>, 14> register_callbacks
+    std::array <std::function<std::uint16_t(void)>, 14> register_callbacks
     {
         [&cpu](){return cpu.get_PC();},
         [&cpu](){return cpu.get_AC();},
@@ -70,11 +74,11 @@ int main()
         register_callbacks,
         trace.get_trace_v(),
         &roms.back(),
-
     };
 
     GUI gui ("6502 Emulator", 1920, 1080, emu_state);
 
+    // std::thread cpu_thread (cpu_handler, std::ref(cpu), std::ref(trace), std::ref(gui));
     std::thread cpu_thread ([&]()
     {
         while (gui.is_running())
@@ -83,7 +87,6 @@ int main()
                 std::unique_lock <std::mutex> lock (gui.mu);
                 gui.cv.wait(lock, [&gui](){return !gui.is_paused;});
             }
-            
             cpu.update();
             trace.trace();
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -114,4 +117,19 @@ int main()
     cpu_step_thread.join();
 
     return 0;
+}
+
+void cpu_handler (MOS_6502::CPU& cpu, MOS_6502::CPU_Trace& trace, GUI& gui)
+{
+    while (gui.is_running())
+    {   
+        {
+            std::unique_lock <std::mutex> lock (gui.mu);
+            gui.cv.wait(lock, [&gui](){return !gui.is_paused;});
+        }
+        
+        cpu.update();
+        trace.trace();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
 }

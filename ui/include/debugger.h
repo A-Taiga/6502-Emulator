@@ -22,7 +22,7 @@ struct Emulator_state
     std::span <const char*>  register_names;
     std::span <const char*>  format_strings;
 
-    std::span <std::function<std::uint8_t(void)>> register_callbacks;
+    std::span <std::function<std::uint16_t(void)>> register_callbacks;
     std::vector<std::vector<std::string>>& trace;
     File_info* current_rom = nullptr;
 
