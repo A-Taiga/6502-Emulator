@@ -8,14 +8,161 @@
 #include <mutex>
 #include <thread>
 #include "mem.h"
+#include <chrono>
+#include <thread>
+#include <filesystem>
+#include <iostream>
 
 
+/*
 
-void cpu_handler (MOS_6502::CPU& cpu, MOS_6502::CPU_Trace& trace, GUI& gui);
-void cpu_step_handler (MOS_6502::CPU& cpu, MOS_6502::CPU_Trace& trace, GUI& gui);
+*=$8000
+BRK
+*=$F000
+.BYTE $a9
+.BYTE $4b
+.BYTE $4a
+.BYTE $0a
+.BYTE $85
+.BYTE $50
+.BYTE $06
+.BYTE $50
+.BYTE $06
+.BYTE $50
+.BYTE $46
+.BYTE $50
+.BYTE $a5
+.BYTE $50
+.BYTE $a6
+.BYTE $50
+.BYTE $09
+.BYTE $c9
+.BYTE $85
+.BYTE $60
+.BYTE $16
+.BYTE $4c
+.BYTE $56
+.BYTE $4c
+.BYTE $56
+.BYTE $4c
+.BYTE $b5
+.BYTE $4c
+.BYTE $a6
+.BYTE $60
+.BYTE $09
+.BYTE $41
+.BYTE $8d
+.BYTE $2e
+.BYTE $01
+.BYTE $5e
+.BYTE $00
+.BYTE $01
+.BYTE $5e
+.BYTE $00
+.BYTE $01
+.BYTE $1e
+.BYTE $00
+.BYTE $01
+.BYTE $bd
+.BYTE $00
+.BYTE $01
+.BYTE $ae
+.BYTE $2e
+.BYTE $01
+.BYTE $09
+.BYTE $81
+.BYTE $9d
+.BYTE $00
+.BYTE $01
+.BYTE $4e
+.BYTE $36
+.BYTE $01
+.BYTE $4e
+.BYTE $36
+.BYTE $01
+.BYTE $0e
+.BYTE $36
+.BYTE $01
+.BYTE $bd
+.BYTE $00
+.BYTE $01
+.BYTE $2a
+.BYTE $2a
+.BYTE $6a
+.BYTE $85
+.BYTE $70
+.BYTE $a6
+.BYTE $70
+.BYTE $09
+.BYTE $03
+.BYTE $95
+.BYTE $0C
+.BYTE $26
+.BYTE $c0
+.BYTE $66
+.BYTE $c0
+.BYTE $66
+.BYTE $c0
+.BYTE $b5
+.BYTE $0c
+.BYTE $a6
+.BYTE $c0
+.BYTE $85
+.BYTE $d0
+.BYTE $36
+.BYTE $75
+.BYTE $36
+.BYTE $75
+.BYTE $76
+.BYTE $75
+.BYTE $a5
+.BYTE $d0
+.BYTE $a6
+.BYTE $d0
+.BYTE $9d
+.BYTE $00
+.BYTE $01
+.BYTE $2e
+.BYTE $b7
+.BYTE $01
+.BYTE $2e
+.BYTE $b7
+.BYTE $01
+.BYTE $2e
+.BYTE $b7
+.BYTE $01
+.BYTE $6e
+.BYTE $b7
+.BYTE $01
+.BYTE $bd
+.BYTE $00
+.BYTE $01
+.BYTE $ae
+.BYTE $b7
+.BYTE $01
+.BYTE $8d
+.BYTE $dd
+.BYTE $01
+.BYTE $3e
+.BYTE $00
+.BYTE $01
+.BYTE $7e
+.BYTE $00
+.BYTE $01
+.BYTE $7e
+.BYTE $00
+.BYTE $01
+
+*=$FFFC
+.DBYTE $F000
+*/
+
+
+void cpu_thread_handler (MOS_6502::CPU& cpu, MOS_6502::CPU_Trace& trace, GUI& gui);
 
 int main()
 {
+
 
     /* I don't like these */
     Memory::RAM ram{};
@@ -23,143 +170,53 @@ int main()
 
     Bus bus (rom, ram);
 
-
-    std::vector <File_info> roms{};
-
-    for (const auto& entry : std::filesystem::recursive_directory_iterator("roms/"))
-    {
-        roms.emplace_back (
-                            entry.path().filename().string(), 
-                            entry.path().string(), 
-                            entry.file_size()
-                          );
-    }
-
-    rom.load(roms.back().file_path, roms.back().file_size);
-
     MOS_6502::CPU cpu (
         [&bus] (const auto address) {return bus.read(address);},
         [&bus] (const auto address, const auto data) {bus.write(address, data);}
     );
 
-    std::vector <std::string> code = MOS_6502::disassembler(rom.get_rom(), 0x7000);
     MOS_6502::CPU_Trace trace (cpu, rom.get_rom());
 
-    std::array <const char*, 14> register_names = {"PC", "AC", "XR", "YR", "SP", " ", "C", "Z", "I", "D", "B", "_", "V", "N"};
-    std::array <const char*, 14> format_strings = {"%04X", "%02X", "%02X", "%02X", "%02X", "%c", "%d", "%d", "%d", "%d", "%d", "%d", "%d", "%d"};
-    std::array <std::function<std::uint16_t(void)>, 14> register_callbacks
-    {
-        [&cpu](){return cpu.get_PC();},
-        [&cpu](){return cpu.get_AC();},
-        [&cpu](){return cpu.get_XR();},
-        [&cpu](){return cpu.get_YR();},
-        [&cpu](){return cpu.get_SP();},
-        [](){return ' ';},
-        [&cpu](){return (cpu.get_SR() >> 0) & 1;},
-        [&cpu](){return (cpu.get_SR() >> 1) & 1;},
-        [&cpu](){return (cpu.get_SR() >> 2) & 1;},
-        [&cpu](){return (cpu.get_SR() >> 3) & 1;},
-        [&cpu](){return (cpu.get_SR() >> 4) & 1;},
-        [&cpu](){return (cpu.get_SR() >> 5) & 1;},
-        [&cpu](){return (cpu.get_SR() >> 6) & 1;},
-        [&cpu](){return (cpu.get_SR() >> 7) & 1;},
-    };
+    GUI gui (cpu, trace, rom, ram);
 
-    auto reset_cpu = [&cpu]()
-    {
-        cpu.reset();
-    };
-
-    auto reset_rom = [&rom]()
-    {
-        rom.reset();
-    };
-
-    auto reset_ram = [&ram]()
-    {
-        ram.reset();
-    };
-
-    auto load_rom = [&](const std::string &path, const std::size_t size)
-    {
-        rom.load(path, size);
-    };
-
-    auto reset_trace = [&trace] ()
-    {
-        trace.reset();
-    };
-
-    auto dissasemble = [&code, &rom] ()
-    {
-        if (rom.is_loaded())
-            code = MOS_6502::disassembler(rom.get_rom(), 0x7000);
-        else
-            printf("ERROR\n");
-    };
-
-    Emulator_state emu_state = 
-    {
-        roms,
-        rom.get_rom(),
-        ram.get_ram(),
-        code,
-        register_names,
-        format_strings,
-        reset_cpu,
-        reset_rom,
-        reset_ram,
-        reset_trace,
-        dissasemble,
-        load_rom,
-        register_callbacks,
-        trace.get_trace_v(),
-        &roms.back(),
-    };
-
-    GUI gui ("6502 Emulator", 1920, 1080, emu_state);
-
-    std::thread cpu_thread (cpu_handler, std::ref(cpu), std::ref(trace), std::ref(gui));
-    std::thread cpu_step_thread (cpu_step_handler, std::ref(cpu), std::ref(trace), std::ref(gui));
-
+    std::thread cpu_thread (cpu_thread_handler, std::ref(cpu), std::ref(trace), std::ref(gui));
 
     gui.run();
     cpu_thread.join();
-    cpu_step_thread.join();
 
     return 0;
 }
 
-void cpu_handler (MOS_6502::CPU& cpu, MOS_6502::CPU_Trace& trace, GUI& gui)
+
+void cpu_thread_handler (MOS_6502::CPU& cpu, MOS_6502::CPU_Trace& trace, GUI& gui)
 {
     while (gui.is_running())
     {   
         {
             std::unique_lock <std::mutex> lock (gui.mu);
-            gui.cv.wait(lock, [&gui](){return !gui.is_paused;});
+            gui.cv.wait(lock, [&gui](){return !gui.is_paused || gui.step;});
         }
-        
-        cpu.update();
-        trace.trace();
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-}
 
-void cpu_step_handler (MOS_6502::CPU& cpu, MOS_6502::CPU_Trace& trace, GUI& gui)
-{
-    while (gui.is_running())
-    {
+        auto begin = std::chrono::high_resolution_clock::now();
+
+        int cycles = cpu.update();
+
+        auto end = std::chrono::high_resolution_clock::now();
+        auto target = std::chrono::nanoseconds(cycles * 559);
+
+        if (target > (end - begin))
         {
-            std::unique_lock <std::mutex> lock (gui.mu);
-            gui.cv.wait(lock, [&gui](){return gui.step;});
+            std::this_thread::sleep_for(target - (end - begin));
         }
-        cpu.update();
+
         trace.trace();
+
         {
             std::lock_guard <std::mutex> lock(gui.mu);
             gui.step = false;
         }
         gui.cv.notify_all();
-
     }
 }
+
+

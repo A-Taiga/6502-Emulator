@@ -2,8 +2,10 @@
 #include <cstdlib>
 #include <cstring>
 #include <cstdio>
-#include <format>
 #include "mem.h"
+#include <print>
+
+
 
 MOS_6502::CPU::CPU (read_cb read, write_cb write)
 : read{read}
@@ -12,13 +14,15 @@ MOS_6502::CPU::CPU (read_cb read, write_cb write)
     reset ();
 }
 
-void MOS_6502::CPU::update (void)
+int MOS_6502::CPU::update (void)
 {
     set_flag(Flag::_, true);
     current.pc = PC;
     current.instruction = &instruction_table[read (PC++)];
-    current.cycles = current.instruction->cycle_count + (this->*current.instruction->mode)();
+    current.cycles = current.instruction->cycle_count;
+    (this->*current.instruction->mode)();
     (this->*current.instruction->opcode)();
+    return current.cycles;
 }
 
 void MOS_6502::CPU::reset (void)
@@ -29,7 +33,7 @@ void MOS_6502::CPU::reset (void)
     XR = 0;
     YR = 0;
     SR = 0;
-    SP = 0;
+    SP = 0xFF;
     current = {};
 }
 
@@ -43,135 +47,119 @@ void MOS_6502::CPU::set_flag(const Flag Flag, const bool condition)
 
 void MOS_6502::CPU::stack_push (const byte data)
 {
-    // --SP;
+    --SP;
     write (stk_begin + SP, data);
-    ++SP;
+    // ++SP;
 }
 
 byte MOS_6502::CPU::stack_pop (void)
 {
-    --SP;
+    // --SP;
     const auto result = read (stk_begin + SP);
-    // ++SP;
+    ++SP;
     return result;
 }
 
-/* 
-    ADDRESSING MODES 
-
-    some of these functions will return an extra cycle 
-    if a page boundry was crossed
-*/
 
 // accumulator
-int MOS_6502::CPU::ACC (void)
+void MOS_6502::CPU::ACC (void)
 {
     current.data = AC;
-    return 0;
 }
 
 // absolute
-int MOS_6502::CPU::ABS (void)
+void MOS_6502::CPU::ABS (void)
 {
     const byte low = read (PC++);
     const byte high = read (PC++);
     current.address = (high << 8) | low;
-    return 0;
 }
 
 // absolute XR
-int MOS_6502::CPU::ABX (void)
+void MOS_6502::CPU::ABX (void)
 {
     const byte low = read (PC++);
     const byte high = read (PC++);
     current.address = ((high << 8) | low) + XR;
-    return (current.address & 0xFF00) != (high << 8) ? 1 : 0;
+    current.cycles += (current.address & 0xFF00) != (high << 8) ? 1 : 0;
 }
 
 // absolute YR
-int MOS_6502::CPU::ABY (void)
+void MOS_6502::CPU::ABY (void)
 {
     const byte low = read (PC++);
     const byte high = read (PC++);
     current.address = ((high << 8) | low) + YR;
-    return (current.address & 0xFF00) != (high << 8) ? 1 : 0;
+    current.cycles += (current.address & 0xFF00) != (high << 8) ? 1 : 0;
 }
 
 // # / immediate 
-int MOS_6502::CPU::IMM (void)
+void MOS_6502::CPU::IMM (void)
 {
     current.address = PC++;
-    return 0;
 }
 
 // implied
-int MOS_6502::CPU::IMP (void)
+void MOS_6502::CPU::IMP (void)
 {
     // does nothing?
-    return 0;
 }
 
 // indirect
-int MOS_6502::CPU::IND (void)
+void MOS_6502::CPU::IND (void)
 {
     const byte low = read (PC++);
     const byte high = read (PC++);
     const word lookup_addr = (high << 8) | low;
     current.address = (read (lookup_addr+1) << 8) | read (lookup_addr);
-    return 0;
 }
 
 // XR-indexed indirect zeropage address
 // operand is zeropage address; effective address is word in (LL + XR, LL + XR + 1), inc. without carry: C.w($00LL + XR)
-int MOS_6502::CPU::XIZ (void)
+void MOS_6502::CPU::XIZ (void)
 {
     const byte temp = read (PC++);
     const byte low = read (temp + XR);
     const byte high = read (temp + XR + 1);
     current.address = (high << 8) | low;
-    return 0;
 }
 
 
 // YR-indexed indirect zeropage address
 // operand is zeropage address; effective address is word in (LL, LL + 1) incremented by YR with carry: C.w($00LL) + YR
-int MOS_6502::CPU::YIZ (void)
+void MOS_6502::CPU::YIZ (void)
 {
     const byte temp = read (PC++);
     const byte low = read (temp);
     const byte high = read (temp + 1);
     current.address = ((high << 8) | low) + YR;
-    return (current.address & 0xFF00) != (high << 8) ? 1 : 0;
+    current.cycles += (current.address & 0xFF00) != (high << 8) ? 1 : 0;
 }
 
 // relative
 // branch target is PC + signed offset BB 
-int MOS_6502::CPU::REL (void)
+void MOS_6502::CPU::REL (void)
 {
     current.address = read (PC++);
     current.address |= current.address & 0x80 ? 0xFF00 : 0x0000;
-    return 0;
 }
 
 // zeropage
-int MOS_6502::CPU::ZPG (void)
+void MOS_6502::CPU::ZPG (void)
 {
     current.address = read (PC++);
-    return 0;
 }
 
 // zeropage XR-indexed
-int MOS_6502::CPU::ZPX (void)
+void MOS_6502::CPU::ZPX (void)
 {
     current.address = read (PC++) + XR;
-    return 0;
 }
 
 // zeropage YR-indexed
-int MOS_6502::CPU::ZPY (void)
+void MOS_6502::CPU::ZPY (void)
 {
     current.address = read (PC++) + YR;
-    return 0;
 }
 
 /* OPCODES */
@@ -179,6 +167,7 @@ int MOS_6502::CPU::ZPY (void)
 // break
 void MOS_6502::CPU::BRK (void)
 {
+    return;
     ++PC;
 
     stack_push (PC & 0xFF00);
@@ -281,9 +270,13 @@ void MOS_6502::CPU::ROL (void)
     current.data = current.instruction->mode == &CPU::ACC ? AC : read (current.address);
     
     set_flag (Flag::C, current.data & 0x80);
-    
+
+    std::println("{:08b}", SR);
+    std::println("BEFORE: {:08b} {:04X}", current.data, current.data);
     current.data <<= 1;
-    current.data |= static_cast <byte> (Flag::C) & SP;
+    std::println("AFTER:  {:08b} {:04X}", current.data, current.data);
+    current.data |= (SR & 1);
+    std::println("RESULT: {:08b} {:04X}\n", current.data, current.data);
     
     set_flag (Flag::Z, current.data == 0x00);
     set_flag (Flag::N, current.data & 0x80);
@@ -431,10 +424,10 @@ void MOS_6502::CPU::ROR (void)
 {
     current.data = current.instruction->mode == &CPU::ACC ? AC : read (current.address);
 
-    set_flag (Flag::C, current.data & 0x80);
+    set_flag (Flag::C, current.data & 0x01);
     
     current.data >>= 1;
-    current.data |= (static_cast <byte> (Flag::C) & SP) << 7;
+    current.data |= (static_cast <byte> (Flag::C) & SR) << 7;
     
     set_flag (Flag::Z, current.data == 0x00);
     set_flag (Flag::N, current.data & 0x80);
@@ -780,8 +773,7 @@ MOS_6502::CPU_Trace::CPU_Trace (MOS_6502::CPU& _cpu, const std::span<std::uint8_
 void MOS_6502::CPU_Trace::trace ()
 {
     std::string line {};
-    const auto& current = cpu.get_current();
-    MOS_6502::disassemble_line(line, rom, 0x7FFF & current.pc);
+    MOS_6502::disassemble_line(line, rom, 0x7FFF & cpu.get_current().pc);
     std::vector <std::string> temp = 
     {
         std::format ("{:04X}", cpu.get_PC()),

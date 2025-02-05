@@ -25,3 +25,4 @@ target_include_directories(GUI PUBLIC
 
 target_link_libraries(GUI PUBLIC SDL2main SDL2)
 target_link_libraries(GUI PUBLIC GL)
+target_link_libraries(GUI PUBLIC CPU)

@@ -77,8 +77,8 @@ namespace MOS_6502
         Mnemonic mnemonic;
         Mode     addr_mode;
 
-        void (CPU::*opcode)(void);
-        int  (CPU::*mode)(void);
+        void (CPU::*opcode) (void);
+        void (CPU::*mode)   (void);
         int  cycle_count;
     };
 
@@ -89,101 +89,6 @@ namespace MOS_6502
         byte data;
         int cycles;
         word pc;
-    };
-
-    class CPU
-    {
-    public:
-        using read_cb = std::function <byte(const word)>;
-        using write_cb = std::function <void(const word, const byte)>;
-        
-        CPU (read_cb, write_cb);
-
-        void update (void);
-        void reset (void);
-
-    private:
-
-        read_cb  read;
-        write_cb write;
-        word PC;    // program counter
-        byte AC;    // accumulator
-        byte XR;    // x register
-        byte YR;    // y register
-        byte SR;    // status register
-        byte SP;    // stack pointer
-
-
-        void set_flag (const Flag, const bool);
-        void stack_push (const byte val);
-        byte stack_pop (void);
-
-        Current current;
-
-        /* OPCODES */
-        void BRK (void); void ORA (void); void ASL (void); void PHP (void); void BPL (void);
-        void CLC (void); void JSR (void); void AND (void); void BIT (void); void ROL (void); 
-        void PLP (void); void BMI (void); void SEC (void); void RTI (void); void EOR (void);
-        void LSR (void); void PHA (void); void JMP (void); void BVC (void); void CLI (void);
-        void RTS (void); void PLA (void); void ADC (void); void ROR (void); void BVS (void);
-        void SEI (void); void STA (void); void STY (void); void STX (void); void DEY (void);
-        void TXA (void); void BCC (void); void TYA (void); void TXS (void); void LDY (void); 
-        void LDA (void); void LDX (void); void TAY (void); void TAX (void); void BCS (void); 
-        void CLV (void); void TSX (void); void CPY (void); void CMP (void); void DEC (void); 
-        void INY (void); void DEX (void); void BNE (void); void CLD (void); void CPX (void); 
-        void SBC (void); void INC (void); void INX (void); void NOP (void); void BEQ (void); 
-        void SED (void); void ___ (void); // ___ = illegal
-
-        /* ADDRESSING MODES */
-        int ACC (void); // accumulator 
-        int ABS (void); // absolute
-        int ABX (void); // absoulte X-indexed
-        int ABY (void); // absolute Y-indexed
-        int IMM (void); // immediate
-        int IMP (void); // implied
-        int IND (void); // indirect
-        int XIZ (void); // X-indexed indirect zeropage address
-        int YIZ (void); // Y-indexed indirect zeropage address
-        int REL (void); // relative
-        int ZPG (void); // zeropage
-        int ZPX (void); // zeropage X-indexed
-        int ZPY (void); // zeropage Y-indexed
-
-        using _ = CPU;
-        using M = Mnemonic;
-        using A = Mode;
-    public:
-
-        static constexpr std::array<Instruction, 256> instruction_table
-        {{
-            {M::BRK, A::IMP, &_::BRK, &_::IMP, 7}, {M::ORA, A::XIZ, &_::ORA, &_::XIZ, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::ORA, A::ZPG, &_::ORA, &_::ZPG, 3}, {M::ASL, A::ZPG, &_::ASL, &_::ZPG, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::PHP, A::IMP, &_::PHP, &_::IMP, 3}, {M::ORA, A::IMM, &_::ORA, &_::IMM, 2}, {M::ASL, A::ACC, &_::ASL, &_::ACC, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::ORA, A::ABS, &_::ORA, &_::ABS, 4}, {M::ASL, A::ABS, &_::ASL, &_::ABS, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
-            {M::BPL, A::REL, &_::BPL, &_::REL, 2}, {M::ORA, A::YIZ, &_::ORA, &_::YIZ, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::ORA, A::ZPX, &_::ORA, &_::ZPX, 4}, {M::ASL, A::ZPX, &_::ASL, &_::ZPX, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CLC, A::IMP, &_::CLC, &_::IMP, 2}, {M::ORA, A::ABY, &_::ORA, &_::ABY, 4}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::ORA, A::ABX, &_::ORA, &_::ABX, 4}, {M::ASL, A::ABX, &_::ASL, &_::ABX, 7}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
-            {M::JSR, A::ABS, &_::JSR, &_::ABS, 6}, {M::AND, A::XIZ, &_::AND, &_::XIZ, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::BIT, A::ZPG, &_::BIT, &_::ZPG, 3}, {M::AND, A::ZPG, &_::AND, &_::ZPG, 3}, {M::ROL, A::ZPG, &_::ROL, &_::ZPG, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::PLP, A::IMP, &_::PLP, &_::IMP, 4}, {M::AND, A::IMM, &_::AND, &_::IMM, 2}, {M::ROL, A::ACC, &_::ROL, &_::ACC, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::BIT, A::ABS, &_::BIT, &_::ABS, 4}, {M::AND, A::ABS, &_::AND, &_::ABS, 4}, {M::ROL, A::ABS, &_::ROL, &_::ABS, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
-            {M::BMI, A::REL, &_::BMI, &_::REL, 2}, {M::AND, A::YIZ, &_::AND, &_::YIZ, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::AND, A::ZPX, &_::AND, &_::ZPX, 4}, {M::ROL, A::ZPX, &_::ROL, &_::ZPX, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::SEC, A::IMP, &_::SEC, &_::IMP, 2}, {M::AND, A::ABY, &_::AND, &_::ABY, 4}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::AND, A::ABX, &_::AND, &_::ABX, 4}, {M::ROL, A::ABX, &_::ROL, &_::ABX, 7}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
-            {M::RTI, A::IMP, &_::RTI, &_::IMP, 6}, {M::EOR, A::XIZ, &_::EOR, &_::XIZ, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::EOR, A::ZPG, &_::EOR, &_::ZPG, 3}, {M::LSR, A::ZPG, &_::LSR, &_::ZPG, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::PHA, A::IMP, &_::PHA, &_::IMP, 3}, {M::EOR, A::IMM, &_::EOR, &_::IMM, 2}, {M::LSR, A::ACC, &_::LSR, &_::ACC, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::JMP, A::ABS, &_::JMP, &_::ABS, 3}, {M::EOR, A::ABS, &_::EOR, &_::ABS, 4}, {M::LSR, A::ABS, &_::LSR, &_::ABS, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
-            {M::BVC, A::REL, &_::BVC, &_::REL, 2}, {M::EOR, A::YIZ, &_::EOR, &_::YIZ, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::EOR, A::ZPX, &_::EOR, &_::ZPX, 4}, {M::LSR, A::ZPX, &_::LSR, &_::ZPX, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CLI, A::IMP, &_::CLI, &_::IMP, 2}, {M::EOR, A::ABY, &_::EOR, &_::ABY, 4}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::EOR, A::ABX, &_::EOR, &_::ABX, 4}, {M::LSR, A::ABX, &_::LSR, &_::ABX, 7}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
-            {M::RTS, A::IMP, &_::RTS, &_::IMP, 6}, {M::ADC, A::XIZ, &_::ADC, &_::XIZ, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::ADC, A::ZPG, &_::ADC, &_::ZPG, 3}, {M::ROR, A::ZPG, &_::ROR, &_::ZPG, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::PLA, A::IMP, &_::PLA, &_::IMP, 4}, {M::ADC, A::IMM, &_::ADC, &_::IMM, 2}, {M::ROR, A::ACC, &_::ROR, &_::ACC, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::JMP, A::IND, &_::JMP, &_::IND, 5}, {M::ADC, A::ABS, &_::ADC, &_::ABS, 4}, {M::ROR, A::ABS, &_::ROR, &_::ABS, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
-            {M::BVS, A::REL, &_::BVS, &_::REL, 2}, {M::ADC, A::YIZ, &_::ADC, &_::YIZ, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::ADC, A::ZPX, &_::ADC, &_::ZPX, 4}, {M::ROR, A::ZPX, &_::ROR, &_::ZPX, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::SEI, A::IMP, &_::SEI, &_::IMP, 2}, {M::ADC, A::ABY, &_::ADC, &_::ABY, 4}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::ADC, A::ABX, &_::ADC, &_::ABX, 4}, {M::ROR, A::ABX, &_::ROR, &_::ABX, 7}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
-            {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::STA, A::XIZ, &_::STA, &_::XIZ, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::STY, A::ZPG, &_::STY, &_::ZPG, 3}, {M::STA, A::ZPG, &_::STA, &_::ZPG, 3}, {M::STX, A::ZPG, &_::STX, &_::ZPG, 3}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::DEY, A::IMP, &_::DEY, &_::IMP, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::TXA, A::IMP, &_::TXA, &_::IMP, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::STY, A::ABS, &_::STY, &_::ABS, 4}, {M::STA, A::ABS, &_::STA, &_::ABS, 4}, {M::STX, A::ABS, &_::STX, &_::ABS, 4}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
-            {M::BCC, A::REL, &_::BCC, &_::REL, 2}, {M::STA, A::YIZ, &_::STA, &_::YIZ, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::STY, A::ZPX, &_::STY, &_::ZPX, 4}, {M::STA, A::ZPX, &_::STA, &_::ZPX, 4}, {M::STX, A::ZPY, &_::STX, &_::ZPY, 4}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::TYA, A::IMP, &_::TYA, &_::IMP, 2}, {M::STA, A::ABY, &_::STA, &_::ABY, 5}, {M::TXS, A::IMP, &_::TXS, &_::IMP, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::STA, A::ABX, &_::STA, &_::ABX, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
-            {M::LDY, A::IMM, &_::LDY, &_::IMM, 2}, {M::LDA, A::XIZ, &_::LDA, &_::XIZ, 6}, {M::LDX, A::IMM, &_::LDX, &_::IMM, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::LDY, A::ZPG, &_::LDY, &_::ZPG, 3}, {M::LDA, A::ZPG, &_::LDA, &_::ZPG, 3}, {M::LDX, A::ZPG, &_::LDX, &_::ZPG, 3}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::TAY, A::IMP, &_::TAY, &_::IMP, 2}, {M::LDA, A::IMM, &_::LDA, &_::IMM, 2}, {M::TAX, A::IMP, &_::TAX, &_::IMP, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::LDY, A::ABS, &_::LDY, &_::ABS, 4}, {M::LDA, A::ABS, &_::LDA, &_::ABS, 4}, {M::LDX, A::ABS, &_::LDX, &_::ABS, 4}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
-            {M::BCS, A::REL, &_::BCS, &_::REL, 2}, {M::LDA, A::YIZ, &_::LDA, &_::YIZ, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::LDY, A::ZPX, &_::LDY, &_::ZPX, 4}, {M::LDA, A::ZPX, &_::LDA, &_::ZPX, 4}, {M::LDX, A::ZPY, &_::LDX, &_::ZPY, 4}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CLV, A::IMP, &_::CLV, &_::IMP, 2}, {M::LDA, A::ABY, &_::LDA, &_::ABY, 4}, {M::TSX, A::IMP, &_::TSX, &_::IMP, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::LDY, A::ABX, &_::LDY, &_::ABX, 4}, {M::LDA, A::ABX, &_::LDA, &_::ABX, 4}, {M::LDX, A::ABY, &_::LDX, &_::ABY, 4}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
-            {M::CPY, A::IMM, &_::CPY, &_::IMM, 2}, {M::CMP, A::XIZ, &_::CMP, &_::XIZ, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CPY, A::ZPG, &_::CPY, &_::ZPG, 3}, {M::CMP, A::ZPG, &_::CMP, &_::ZPG, 3}, {M::DEC, A::ZPG, &_::DEC, &_::ZPG, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::INY, A::IMP, &_::INY, &_::IMP, 2}, {M::CMP, A::IMM, &_::CMP, &_::IMM, 2}, {M::DEX, A::IMP, &_::DEX, &_::IMP, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CPY, A::ABS, &_::CPY, &_::ABS, 4}, {M::CMP, A::ABS, &_::CMP, &_::ABS, 4}, {M::DEC, A::ABS, &_::DEC, &_::ABS, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
-            {M::BNE, A::REL, &_::BNE, &_::REL, 2}, {M::CMP, A::YIZ, &_::CMP, &_::YIZ, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CMP, A::ZPX, &_::CMP, &_::ZPX, 4}, {M::DEC, A::ZPX, &_::DEC, &_::ZPX, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CLD, A::IMP, &_::CLD, &_::IMP, 2}, {M::CMP, A::ABY, &_::CMP, &_::ABY, 4}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CMP, A::ABX, &_::CMP, &_::ABX, 4}, {M::DEC, A::ABX, &_::DEC, &_::ABX, 7}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
-            {M::CPX, A::IMM, &_::CPX, &_::IMM, 2}, {M::SBC, A::XIZ, &_::SBC, &_::XIZ, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CPX, A::ZPG, &_::CPX, &_::ZPG, 3}, {M::SBC, A::ZPG, &_::SBC, &_::ZPG, 3}, {M::INC, A::ZPG, &_::INC, &_::ZPG, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::INX, A::IMP, &_::INX, &_::IMP, 2}, {M::SBC, A::IMM, &_::SBC, &_::IMM, 2}, {M::NOP, A::IMP, &_::NOP, &_::IMP, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CPX, A::ABS, &_::CPX, &_::ABS, 4}, {M::SBC, A::ABS, &_::SBC, &_::ABS, 4}, {M::INC, A::ABS, &_::INC, &_::ABS, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0},
-            {M::BEQ, A::REL, &_::BEQ, &_::REL, 2}, {M::SBC, A::YIZ, &_::SBC, &_::YIZ, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::SBC, A::ZPX, &_::SBC, &_::ZPX, 4}, {M::INC, A::ZPX, &_::INC, &_::ZPX, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::SED, A::IMP, &_::SED, &_::IMP, 2}, {M::SBC, A::ABY, &_::SBC, &_::ABY, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::SBC, A::ABX, &_::SBC, &_::ABX, 4}, {M::INC, A::ABX, &_::INC, &_::ABX, 7}, {M::___, A::IMP, &_::___, &_::IMP, 0},
-        }};
-
-    public:
-        /* GETTERS */
-        word get_PC () const;
-        byte get_AC () const;
-        byte get_XR () const;
-        byte get_YR () const;
-        byte get_SR () const;
-        byte get_SP () const;
-        const Current& get_current () const;
-        static const std::array<Instruction, 256>& get_instruction_table (); 
     };
 
     class CPU_Trace
@@ -238,51 +143,102 @@ namespace MOS_6502
 
     std::vector <std::string> disassembler (const std::span<std::uint8_t>& memory, std::uint16_t offset = 0);
     std::uint16_t disassemble_line (std::string& result, const std::span<std::uint8_t>& memory, std::uint16_t rom_index);
+
+    class CPU
+    {
+    public:
+        using read_cb = std::function <byte(const word)>;
+        using write_cb = std::function <void(const word, const byte)>;
+        
+        CPU (read_cb, write_cb);
+
+        int update (void);
+        void reset (void);
+
+    private:
+
+        read_cb  read;
+        write_cb write;
+
+        word PC;    // program counter
+        byte AC;    // accumulator
+        byte XR;    // x register
+        byte YR;    // y register
+        byte SR;    // status register
+        byte SP;    // stack pointer
+
+
+        void set_flag   (const Flag, const bool);
+        void stack_push (const byte val);
+        byte stack_pop  (void);
+
+        Current current;
+
+        /* OPCODES */
+        void BRK (void); void ORA (void); void ASL (void); void PHP (void); void BPL (void);
+        void CLC (void); void JSR (void); void AND (void); void BIT (void); void ROL (void); 
+        void PLP (void); void BMI (void); void SEC (void); void RTI (void); void EOR (void);
+        void LSR (void); void PHA (void); void JMP (void); void BVC (void); void CLI (void);
+        void RTS (void); void PLA (void); void ADC (void); void ROR (void); void BVS (void);
+        void SEI (void); void STA (void); void STY (void); void STX (void); void DEY (void);
+        void TXA (void); void BCC (void); void TYA (void); void TXS (void); void LDY (void); 
+        void LDA (void); void LDX (void); void TAY (void); void TAX (void); void BCS (void); 
+        void CLV (void); void TSX (void); void CPY (void); void CMP (void); void DEC (void); 
+        void INY (void); void DEX (void); void BNE (void); void CLD (void); void CPX (void); 
+        void SBC (void); void INC (void); void INX (void); void NOP (void); void BEQ (void); 
+        void SED (void); void ___ (void); // ___ = illegal
+
+        /* ADDRESSING MODES */
+        void ACC (void); // accumulator 
+        void ABS (void); // absolute
+        void ABX (void); // absoulte X-indexed
+        void ABY (void); // absolute Y-indexed
+        void IMM (void); // immediate
+        void IMP (void); // implied
+        void IND (void); // indirect
+        void XIZ (void); // X-indexed indirect zeropage address
+        void YIZ (void); // Y-indexed indirect zeropage address
+        void REL (void); // relative
+        void ZPG (void); // zeropage
+        void ZPX (void); // zeropage X-indexed
+        void ZPY (void); // zeropage Y-indexed
+
+        using _ = CPU;
+        using M = Mnemonic;
+        using A = Mode;
+        
+    public:
+
+        static constexpr std::array<Instruction, 256> instruction_table
+        {{
+            {M::BRK, A::IMP, &_::BRK, &_::IMP, 7}, {M::ORA, A::XIZ, &_::ORA, &_::XIZ, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::ORA, A::ZPG, &_::ORA, &_::ZPG, 3}, {M::ASL, A::ZPG, &_::ASL, &_::ZPG, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::PHP, A::IMP, &_::PHP, &_::IMP, 3}, {M::ORA, A::IMM, &_::ORA, &_::IMM, 2}, {M::ASL, A::ACC, &_::ASL, &_::ACC, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::ORA, A::ABS, &_::ORA, &_::ABS, 4}, {M::ASL, A::ABS, &_::ASL, &_::ABS, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
+            {M::BPL, A::REL, &_::BPL, &_::REL, 2}, {M::ORA, A::YIZ, &_::ORA, &_::YIZ, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::ORA, A::ZPX, &_::ORA, &_::ZPX, 4}, {M::ASL, A::ZPX, &_::ASL, &_::ZPX, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CLC, A::IMP, &_::CLC, &_::IMP, 2}, {M::ORA, A::ABY, &_::ORA, &_::ABY, 4}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::ORA, A::ABX, &_::ORA, &_::ABX, 4}, {M::ASL, A::ABX, &_::ASL, &_::ABX, 7}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
+            {M::JSR, A::ABS, &_::JSR, &_::ABS, 6}, {M::AND, A::XIZ, &_::AND, &_::XIZ, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::BIT, A::ZPG, &_::BIT, &_::ZPG, 3}, {M::AND, A::ZPG, &_::AND, &_::ZPG, 3}, {M::ROL, A::ZPG, &_::ROL, &_::ZPG, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::PLP, A::IMP, &_::PLP, &_::IMP, 4}, {M::AND, A::IMM, &_::AND, &_::IMM, 2}, {M::ROL, A::ACC, &_::ROL, &_::ACC, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::BIT, A::ABS, &_::BIT, &_::ABS, 4}, {M::AND, A::ABS, &_::AND, &_::ABS, 4}, {M::ROL, A::ABS, &_::ROL, &_::ABS, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
+            {M::BMI, A::REL, &_::BMI, &_::REL, 2}, {M::AND, A::YIZ, &_::AND, &_::YIZ, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::AND, A::ZPX, &_::AND, &_::ZPX, 4}, {M::ROL, A::ZPX, &_::ROL, &_::ZPX, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::SEC, A::IMP, &_::SEC, &_::IMP, 2}, {M::AND, A::ABY, &_::AND, &_::ABY, 4}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::AND, A::ABX, &_::AND, &_::ABX, 4}, {M::ROL, A::ABX, &_::ROL, &_::ABX, 7}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
+            {M::RTI, A::IMP, &_::RTI, &_::IMP, 6}, {M::EOR, A::XIZ, &_::EOR, &_::XIZ, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::EOR, A::ZPG, &_::EOR, &_::ZPG, 3}, {M::LSR, A::ZPG, &_::LSR, &_::ZPG, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::PHA, A::IMP, &_::PHA, &_::IMP, 3}, {M::EOR, A::IMM, &_::EOR, &_::IMM, 2}, {M::LSR, A::ACC, &_::LSR, &_::ACC, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::JMP, A::ABS, &_::JMP, &_::ABS, 3}, {M::EOR, A::ABS, &_::EOR, &_::ABS, 4}, {M::LSR, A::ABS, &_::LSR, &_::ABS, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
+            {M::BVC, A::REL, &_::BVC, &_::REL, 2}, {M::EOR, A::YIZ, &_::EOR, &_::YIZ, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::EOR, A::ZPX, &_::EOR, &_::ZPX, 4}, {M::LSR, A::ZPX, &_::LSR, &_::ZPX, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CLI, A::IMP, &_::CLI, &_::IMP, 2}, {M::EOR, A::ABY, &_::EOR, &_::ABY, 4}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::EOR, A::ABX, &_::EOR, &_::ABX, 4}, {M::LSR, A::ABX, &_::LSR, &_::ABX, 7}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
+            {M::RTS, A::IMP, &_::RTS, &_::IMP, 6}, {M::ADC, A::XIZ, &_::ADC, &_::XIZ, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::ADC, A::ZPG, &_::ADC, &_::ZPG, 3}, {M::ROR, A::ZPG, &_::ROR, &_::ZPG, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::PLA, A::IMP, &_::PLA, &_::IMP, 4}, {M::ADC, A::IMM, &_::ADC, &_::IMM, 2}, {M::ROR, A::ACC, &_::ROR, &_::ACC, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::JMP, A::IND, &_::JMP, &_::IND, 5}, {M::ADC, A::ABS, &_::ADC, &_::ABS, 4}, {M::ROR, A::ABS, &_::ROR, &_::ABS, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
+            {M::BVS, A::REL, &_::BVS, &_::REL, 2}, {M::ADC, A::YIZ, &_::ADC, &_::YIZ, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::ADC, A::ZPX, &_::ADC, &_::ZPX, 4}, {M::ROR, A::ZPX, &_::ROR, &_::ZPX, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::SEI, A::IMP, &_::SEI, &_::IMP, 2}, {M::ADC, A::ABY, &_::ADC, &_::ABY, 4}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::ADC, A::ABX, &_::ADC, &_::ABX, 4}, {M::ROR, A::ABX, &_::ROR, &_::ABX, 7}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
+            {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::STA, A::XIZ, &_::STA, &_::XIZ, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::STY, A::ZPG, &_::STY, &_::ZPG, 3}, {M::STA, A::ZPG, &_::STA, &_::ZPG, 3}, {M::STX, A::ZPG, &_::STX, &_::ZPG, 3}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::DEY, A::IMP, &_::DEY, &_::IMP, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::TXA, A::IMP, &_::TXA, &_::IMP, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::STY, A::ABS, &_::STY, &_::ABS, 4}, {M::STA, A::ABS, &_::STA, &_::ABS, 4}, {M::STX, A::ABS, &_::STX, &_::ABS, 4}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
+            {M::BCC, A::REL, &_::BCC, &_::REL, 2}, {M::STA, A::YIZ, &_::STA, &_::YIZ, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::STY, A::ZPX, &_::STY, &_::ZPX, 4}, {M::STA, A::ZPX, &_::STA, &_::ZPX, 4}, {M::STX, A::ZPY, &_::STX, &_::ZPY, 4}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::TYA, A::IMP, &_::TYA, &_::IMP, 2}, {M::STA, A::ABY, &_::STA, &_::ABY, 5}, {M::TXS, A::IMP, &_::TXS, &_::IMP, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::STA, A::ABX, &_::STA, &_::ABX, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
+            {M::LDY, A::IMM, &_::LDY, &_::IMM, 2}, {M::LDA, A::XIZ, &_::LDA, &_::XIZ, 6}, {M::LDX, A::IMM, &_::LDX, &_::IMM, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::LDY, A::ZPG, &_::LDY, &_::ZPG, 3}, {M::LDA, A::ZPG, &_::LDA, &_::ZPG, 3}, {M::LDX, A::ZPG, &_::LDX, &_::ZPG, 3}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::TAY, A::IMP, &_::TAY, &_::IMP, 2}, {M::LDA, A::IMM, &_::LDA, &_::IMM, 2}, {M::TAX, A::IMP, &_::TAX, &_::IMP, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::LDY, A::ABS, &_::LDY, &_::ABS, 4}, {M::LDA, A::ABS, &_::LDA, &_::ABS, 4}, {M::LDX, A::ABS, &_::LDX, &_::ABS, 4}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
+            {M::BCS, A::REL, &_::BCS, &_::REL, 2}, {M::LDA, A::YIZ, &_::LDA, &_::YIZ, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::LDY, A::ZPX, &_::LDY, &_::ZPX, 4}, {M::LDA, A::ZPX, &_::LDA, &_::ZPX, 4}, {M::LDX, A::ZPY, &_::LDX, &_::ZPY, 4}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CLV, A::IMP, &_::CLV, &_::IMP, 2}, {M::LDA, A::ABY, &_::LDA, &_::ABY, 4}, {M::TSX, A::IMP, &_::TSX, &_::IMP, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::LDY, A::ABX, &_::LDY, &_::ABX, 4}, {M::LDA, A::ABX, &_::LDA, &_::ABX, 4}, {M::LDX, A::ABY, &_::LDX, &_::ABY, 4}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
+            {M::CPY, A::IMM, &_::CPY, &_::IMM, 2}, {M::CMP, A::XIZ, &_::CMP, &_::XIZ, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CPY, A::ZPG, &_::CPY, &_::ZPG, 3}, {M::CMP, A::ZPG, &_::CMP, &_::ZPG, 3}, {M::DEC, A::ZPG, &_::DEC, &_::ZPG, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::INY, A::IMP, &_::INY, &_::IMP, 2}, {M::CMP, A::IMM, &_::CMP, &_::IMM, 2}, {M::DEX, A::IMP, &_::DEX, &_::IMP, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CPY, A::ABS, &_::CPY, &_::ABS, 4}, {M::CMP, A::ABS, &_::CMP, &_::ABS, 4}, {M::DEC, A::ABS, &_::DEC, &_::ABS, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
+            {M::BNE, A::REL, &_::BNE, &_::REL, 2}, {M::CMP, A::YIZ, &_::CMP, &_::YIZ, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CMP, A::ZPX, &_::CMP, &_::ZPX, 4}, {M::DEC, A::ZPX, &_::DEC, &_::ZPX, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CLD, A::IMP, &_::CLD, &_::IMP, 2}, {M::CMP, A::ABY, &_::CMP, &_::ABY, 4}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CMP, A::ABX, &_::CMP, &_::ABX, 4}, {M::DEC, A::ABX, &_::DEC, &_::ABX, 7}, {M::___, A::IMP, &_::___, &_::IMP, 0}, 
+            {M::CPX, A::IMM, &_::CPX, &_::IMM, 2}, {M::SBC, A::XIZ, &_::SBC, &_::XIZ, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CPX, A::ZPG, &_::CPX, &_::ZPG, 3}, {M::SBC, A::ZPG, &_::SBC, &_::ZPG, 3}, {M::INC, A::ZPG, &_::INC, &_::ZPG, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::INX, A::IMP, &_::INX, &_::IMP, 2}, {M::SBC, A::IMM, &_::SBC, &_::IMM, 2}, {M::NOP, A::IMP, &_::NOP, &_::IMP, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CPX, A::ABS, &_::CPX, &_::ABS, 4}, {M::SBC, A::ABS, &_::SBC, &_::ABS, 4}, {M::INC, A::ABS, &_::INC, &_::ABS, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0},
+            {M::BEQ, A::REL, &_::BEQ, &_::REL, 2}, {M::SBC, A::YIZ, &_::SBC, &_::YIZ, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::SBC, A::ZPX, &_::SBC, &_::ZPX, 4}, {M::INC, A::ZPX, &_::INC, &_::ZPX, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::SED, A::IMP, &_::SED, &_::IMP, 2}, {M::SBC, A::ABY, &_::SBC, &_::ABY, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::SBC, A::ABX, &_::SBC, &_::ABX, 4}, {M::INC, A::ABX, &_::INC, &_::ABX, 7}, {M::___, A::IMP, &_::___, &_::IMP, 0},
+        }};
+
+        /* GETTERS */
+        word get_PC () const;
+        byte get_AC () const;
+        byte get_XR () const;
+        byte get_YR () const;
+        byte get_SR () const;
+        byte get_SP () const;
+        const Current& get_current () const;
+        static const std::array<Instruction, 256>& get_instruction_table ();
+    };
 }
 
 #endif
-
-
-
-// 6502 Test #00
-// Heather Justice 3/11/08
-// Tests instructions LDA/LDX/LDY & STA/STX/STY with all addressing modes.
-//
-// EXPECTED RESULTS:
-//  $022A = 0x55 (decimal 85)
-//  A = 0x55, X = 0x2A, Y = 0x73
-
-// LDA #85 
-// LDX #42 
-// LDY #115 
-// STA $81 
-// LDA #$01 
-// STA $61 
-// LDA $81 
-// STA $0910 
-// LDA $0910 
-// STA $56,X 
-// LDA $56,X 
-// STY $60 
-// STA ($60),Y 
-// LDA ($60),Y 
-// STA $07ff,X 
-// LDA $07ff,X 
-// STA $07ff,Y 
-// LDA $07ff,Y 
-// STA ($36,X) 
-// LDA ($36,X) 
-// STX $50 
-// LDX $60 
-// LDY $50 
-// STX $0913 
-// LDX $0913 
-// STY $0914 
-// LDY $0914 
-// STY $2D,X 
-// STX $77,Y 
-// LDY $2D,X 
-// LDX $77,Y 
-// LDY $08A0,X 
-// LDX $08A1,Y 
-// STA $0200,X 
