@@ -61,16 +61,23 @@ void GUI::registers ()
 void GUI::code_window ()
 {
     ImGui::Begin("code", 0);
-    ImGuiListClipper clipper;
-
-    clipper.Begin(code.size(), ImGui::GetTextLineHeightWithSpacing());
-
-    while (clipper.Step())
+    if (ImGui::BeginTable("##code table", 1,  ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg))
     {
-        for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; ++row)
+        ImGuiListClipper clipper;
+        clipper.Begin(code.size(), ImGui::GetTextLineHeightWithSpacing());
+
+        while (clipper.Step())
         {
-            ImGui::Text("%s", code[row].c_str());
+            for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; ++row)
+            {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                if (code[row].first == cpu.get_PC())
+                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, IM_COL32(0, 255, 0, 100));
+                ImGui::Text("%s", code[row].second.c_str());
+            }
         }
+        ImGui::EndTable();
     }
     ImGui::End();
 }
@@ -85,55 +92,55 @@ void GUI::trace_window ()
     if (ImGui::BeginTable("##trace table", 6, ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
     {
     
-    ImGui::TableSetupScrollFreeze(0, 1); // Make top row always visible
-    for (const auto& c : std::span (register_names.cbegin(), register_names.cend()).subspan(0, 5))
-        ImGui::TableSetupColumn(c);
-    ImGui::TableSetupColumn("Code");
-    ImGui::TableHeadersRow();
-    ImGuiListClipper clipper;
-    clipper.Begin(trace.size());
-    while (clipper.Step())
-    {
-        for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
+        ImGui::TableSetupScrollFreeze(0, 1); // Make top row always visible
+        for (const auto& c : std::span (register_names.cbegin(), register_names.cend()).subspan(0, 5))
+            ImGui::TableSetupColumn(c);
+        ImGui::TableSetupColumn("Code");
+        ImGui::TableHeadersRow();
+        ImGuiListClipper clipper;
+        clipper.Begin(trace.size());
+        while (clipper.Step())
         {
-            try 
+            for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
             {
-                const auto& t = trace.get_trace_v().at(row);
-                ImGui::TableNextRow();
+                try 
+                {
+                    const auto& t = trace.get_trace_v().at(row);
+                    ImGui::TableNextRow();
 
-                ImGui::TableSetColumnIndex(0);
-                ImGui::TextUnformatted(t.at(0).c_str());
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::TextUnformatted(t.at(0).c_str());
 
-                ImGui::TableSetColumnIndex(1);
-                ImGui::TextUnformatted(t.at(1).c_str());
+                    ImGui::TableSetColumnIndex(1);
+                    ImGui::TextUnformatted(t.at(1).c_str());
 
-                ImGui::TableSetColumnIndex(2);
-                ImGui::TextUnformatted(t.at(2).c_str());
+                    ImGui::TableSetColumnIndex(2);
+                    ImGui::TextUnformatted(t.at(2).c_str());
 
-                ImGui::TableSetColumnIndex(3);
-                ImGui::TextUnformatted(t.at(3).c_str());
+                    ImGui::TableSetColumnIndex(3);
+                    ImGui::TextUnformatted(t.at(3).c_str());
 
-                ImGui::TableSetColumnIndex(4);
-                ImGui::TextUnformatted(t.at(4).c_str());
+                    ImGui::TableSetColumnIndex(4);
+                    ImGui::TextUnformatted(t.at(4).c_str());
 
-                ImGui::TableSetColumnIndex(5);
-                ImGui::TextUnformatted(t.at(5).c_str());
-            } 
-            catch (std::out_of_range& e)
-            {
-                std::cerr << e.what() << '\n';
+                    ImGui::TableSetColumnIndex(5);
+                    ImGui::TextUnformatted(t.at(5).c_str());
+                } 
+                catch (std::out_of_range& e)
+                {
+                    std::cerr << e.what() << '\n';
+                }
             }
         }
-    }
 
-    // scroll to bottom when running
-    if (trace.size() != prev_size)
-    {
+        // scroll to bottom when running
+        if (trace.size() != prev_size)
+        {
 
-        ImGui::SetScrollY(trace.size() * 255);
-        prev_size = trace.size();
-    }
-    
+            ImGui::SetScrollY(trace.size() * 255);
+            prev_size = trace.size();
+        }
+        
         ImGui::EndTable();
     }
     ImGui::End();

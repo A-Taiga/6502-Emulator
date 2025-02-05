@@ -141,8 +141,8 @@ namespace MOS_6502
         {Mode::ZPY, "ZPY"},
     };
 
-    std::vector <std::string> disassembler (const std::span<std::uint8_t>& memory, std::uint16_t offset = 0);
-    std::uint16_t disassemble_line (std::string& result, const std::span<std::uint8_t>& memory, std::uint16_t rom_index);
+    std::vector <std::pair<std::uint16_t, std::string>> disassembler (const std::span<std::uint8_t>& memory, std::uint16_t offset = 0);
+    std::uint16_t disassemble_line (std::pair<std::uint16_t, std::string>& result, const std::span<std::uint8_t>& memory, std::uint16_t rom_index);
 
     class CPU
     {

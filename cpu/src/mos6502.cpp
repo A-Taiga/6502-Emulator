@@ -772,7 +772,7 @@ MOS_6502::CPU_Trace::CPU_Trace (MOS_6502::CPU& _cpu, const std::span<std::uint8_
 
 void MOS_6502::CPU_Trace::trace ()
 {
-    std::string line {};
+    std::pair<std::uint16_t, std::string> line;
     MOS_6502::disassemble_line(line, rom, 0x7FFF & cpu.get_current().pc);
     std::vector <std::string> temp = 
     {
@@ -781,7 +781,7 @@ void MOS_6502::CPU_Trace::trace ()
         std::format ("{:02X}", cpu.get_XR()),
         std::format ("{:02X}", cpu.get_YR()),
         std::format ("{:02X}", cpu.get_SP()),
-        std::move(line)
+        std::move(line.second)
     };
     traces.push_back (std::move (temp));
 }
@@ -796,21 +796,21 @@ std::vector<MOS_6502::CPU_Trace::trace_type>& MOS_6502::CPU_Trace::get_trace_v (
     return traces;
 }
 
-std::vector <std::string> MOS_6502::disassembler (const std::span<std::uint8_t>& memory, std::uint16_t offset)
+std::vector <std::pair<std::uint16_t, std::string>> MOS_6502::disassembler (const std::span<std::uint8_t>& memory, std::uint16_t offset)
 {
-    std::vector <std::string> result {};
+    std::vector <std::pair<std::uint16_t, std::string>> result {};
     std::uint16_t rom_index = offset;
 
     while (rom_index < Memory::rom_size)
     {
-        std::string line{};
+        std::pair<std::uint16_t, std::string> line;
         rom_index = disassemble_line(line, memory, rom_index);
         result.push_back (std::move(line));
     }
     return result;
 }
 
-std::uint16_t MOS_6502::disassemble_line (std::string& result, const std::span<std::uint8_t>& memory, std::uint16_t rom_index)
+std::uint16_t MOS_6502::disassemble_line (std::pair<std::uint16_t, std::string>& result, const std::span<std::uint8_t>& memory, std::uint16_t rom_index)
 {
     const auto&         ins      = MOS_6502::CPU::instruction_table[static_cast<std::size_t>(memory[rom_index])];
     const std::uint16_t index    = rom_index + Memory::rom_size;
@@ -823,51 +823,51 @@ std::uint16_t MOS_6502::disassemble_line (std::string& result, const std::span<s
     {
         case MOS_6502::Mode::IMP:
         case MOS_6502::Mode::ACC:
-            result = std::format ("{:04X}: {:02X} {:>9}", index, b0, mnemonic);
+            result = {index, std::format ("{:04X}: {:02X} {:>9}", index, b0, mnemonic)};
             rom_index += 1;
             break;
         case MOS_6502::Mode::ABS:
-            result =  std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X}", index, b0, b1, b2, mnemonic, (b2 << 8 | b1));
+            result =  {index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X}", index, b0, b1, b2, mnemonic, (b2 << 8 | b1))};
             rom_index += 3;
             break;
         case MOS_6502::Mode::ABX:
-            result = std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X},X", index, b0, b1, b2, mnemonic, (b2 << 8 | b1));
+            result = {index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X},X", index, b0, b1, b2, mnemonic, (b2 << 8 | b1))};
             rom_index += 3;
             break;
         case MOS_6502::Mode::ABY:
-            result = std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X},Y", index, b0, b1, b2, mnemonic, (b2 << 8 | b1));
+            result = {index, std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X},Y", index, b0, b1, b2, mnemonic, (b2 << 8 | b1))};
             rom_index += 3;
             break;
         case MOS_6502::Mode::IMM:
-            result = std::format ("{:04X}: {:02X} {:02X} {:>6} #${:02X}", index, b0, b1, mnemonic, b1);
+            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} #${:02X}", index, b0, b1, mnemonic, b1)};
             rom_index += 2;
             break;
         case MOS_6502::Mode::IND:
-            result = std::format ("{:04X}: {:02X} {:02X} {:02X} {:s} (${:04X})", index, b0, b1, b2, mnemonic, (b2 << 8) | b1);
+            result = {index, std::format ("{:04X}: {:02X} {:02X} {:02X} {:s} (${:04X})", index, b0, b1, b2, mnemonic, (b2 << 8) | b1)};
             rom_index += 3;
             break;
         case MOS_6502::Mode::XIZ:
-            result = std::format ("{:04X}: {:02X} {:02X} {:>6} (${:02X},X)", index, b0, b1, mnemonic, b1);
+            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} (${:02X},X)", index, b0, b1, mnemonic, b1)};
             rom_index += 2;
             break;
         case MOS_6502::Mode::YIZ:
-            result = std::format ("{:04X}: {:02X} {:02X} {:>6} (${:02X}),Y", index, b0, b1, mnemonic, b1);
+            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} (${:02X}),Y", index, b0, b1, mnemonic, b1)};
             rom_index += 2;
             break;
         case MOS_6502::Mode::REL:
-            result = std::format ("{:04X}: {:02X} {:02X} {:>6} ${:04X}", index, b0, b1, mnemonic, (index+2) + b1);
+            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} ${:04X}", index, b0, b1, mnemonic, (index+2) + b1)};
             rom_index += 2;
             break;
         case MOS_6502::Mode::ZPG:
-            result = std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, b0, b1, mnemonic, b1);
+            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, b0, b1, mnemonic, b1)};
             rom_index += 2;
             break;
         case MOS_6502::Mode::ZPX:
-            result = std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X},X", index, b0, b1, mnemonic, b1);
+            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X},X", index, b0, b1, mnemonic, b1)};
             rom_index += 2;
             break;
         case MOS_6502::Mode::ZPY:
-            result = std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X},Y", index, b0, b1, mnemonic, b1);
+            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X},Y", index, b0, b1, mnemonic, b1)};
             rom_index += 2;
             break;
     }

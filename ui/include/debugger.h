@@ -54,7 +54,7 @@ private:
     MOS_6502::CPU_Trace& trace;
     Memory::ROM& rom;
     Memory::RAM& ram;
-    std::vector <std::string> code;
+    std::vector <std::pair<std::uint16_t, std::string>> code;
     File_info* current_rom;
     std::vector <File_info> roms;
     std::array <std::function<std::uint16_t(void)>, 14> register_callbacks;
