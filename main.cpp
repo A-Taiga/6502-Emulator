@@ -197,6 +197,7 @@ void cpu_thread_handler (MOS_6502::CPU& cpu, MOS_6502::CPU_Trace& trace, GUI& gu
 
         int cycles = cpu.update();
 
+        // idk if this is how you actually emulate cpu time
         auto end = std::chrono::high_resolution_clock::now();
         auto target = std::chrono::nanoseconds(cycles * 559);
 
