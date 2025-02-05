@@ -278,7 +278,8 @@ void GUI::run ()
     Hex_Editor rom_data ("ROM", rom_n, 0, rom_n, sizeof(std::uint8_t), rom.get_rom().data());
     Hex_Editor ram_data ("RAM", ram_n, 0, ram_n, sizeof(std::uint8_t), ram.get_ram().data());
 
-    Hex_Editor stack ("Stack", ram_n, 0x0100, 256, sizeof(std::uint8_t), ram.get_ram().data());
+    Hex_Editor stack_page ("Stack page", ram_n, 0x0100, 256, sizeof(std::uint8_t), ram.get_ram().data());
+    Hex_Editor zero_page  ("Zero page", ram_n, 0x0, 256, sizeof(std::uint8_t), ram.get_ram().data());
     
     while (window.is_running())
     {
@@ -301,7 +302,8 @@ void GUI::run ()
         action_bar();
         rom_data.present();
         ram_data.present();
-        stack.present();
+        stack_page.present();
+        zero_page.present();
         code_window();
         registers();
         trace_window();
