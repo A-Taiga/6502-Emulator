@@ -4,14 +4,11 @@
 #include "debugger.h"
 #include <chrono>
 #include <condition_variable>
-#include <filesystem>
 #include <mutex>
 #include <thread>
 #include "mem.h"
 #include <chrono>
 #include <thread>
-#include <filesystem>
-#include <iostream>
 
 
 /*
@@ -162,7 +159,6 @@ void cpu_thread_handler (MOS_6502::CPU& cpu, MOS_6502::CPU_Trace& trace, GUI& gu
 
 int main()
 {
-
 
     /* I don't like these */
     Memory::RAM ram{};
