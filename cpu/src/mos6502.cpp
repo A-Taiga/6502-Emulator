@@ -97,9 +97,6 @@ void MOS_6502::CPU::ABY (void)
 void MOS_6502::CPU::IMM (void)
 {
     current.address = PC++;
-    printf("%04X\n", read(current.address));
-    // current.data = read (current.address);
-    
 }
 
 // implied
