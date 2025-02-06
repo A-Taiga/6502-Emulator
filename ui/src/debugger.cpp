@@ -243,7 +243,7 @@ GUI::GUI (MOS_6502::CPU& _cpu, MOS_6502::CPU_Trace& _trace, Memory::ROM& _rom, M
                             entry.file_size()
                           );
     }
-
+ 
     register_callbacks =
     {
         [&](){return cpu.get_PC();},

@@ -613,10 +613,12 @@ void MOS_6502::CPU::CPY (void)
 void MOS_6502::CPU::CMP (void)
 {
     current.data = read (current.address);
+    const std::uint8_t result = AC - current.data;
 
     set_flag (Flag::C, AC >= current.data);
-    set_flag (Flag::Z, AC == 0x00);
-    set_flag (Flag::N, (AC - current.data) & 0x80);
+    set_flag (Flag::Z, result == 0x00);
+    set_flag (Flag::N, result & 0x80);
+
 }
 
 // decrement memory
