@@ -61,7 +61,7 @@ private:
     bool is_showing;
 
     std::uint8_t selected_value;
-    std::uint8_t selected_index;
+    std::uint16_t selected_index;
 
     std::vector <char> lookup_buffer;
 

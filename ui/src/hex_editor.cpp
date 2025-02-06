@@ -1,7 +1,22 @@
 #include "hex_editor.h"
 #include "imgui.h"
 #include <cmath>
+#include <cstdint>
 #include <format>
+
+
+
+std::uint64_t numeric_cast (const std::span<std::uint8_t>& buffer, std::size_t index, std::size_t type_size)
+{
+    std::uint64_t value {};
+    for (int i = type_size - 1, j = i + index; i >= 0; --i, --j)
+    {
+        value |= (std::uint64_t)buffer[j] << (i * 8);
+    }
+    return value;
+}
+
+
 
 
 Hex_Editor::Hex_Editor (const char* window_name, const std::size_t total_mem_size, const std::size_t begin, const std::size_t end, const std::size_t type_size,  void * const buffer)
@@ -97,7 +112,7 @@ void Hex_Editor::present (void)
             ImGui::Text ("%.*zX:", this->sizes.address_padding, (row * this->sizes.row_width) + offset);
             for (std::size_t col = 0; col < 16; col++)
             {
-                std::size_t index = row * this->sizes.row_width + col;
+                std::uint16_t index = row * this->sizes.row_width + col;
                 float byte_pos_x = (this->sizes.address_text_width + this->sizes.glyph_width) + (this->sizes.byte_text_width +  this->sizes.glyph_width) * col;
                 if (col >= 8)
                     byte_pos_x += this->sizes.glyph_width;
@@ -155,26 +170,33 @@ void Hex_Editor::present (void)
         lookup = true;
 
     ImGui::NewLine();
-    ImGui::TextUnformatted(std::format ("Hex     {:{}}{:02X}", " ", 5, selected_value).c_str());
-    ImGui::TextUnformatted(std::format ("Binary  {:{}}{:08b}", " ", 5, selected_value).c_str());
-    ImGui::TextUnformatted(std::format ("Octal   {:{}}{:o}", " ", 5, selected_value).c_str());
-    ImGui::TextUnformatted(std::format ("uint8   {:{}}{:}", " ", 5, selected_value).c_str());
-    ImGui::TextUnformatted(std::format ("int8    {:{}}{:}", " ", 5, (std::int8_t)selected_value).c_str());
+
+    ImGui::TextUnformatted(std::format("Binary {:{}}{:08b}", " ", 5, selected_value).c_str());
+    ImGui::Text("Hex   %*s%02X", 6, " ", selected_value);
+    ImGui::Text("Octal %*s%o", 6, " ", selected_value);
+    ImGui::Text("uint8 %*s%u", 6, " ", selected_value);
+    ImGui::Text("int8  %*s%d", 6, " ", (std::int8_t)selected_value);
     
+
     if (selected_index + 1 >= view.size())
-    {
-        ImGui::TextUnformatted(std::format ("uint16  {:{}}EOF", " ", 5).c_str());
-        ImGui::TextUnformatted(std::format ("int16   {:{}}EOF", " ", 5).c_str());
-    }
+        ImGui::Text("uint16 %*s%s", 5, " ", "EOF");
     else
-    {
-        /* the 6502 is little-endian so display the values that way */
-        ImGui::TextUnformatted(std::format ("uint16  {:{}}{:}", " ", 5, (this->view[selected_index+1] << 8) | (selected_value )).c_str());
-        ImGui::TextUnformatted(std::format ("int16   {:{}}{:}", " ", 5, (this->view[selected_index+1] << 8) | (selected_value )).c_str());
-    }
-    
-    ImGui::TextUnformatted(std::format ("ASCII    {:{}}{:}", " ", 5, (char)selected_value).c_str());
+        ImGui::Text("uint16 %*s%u", 5, " ", (std::uint16_t)numeric_cast(view, selected_index, sizeof(std::uint16_t)));
+
+    if (selected_index + 4 > view.size())
+        ImGui::Text("uint32 %*s%s", 5, " ", "EOF");
+    else
+        ImGui::Text("uint32 %*s%u", 5, " ", (std::uint32_t)numeric_cast(view, selected_index, sizeof(uint32_t)));
+
+    if (selected_index + 8 > view.size())
+        ImGui::Text("uint64 %*s%s", 5, " ", "EOF");
+    else
+        ImGui::Text("uint64 %*s%lu", 5, " ", numeric_cast(view, selected_index, sizeof(std::uint64_t)));
+
+
+    ImGui::TextUnformatted(std::format ("ASCII {:{}}{:}", " ", 6, (char)selected_value).c_str());
     ImGui::End();
+
 }
 
 int Hex_Editor::input_callback(ImGuiInputTextCallbackData* data)

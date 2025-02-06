@@ -60,7 +60,7 @@ void GUI::registers ()
 
 void GUI::code_window ()
 {
-    ImGui::Begin("code", 0);
+    ImGui::Begin("Code", 0);
     if (ImGui::BeginTable("##code table", 1,  ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg))
     {
         ImGuiListClipper clipper;
@@ -87,7 +87,7 @@ void GUI::trace_window ()
 
     static std::size_t prev_size = 0;
 
-    ImGui::Begin("trace", 0, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoScrollbar);
+    ImGui::Begin("Trace", 0, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoScrollbar);
     
     if (ImGui::BeginTable("##trace table", 6, ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
     {
