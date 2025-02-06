@@ -97,6 +97,9 @@ void MOS_6502::CPU::ABY (void)
 void MOS_6502::CPU::IMM (void)
 {
     current.address = PC++;
+    printf("%04X\n", read(current.address));
+    // current.data = read (current.address);
+    
 }
 
 // implied
@@ -603,10 +606,11 @@ void MOS_6502::CPU::TSX (void)
 void MOS_6502::CPU::CPY (void)
 {
     current.data = read (current.address);
+    const std::uint8_t result = YR - current.data;
 
     set_flag (Flag::C, YR >= current.data);
-    set_flag (Flag::Z, YR == 0x00);
-    set_flag (Flag::N, (YR - current.data) & 0x80);
+    set_flag (Flag::Z, result == 0x00);
+    set_flag (Flag::N, result & 0x80);
 }
 
 // compare accumulator
@@ -618,7 +622,6 @@ void MOS_6502::CPU::CMP (void)
     set_flag (Flag::C, AC >= current.data);
     set_flag (Flag::Z, result == 0x00);
     set_flag (Flag::N, result & 0x80);
-
 }
 
 // decrement memory
@@ -680,14 +683,14 @@ void MOS_6502::CPU::CLD (void)
 void MOS_6502::CPU::CPX (void)
 {
     current.data = read (current.address);
+    const std::uint8_t result = XR - current.data;
 
     set_flag (Flag::C, XR >= current.data);
-    set_flag (Flag::Z, XR == current.data);
-    set_flag (Flag::N, (XR - current.data) & 0x80);
+    set_flag (Flag::Z, result == 0x00);
+    set_flag (Flag::N, result & 0x80);
 }
 
 // subtract with carry
-// TODO ~(result < 0x00) look at the nes docs
 void MOS_6502::CPU::SBC (void)
 {
     current.data = read (current.address);
@@ -778,12 +781,12 @@ void MOS_6502::CPU_Trace::trace ()
     MOS_6502::disassemble_line(line, rom, 0x7FFF & cpu.get_current().pc);
     std::vector <std::string> temp = 
     {
-        std::format ("{:04X}", cpu.get_PC()),
-        std::format ("{:02X}", cpu.get_AC()),
-        std::format ("{:02X}", cpu.get_XR()),
-        std::format ("{:02X}", cpu.get_YR()),
-        std::format ("{:02X}", cpu.get_SP()),
-        std::move(line.second)
+        std::move(line.second),
+        std::format (" {:02X} ", cpu.get_XR()),
+        std::format (" {:02X} ", cpu.get_YR()),
+        std::format (" {:02X} ", cpu.get_AC()),
+        std::format (" {:02X} ", cpu.get_SP()),
+        std::format (" {:04X} ", cpu.get_PC())
     };
     traces.push_back (std::move (temp));
 }

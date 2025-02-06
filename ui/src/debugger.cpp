@@ -26,8 +26,8 @@ namespace
     // idk how else to do this
     static auto roms_path = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().string() + "/roms/";
     static auto font_path = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().string() + "/imgui/misc/fonts/Cousine-Regular.ttf";
-    static constexpr std::array <const char*, 14> register_names = {"PC", "AC", "XR", "YR", "SP", " ", "C", "Z", "I", "D", "B", "_", "V", "N"};
-    static constexpr std::array <const char*, 14> format_strings = {"%04X", "%02X", "%02X", "%02X", "%02X", "%c", "%d", "%d", "%d", "%d", "%d", "%d", "%d", "%d"};
+    static constexpr std::array <const char*, 14> register_names = {" XR ", " YR ", " AC ", " SP ", " PC ", " ", "C", "Z", "I", "D", "B", "_", "V", "N"};
+    static constexpr std::array <const char*, 14> format_strings = {" %02X ", " %02X ", " %02X ", " %02X ", " %04X ", "%c", "%d", "%d", "%d", "%d", "%d", "%d", "%d", "%d"};
 }
 
 void GUI::registers ()
@@ -93,9 +93,9 @@ void GUI::trace_window ()
     {
     
         ImGui::TableSetupScrollFreeze(0, 1); // Make top row always visible
+        ImGui::TableSetupColumn("Code");
         for (const auto& c : std::span (register_names.cbegin(), register_names.cend()).subspan(0, 5))
             ImGui::TableSetupColumn(c);
-        ImGui::TableSetupColumn("Code");
         ImGui::TableHeadersRow();
         ImGuiListClipper clipper;
         clipper.Begin(trace.size());
@@ -122,9 +122,10 @@ void GUI::trace_window ()
 
                     ImGui::TableSetColumnIndex(4);
                     ImGui::TextUnformatted(t.at(4).c_str());
-
+                    
                     ImGui::TableSetColumnIndex(5);
                     ImGui::TextUnformatted(t.at(5).c_str());
+
                 } 
                 catch (std::out_of_range& e)
                 {
@@ -246,11 +247,11 @@ GUI::GUI (MOS_6502::CPU& _cpu, MOS_6502::CPU_Trace& _trace, Memory::ROM& _rom, M
  
     register_callbacks =
     {
-        [&](){return cpu.get_PC();},
-        [&](){return cpu.get_AC();},
         [&](){return cpu.get_XR();},
         [&](){return cpu.get_YR();},
+        [&](){return cpu.get_AC();},
         [&](){return cpu.get_SP();},
+        [&](){return cpu.get_PC();},
         [](){return ' ';},
         [&](){return (cpu.get_SR() >> 0) & 1;},
         [&](){return (cpu.get_SR() >> 1) & 1;},
