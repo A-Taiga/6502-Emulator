@@ -107,25 +107,12 @@ void GUI::trace_window ()
                 {
                     const auto& t = trace.get_trace_v().at(row);
                     ImGui::TableNextRow();
+                    for (int i = 0; i < (int)t.size(); ++i)
+                    {
+                        ImGui::TableSetColumnIndex(i);
+                        ImGui::TextUnformatted(t.at(i).c_str());
 
-                    ImGui::TableSetColumnIndex(0);
-                    ImGui::TextUnformatted(t.at(0).c_str());
-
-                    ImGui::TableSetColumnIndex(1);
-                    ImGui::TextUnformatted(t.at(1).c_str());
-
-                    ImGui::TableSetColumnIndex(2);
-                    ImGui::TextUnformatted(t.at(2).c_str());
-
-                    ImGui::TableSetColumnIndex(3);
-                    ImGui::TextUnformatted(t.at(3).c_str());
-
-                    ImGui::TableSetColumnIndex(4);
-                    ImGui::TextUnformatted(t.at(4).c_str());
-                    
-                    ImGui::TableSetColumnIndex(5);
-                    ImGui::TextUnformatted(t.at(5).c_str());
-
+                    }
                 } 
                 catch (std::out_of_range& e)
                 {
