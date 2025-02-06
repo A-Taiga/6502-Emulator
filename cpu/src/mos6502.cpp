@@ -28,6 +28,7 @@ int MOS_6502::CPU::update (void)
 void MOS_6502::CPU::reset (void)
 {
     set_flag (Flag::I, true);
+    set_flag (Flag::_, true);
     PC = (read(reset_vector) << 8) | read(reset_vector+1);
     AC = 0;
     XR = 0;
@@ -783,7 +784,15 @@ void MOS_6502::CPU_Trace::trace ()
         std::format (" {:02X} ", cpu.get_YR()),
         std::format (" {:02X} ", cpu.get_AC()),
         std::format (" {:02X} ", cpu.get_SP()),
-        std::format (" {:04X} ", cpu.get_PC())
+        std::format (" {:04X} ", cpu.get_PC()),
+        std::format ("{:}", (cpu.get_SR() >> 7) & 1),
+        std::format ("{:}", (cpu.get_SR() >> 6) & 1),
+        std::format ("{:}", (cpu.get_SR() >> 5) & 1),
+        std::format ("{:}", (cpu.get_SR() >> 4) & 1),
+        std::format ("{:}", (cpu.get_SR() >> 3) & 1),
+        std::format ("{:}", (cpu.get_SR() >> 2) & 1),
+        std::format ("{:}", (cpu.get_SR() >> 1) & 1),
+        std::format ("{:}", (cpu.get_SR() >> 0) & 1),
     };
     traces.push_back (std::move (temp));
 }

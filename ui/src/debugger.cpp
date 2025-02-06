@@ -26,13 +26,13 @@ namespace
     // idk how else to do this
     static auto roms_path = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().string() + "/roms/";
     static auto font_path = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().string() + "/imgui/misc/fonts/Cousine-Regular.ttf";
-    static constexpr std::array <const char*, 14> register_names = {" XR ", " YR ", " AC ", " SP ", " PC ", " ", "C", "Z", "I", "D", "B", "_", "V", "N"};
-    static constexpr std::array <const char*, 14> format_strings = {" %02X ", " %02X ", " %02X ", " %02X ", " %04X ", "%c", "%d", "%d", "%d", "%d", "%d", "%d", "%d", "%d"};
 }
 
 void GUI::registers ()
 {
-    
+    static constexpr std::array <const char*, 14> register_names = {"XR", "YR", "AC", "SP", "PC", " ", "N","V","_","B","D","I","Z","C"};
+    static constexpr std::array <const char*, 14> format_strings = {"%02X", "%02X", "%02X", "%02X", "%04X", "%c", "%d", "%d", "%d", "%d", "%d", "%d", "%d", "%d"};
+
     static constexpr int table_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
     const auto n = register_names.size();
     ImGui::Begin("Registers");
@@ -50,7 +50,10 @@ void GUI::registers ()
         for (std::size_t i = 0; i < n; ++i)
         {
             ImGui::TableSetColumnIndex(i);
-            ImGui::Text(format_strings[i], register_callbacks[i]());
+            int val = register_callbacks[i]();
+            if (i >= 6 && val == 1)
+                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, IM_COL32(0, 255, 0, 100));
+            ImGui::Text(format_strings[i], val);
         }
 
         ImGui::EndTable();
@@ -84,17 +87,17 @@ void GUI::code_window ()
 
 void GUI::trace_window ()
 {
-
+    static constexpr std::array <const char*, 14> cols = {" Code ", " XR ", " YR ", " AC ", " SP ", " PC ", "N","V","_","B","D","I","Z","C"};
     static std::size_t prev_size = 0;
+
 
     ImGui::Begin("Trace", 0, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoScrollbar);
     
-    if (ImGui::BeginTable("##trace table", 6, ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
+    if (ImGui::BeginTable("##trace table", 14, ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
     {
     
         ImGui::TableSetupScrollFreeze(0, 1); // Make top row always visible
-        ImGui::TableSetupColumn("Code");
-        for (const auto& c : std::span (register_names.cbegin(), register_names.cend()).subspan(0, 5))
+        for (const auto& c : cols)
             ImGui::TableSetupColumn(c);
         ImGui::TableHeadersRow();
         ImGuiListClipper clipper;
@@ -110,8 +113,9 @@ void GUI::trace_window ()
                     for (int i = 0; i < (int)t.size(); ++i)
                     {
                         ImGui::TableSetColumnIndex(i);
+                        if (i >= 6 && t.at(i) == "1")
+                            ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, IM_COL32(0, 255, 0, 100));
                         ImGui::TextUnformatted(t.at(i).c_str());
-
                     }
                 } 
                 catch (std::out_of_range& e)
@@ -240,14 +244,14 @@ GUI::GUI (MOS_6502::CPU& _cpu, MOS_6502::CPU_Trace& _trace, Memory::ROM& _rom, M
         [&](){return cpu.get_SP();},
         [&](){return cpu.get_PC();},
         [](){return ' ';},
-        [&](){return (cpu.get_SR() >> 0) & 1;},
-        [&](){return (cpu.get_SR() >> 1) & 1;},
-        [&](){return (cpu.get_SR() >> 2) & 1;},
-        [&](){return (cpu.get_SR() >> 3) & 1;},
-        [&](){return (cpu.get_SR() >> 4) & 1;},
-        [&](){return (cpu.get_SR() >> 5) & 1;},
-        [&](){return (cpu.get_SR() >> 6) & 1;},
         [&](){return (cpu.get_SR() >> 7) & 1;},
+        [&](){return (cpu.get_SR() >> 6) & 1;},
+        [&](){return (cpu.get_SR() >> 5) & 1;},
+        [&](){return (cpu.get_SR() >> 4) & 1;},
+        [&](){return (cpu.get_SR() >> 3) & 1;},
+        [&](){return (cpu.get_SR() >> 2) & 1;},
+        [&](){return (cpu.get_SR() >> 1) & 1;},
+        [&](){return (cpu.get_SR() >> 0) & 1;},
     };
 }
 
@@ -258,7 +262,7 @@ void GUI::run ()
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-    io.Fonts->AddFontFromFileTTF(font_path.c_str(), 25);
+    io.Fonts->AddFontFromFileTTF(font_path.c_str(), 24);
     ImGui::StyleColorsDark();
 
     ImGui_ImplSDL2_InitForOpenGL(window.get_window (), window.get_gl_context ());
