@@ -38,6 +38,8 @@ namespace MOS_6502
     static constexpr word stk_begin = 0x0100;
     static constexpr word reset_vector = 0xFFFC;
 
+    using line_type = std::tuple<std::uint16_t, std::string, bool>;
+
 
     enum class Mnemonic
     {
@@ -96,15 +98,15 @@ namespace MOS_6502
     public:
         using trace_type = std::vector<std::string>;
         CPU_Trace(CPU& _cpu, const std::span<std::uint8_t> _rom);
-        ~CPU_Trace(){};
-        void trace();
-        void reset ();
+        ~CPU_Trace (){};
+        void trace ();
+        void reset (const std::span<std::uint8_t> _rom);
         std::size_t size() const {return traces.size();}
         std::vector<trace_type>& get_trace_v ();
 
     private:
         CPU& cpu;
-        std::span<std::uint8_t> rom;
+        std::span <std::uint8_t> rom;
         std::vector <trace_type> traces;
     };
 
@@ -141,8 +143,10 @@ namespace MOS_6502
         {Mode::ZPY, "ZPY"},
     };
 
-    std::vector <std::pair<std::uint16_t, std::string>> disassembler (const std::span<std::uint8_t>& memory, std::uint16_t offset = 0);
-    std::uint16_t disassemble_line (std::pair<std::uint16_t, std::string>& result, const std::span<std::uint8_t>& memory, std::uint16_t rom_index, const std::uint16_t offset);
+
+    std::vector <line_type> disassembler (const std::span<std::uint8_t>& memory, std::uint16_t offset = 0);
+    std::uint16_t disassemble_line (line_type& result, const std::span<std::uint8_t>& memory, std::uint16_t rom_index, const std::uint16_t offset);
+
 
     class CPU
     {
@@ -155,6 +159,9 @@ namespace MOS_6502
         int update (void);
         void reset (void);
 
+        bool check_flag (Flag flag);
+
+        word old_PC; // for tracing
     private:
 
         read_cb  read;
@@ -167,12 +174,11 @@ namespace MOS_6502
         byte SR;    // status register
         byte SP;    // stack pointer
 
-
         void set_flag   (const Flag, const bool);
         void stack_push (const byte val);
         byte stack_pop  (void);
 
-        Current current;
+        struct Current current;
 
         /* OPCODES */
         void BRK (void); void ORA (void); void ASL (void); void PHP (void); void BPL (void);

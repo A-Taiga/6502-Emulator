@@ -16,6 +16,7 @@ MOS_6502::CPU::CPU (read_cb read, write_cb write)
 int MOS_6502::CPU::update (void)
 {
     set_flag(Flag::_, true);
+    old_PC = PC;
     current.instruction = &instruction_table[read (PC++)];
     current.cycles = current.instruction->cycle_count;
     (this->*current.instruction->mode)();
@@ -34,6 +35,12 @@ void MOS_6502::CPU::reset (void)
     SR = 0;
     SP = 0xFF;
     current = {};
+}
+
+
+bool MOS_6502::CPU::check_flag (Flag flag)
+{
+    return SR & static_cast <byte> (flag);
 }
 
 void MOS_6502::CPU::set_flag(const Flag Flag, const bool condition)
@@ -762,42 +769,53 @@ byte MOS_6502::CPU::get_XR () const {return XR;}
 byte MOS_6502::CPU::get_YR () const {return YR;}
 byte MOS_6502::CPU::get_SR () const {return SR;}
 byte MOS_6502::CPU::get_SP () const {return SP;}
+
 const MOS_6502::Current& MOS_6502::CPU::get_current () const {return current;}
 const std::array<MOS_6502::Instruction, 256>& MOS_6502::CPU::get_instruction_table () {return instruction_table;}
 
-
-MOS_6502::CPU_Trace::CPU_Trace (MOS_6502::CPU& _cpu, const std::span<std::uint8_t> _rom)
+/* CPU TRACE */
+MOS_6502::CPU_Trace::CPU_Trace (MOS_6502::CPU& _cpu, const std::span <std::uint8_t> _rom)
 : cpu {_cpu}
 , rom {_rom}
 {}
 
 void MOS_6502::CPU_Trace::trace ()
 {
-    std::pair<std::uint16_t, std::string> line;
-    MOS_6502::disassemble_line(line, rom, 0x7FFF & cpu.get_PC(), 0x7000);
-    std::vector <std::string> temp = 
+
+/*
+    TODO:
+    Find a better way than dissasembling the multiple times
+    It's because when put into an array of dissasembled code,
+    they are not stored at their actual program indicies.
+*/
+
+    MOS_6502::line_type line;
+    MOS_6502::disassemble_line(line, rom, cpu.old_PC & 0x7FFF, 0x7000);
+    std::vector <std::string> temp =
     {
-        std::move(line.second),
+        std::get<1>(line).c_str(),
         std::format (" {:02X} ", cpu.get_XR()),
         std::format (" {:02X} ", cpu.get_YR()),
         std::format (" {:02X} ", cpu.get_AC()),
         std::format (" {:02X} ", cpu.get_SP()),
         std::format (" {:04X} ", cpu.get_PC()),
-        std::format ("{:}", (cpu.get_SR() >> 7) & 1),
-        std::format ("{:}", (cpu.get_SR() >> 6) & 1),
-        std::format ("{:}", (cpu.get_SR() >> 5) & 1),
-        std::format ("{:}", (cpu.get_SR() >> 4) & 1),
-        std::format ("{:}", (cpu.get_SR() >> 3) & 1),
-        std::format ("{:}", (cpu.get_SR() >> 2) & 1),
-        std::format ("{:}", (cpu.get_SR() >> 1) & 1),
-        std::format ("{:}", (cpu.get_SR() >> 0) & 1),
+        std::to_string(cpu.check_flag(Flag::N)),
+        std::to_string(cpu.check_flag(Flag::V)),
+        std::to_string(cpu.check_flag(Flag::_)),
+        std::to_string(cpu.check_flag(Flag::B)),
+        std::to_string(cpu.check_flag(Flag::D)),
+        std::to_string(cpu.check_flag(Flag::I)),
+        std::to_string(cpu.check_flag(Flag::Z)),
+        std::to_string(cpu.check_flag(Flag::C)),
     };
+
     traces.push_back (std::move (temp));
 }
 
-void MOS_6502::CPU_Trace::reset ()
+void MOS_6502::CPU_Trace::reset (const std::span <std::uint8_t> _rom)
 {
     traces = {};
+    rom = _rom;
 }
 
 std::vector<MOS_6502::CPU_Trace::trace_type>& MOS_6502::CPU_Trace::get_trace_v ()
@@ -805,20 +823,20 @@ std::vector<MOS_6502::CPU_Trace::trace_type>& MOS_6502::CPU_Trace::get_trace_v (
     return traces;
 }
 
-std::vector <std::pair<std::uint16_t, std::string>> MOS_6502::disassembler (const std::span<std::uint8_t>& memory, std::uint16_t offset)
+std::vector <MOS_6502::line_type> MOS_6502::disassembler (const std::span<std::uint8_t>& memory, std::uint16_t offset)
 {
-    std::vector <std::pair<std::uint16_t, std::string>> result {};
+    std::vector <std::tuple<std::uint16_t, std::string, bool>> result {};
     std::uint16_t rom_index = offset;
     while (rom_index < memory.size())
     {
-        std::pair<std::uint16_t, std::string> line;
+        line_type line;
         rom_index = disassemble_line(line, memory, rom_index, offset);
         result.push_back (std::move(line));
     }
     return result;
 }
 
-std::uint16_t MOS_6502::disassemble_line (std::pair<std::uint16_t, std::string>& result, const std::span<std::uint8_t>& memory, std::uint16_t rom_index, const std::uint16_t offset)
+std::uint16_t MOS_6502::disassemble_line (MOS_6502::line_type& result, const std::span<std::uint8_t>& memory, std::uint16_t rom_index, const std::uint16_t offset)
 {
     (void)offset;
     const auto&         ins      = MOS_6502::CPU::instruction_table[static_cast<std::size_t>(memory[rom_index])];
@@ -832,51 +850,51 @@ std::uint16_t MOS_6502::disassemble_line (std::pair<std::uint16_t, std::string>&
     {
         case MOS_6502::Mode::IMP:
         case MOS_6502::Mode::ACC:
-            result = {index, std::format ("{:04X}: {:02X} {:>9}", index, b0, mnemonic)};
+            result = {index, std::format ("{:04X}: {:02X} {:>9}", index, b0, mnemonic).c_str(), false};
             rom_index += 1;
             break;
         case MOS_6502::Mode::ABS:
-            result =  {index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X}", index, b0, b1, b2, mnemonic, (b2 << 8 | b1))};
+            result =  {index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X}", index, b0, b1, b2, mnemonic, (b2 << 8 | b1)), false};
             rom_index += 3;
             break;
         case MOS_6502::Mode::ABX:
-            result = {index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X},X", index, b0, b1, b2, mnemonic, (b2 << 8 | b1))};
+            result = {index,std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X},X", index, b0, b1, b2, mnemonic, (b2 << 8 | b1)), false};
             rom_index += 3;
             break;
         case MOS_6502::Mode::ABY:
-            result = {index, std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X},Y", index, b0, b1, b2, mnemonic, (b2 << 8 | b1))};
+            result = {index, std::format ("{:04X}: {:02X} {:02X} {:02X} {:} ${:04X},Y", index, b0, b1, b2, mnemonic, (b2 << 8 | b1)), false};
             rom_index += 3;
             break;
         case MOS_6502::Mode::IMM:
-            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} #${:02X}", index, b0, b1, mnemonic, b1)};
+            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} #${:02X}", index, b0, b1, mnemonic, b1), false};
             rom_index += 2;
             break;
         case MOS_6502::Mode::IND:
-            result = {index, std::format ("{:04X}: {:02X} {:02X} {:02X} {:s} (${:04X})", index, b0, b1, b2, mnemonic, (b2 << 8) | b1)};
+            result = {index, std::format ("{:04X}: {:02X} {:02X} {:02X} {:s} (${:04X})", index, b0, b1, b2, mnemonic, (b2 << 8) | b1), false};
             rom_index += 3;
             break;
         case MOS_6502::Mode::XIZ:
-            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} (${:02X},X)", index, b0, b1, mnemonic, b1)};
+            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} (${:02X},X)", index, b0, b1, mnemonic, b1), false};
             rom_index += 2;
             break;
         case MOS_6502::Mode::YIZ:
-            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} (${:02X}),Y", index, b0, b1, mnemonic, b1)};
+            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} (${:02X}),Y", index, b0, b1, mnemonic, b1), false};
             rom_index += 2;
             break;
         case MOS_6502::Mode::REL:
-            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} ${:04X}", index, b0, b1, mnemonic, (index+2) + b1)};
+            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} ${:04X}", index, b0, b1, mnemonic, (index+2) + b1), false};
             rom_index += 2;
             break;
         case MOS_6502::Mode::ZPG:
-            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, b0, b1, mnemonic, b1)};
+            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X}", index, b0, b1, mnemonic, b1), false};
             rom_index += 2;
             break;
         case MOS_6502::Mode::ZPX:
-            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X},X", index, b0, b1, mnemonic, b1)};
+            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X},X", index, b0, b1, mnemonic, b1), false};
             rom_index += 2;
             break;
         case MOS_6502::Mode::ZPY:
-            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X},Y", index, b0, b1, mnemonic, b1)};
+            result = {index, std::format ("{:04X}: {:02X} {:02X} {:>6} ${:02X},Y", index, b0, b1, mnemonic, b1), false};
             rom_index += 2;
             break;
     }

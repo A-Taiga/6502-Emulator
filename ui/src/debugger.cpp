@@ -76,9 +76,9 @@ void GUI::code_window ()
             {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
-                if (code[row].first == (0x7FFF & cpu.get_PC())) // TODO let user set entry point of 0x7000
+                if (std::get<0>(code[row]) == (0x7FFF & cpu.get_PC())) // TODO let user set entry point of 0x7000
                     ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, IM_COL32(0, 255, 0, 100));
-                ImGui::Text("%s", code[row].second.c_str());
+                ImGui::Text("%s", std::get<1>(code[row]).c_str());
             }
         }
         ImGui::EndTable();
@@ -176,10 +176,12 @@ void GUI::action_bar ()
         ram.reset();
         rom.load(current_rom->file_path, current_rom->file_size);
         cpu.reset();
-        trace.reset();
 
         if (rom.is_loaded())
-            code = MOS_6502::disassembler(rom, 0x7000); // TODO let user select offset 
+        {
+            code = MOS_6502::disassembler(rom, 0x7000);  // TODO let user select offset 
+            trace.reset (rom);
+        }
         else
             printf("ERROR\n");
     }
@@ -188,6 +190,7 @@ void GUI::action_bar ()
 
     if(ImGui::Button(button_label.c_str()))
     {
+        if (rom.is_loaded())
         {
             std::lock_guard<std::mutex> lock (mu);
             is_paused = !is_paused;

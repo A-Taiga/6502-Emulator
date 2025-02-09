@@ -24,7 +24,7 @@ int main()
         [&bus] (const auto address, const auto data) {bus.write(address, data);}
     );
 
-    MOS_6502::CPU_Trace trace (cpu, rom);
+    MOS_6502::CPU_Trace trace (cpu, {});
 
     GUI gui (cpu, trace, rom, ram);
 

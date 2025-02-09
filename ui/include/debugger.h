@@ -1,6 +1,7 @@
 #ifndef DEBUGGER_H
 #define DEBUGGER_H
 
+#include "mos6502.h"
 #include "window.h"
 #include <condition_variable>
 
@@ -49,7 +50,7 @@ private:
     MOS_6502::CPU_Trace& trace;
     Memory& rom;
     Memory& ram;
-    std::vector <std::pair<std::uint16_t, std::string>> code;
+    std::vector <MOS_6502::line_type> code;
     File_info* current_rom;
     std::vector <File_info> roms;
     std::array <std::function<std::uint16_t(void)>, 14> register_callbacks;
