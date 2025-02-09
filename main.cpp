@@ -47,7 +47,8 @@ void cpu_thread_handler (MOS_6502::CPU& cpu, GUI& gui, MOS_6502::trace_type& tra
             std::unique_lock <std::mutex> lock (gui.mu);
             gui.cv.wait(lock, [&gui](){return !gui.is_paused || gui.step;});
         }
-    
+        
+
         auto begin = std::chrono::high_resolution_clock::now();
 
         int cycles = cpu.update();
@@ -69,6 +70,14 @@ void cpu_thread_handler (MOS_6502::CPU& cpu, GUI& gui, MOS_6502::trace_type& tra
         {
             std::lock_guard <std::mutex> lock(gui.mu);
             gui.step = false;
+        }
+        gui.cv.notify_all();
+
+
+        if (map.contains(cpu.get_PC() & 0x7FFF) &&  std::get<2>(map.at(cpu.get_PC() & 0x7FFF)))
+        {
+           std::lock_guard lock (gui.mu);
+           gui.is_paused = true;
         }
         gui.cv.notify_all();
     }

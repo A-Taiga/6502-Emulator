@@ -31,7 +31,6 @@ public:
     bool is_paused = true;
     bool step = false;
 
-
     // GUI (Emulator_state& data);
     GUI (MOS_6502::CPU& _cpu, Memory& _rom, Memory& _ram, MOS_6502::trace_type& _traces, MOS_6502::code_map_type& _code_map);
     void run ();

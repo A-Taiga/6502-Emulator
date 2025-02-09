@@ -27,8 +27,6 @@ namespace
     // idk how else to do this
     static auto roms_path = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().string() + "/roms/";
     static auto font_path = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().string() + "/imgui/misc/fonts/Cousine-Regular.ttf";
-
-    static std::string button_label = "PLAY";
 }
 
 void GUI::registers ()
@@ -71,7 +69,7 @@ void GUI::code_window ()
     {
         ImGui::TableSetupColumn("BRK", ImGuiTableColumnFlags_WidthFixed);
         ImGuiListClipper clipper;
-        clipper.Begin(code.size(), ImGui::GetTextLineHeightWithSpacing());
+        clipper.Begin(code.size());
 
         while (clipper.Step())
         {
@@ -206,16 +204,12 @@ void GUI::action_bar ()
 
     ImGui::SameLine();
 
-    if(ImGui::Button(button_label.c_str()))
+    if(ImGui::Button(is_paused ? "PLAY" : "PAUSE"))
     {
         if (rom.is_loaded())
         {
             std::lock_guard<std::mutex> lock (mu);
             is_paused = !is_paused;
-            if (is_paused)
-                button_label = "PLAY";
-            else
-                button_label = "PAUSE";
         }
         cv.notify_all();
     }
@@ -313,7 +307,6 @@ void GUI::run ()
             SDL_Delay (10);
             continue;
         }
-
 
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
