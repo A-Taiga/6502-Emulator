@@ -129,7 +129,6 @@ void GUI::trace_window ()
         // scroll to bottom when running
         if (trace.size() != prev_size)
         {
-
             ImGui::SetScrollY(trace.size() * 255);
             prev_size = trace.size();
         }
