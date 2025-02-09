@@ -6,6 +6,7 @@
 #include <print>
 
 
+
 MOS_6502::CPU::CPU (read_cb read, write_cb write)
 : read{read}
 , write{write}
@@ -775,7 +776,7 @@ MOS_6502::CPU_Trace::CPU_Trace (MOS_6502::CPU& _cpu, const std::span<std::uint8_
 void MOS_6502::CPU_Trace::trace ()
 {
     std::pair<std::uint16_t, std::string> line;
-    MOS_6502::disassemble_line(line, rom, 0x7FFF & cpu.get_current().pc);
+    MOS_6502::disassemble_line(line, rom, 0x7FFF & cpu.get_current().pc, 0x7000);
     std::vector <std::string> temp = 
     {
         std::move(line.second),
@@ -810,25 +811,25 @@ std::vector <std::pair<std::uint16_t, std::string>> MOS_6502::disassembler (cons
 {
     std::vector <std::pair<std::uint16_t, std::string>> result {};
     std::uint16_t rom_index = offset;
-
     while (rom_index < memory.size())
     {
         std::pair<std::uint16_t, std::string> line;
-        rom_index = disassemble_line(line, memory, rom_index);
+        rom_index = disassemble_line(line, memory, rom_index, offset);
         result.push_back (std::move(line));
     }
     return result;
 }
 
-std::uint16_t MOS_6502::disassemble_line (std::pair<std::uint16_t, std::string>& result, const std::span<std::uint8_t>& memory, std::uint16_t rom_index)
+std::uint16_t MOS_6502::disassemble_line (std::pair<std::uint16_t, std::string>& result, const std::span<std::uint8_t>& memory, std::uint16_t rom_index, const std::uint16_t offset)
 {
+    (void)offset;
     const auto&         ins      = MOS_6502::CPU::instruction_table[static_cast<std::size_t>(memory[rom_index])];
-    const std::uint16_t index    = rom_index + memory.size();
+    const std::uint16_t index    = rom_index;
     const char*         mnemonic = MOS_6502::mnemonic_map.at(ins.mnemonic);
     const std::uint8_t  b0       = memory[rom_index];
     const std::uint8_t  b1       = rom_index + 1 < memory.size() ? memory[rom_index+1] : 0;
     const std::uint8_t  b2       = rom_index + 2 < memory.size() ? memory[rom_index+2] : 0;
-    
+
     switch (ins.addr_mode)
     {
         case MOS_6502::Mode::IMP:

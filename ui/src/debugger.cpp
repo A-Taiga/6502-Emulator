@@ -76,7 +76,7 @@ void GUI::code_window ()
             {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
-                if (code[row].first == cpu.get_PC())
+                if (code[row].first == (0x7FFF & cpu.get_PC())) // TODO let user set entry point of 0x7000
                     ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, IM_COL32(0, 255, 0, 100));
                 ImGui::Text("%s", code[row].second.c_str());
             }
@@ -180,7 +180,7 @@ void GUI::action_bar ()
         trace.reset();
 
         if (rom.is_loaded())
-            code = MOS_6502::disassembler(rom, 0x7000);
+            code = MOS_6502::disassembler(rom, 0x7000); // TODO let user select offset 
         else
             printf("ERROR\n");
     }
@@ -220,7 +220,7 @@ GUI::GUI (MOS_6502::CPU& _cpu, MOS_6502::CPU_Trace& _trace, Memory& _rom, Memory
 , trace {_trace}
 , rom {_rom}
 , ram {_ram}
-, code {MOS_6502::disassembler(rom, 0x7000)}
+, code {}
 , current_rom {nullptr}
 , roms {}
 {

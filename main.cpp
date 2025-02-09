@@ -15,7 +15,7 @@ void cpu_thread_handler (MOS_6502::CPU& cpu, MOS_6502::CPU_Trace& trace, GUI& gu
 int main()
 {
     Memory rom {UINT16_MAX/2};
-    Memory ram {UINT16_MAX/2};
+    Memory ram {UINT16_MAX};
 
     Bus bus (rom, ram);
 

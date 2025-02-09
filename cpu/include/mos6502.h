@@ -31,7 +31,6 @@ using word = std::uint16_t;
 
 // namespace Memory{class ROM;}
 
-class Memory;
 
 namespace MOS_6502
 {
@@ -144,7 +143,7 @@ namespace MOS_6502
     };
 
     std::vector <std::pair<std::uint16_t, std::string>> disassembler (const std::span<std::uint8_t>& memory, std::uint16_t offset = 0);
-    std::uint16_t disassemble_line (std::pair<std::uint16_t, std::string>& result, const std::span<std::uint8_t>& memory, std::uint16_t rom_index);
+    std::uint16_t disassemble_line (std::pair<std::uint16_t, std::string>& result, const std::span<std::uint8_t>& memory, std::uint16_t rom_index, const std::uint16_t offset);
 
     class CPU
     {

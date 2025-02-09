@@ -5,6 +5,7 @@
 
 Memory::Memory (const std::uint16_t size)
 : mem (size, 0)
+, loaded {false}
 {
 }
 
@@ -23,8 +24,14 @@ bool Memory::load (const std::string& path, const std::size_t size)
         return false;
     }
 
+    if (size > UINT16_MAX+1)
+    {
+        std::cerr << path << " is larger that max rom size" << std::endl;
+        loaded = false;
+        return false;
+    }
     mem.resize (size);
-    file.read (reinterpret_cast<char*> (mem.data()), size);
+    file.read (reinterpret_cast<char*> (mem.data()), mem.size());
 
     file.close();
     loaded = true;
@@ -45,7 +52,7 @@ void Memory::write (const std::uint16_t address, const std::uint8_t data)
 
 void Memory::reset ()
 {
-    mem = {0};
+    std::ranges::fill(mem, 0);
 }
 
 std::uint8_t* Memory::data ()
