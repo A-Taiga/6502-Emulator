@@ -33,7 +33,7 @@ public:
 
 
     // GUI (Emulator_state& data);
-    GUI (MOS_6502::CPU& _cpu, MOS_6502::CPU_Trace& _trace, Memory& _rom, Memory& _ram);
+    GUI (MOS_6502::CPU& _cpu, Memory& _rom, Memory& _ram, MOS_6502::trace_type& _traces, MOS_6502::code_map_type& _code_map);
     void run ();
     bool is_running() {return window.is_running();}
 
@@ -47,9 +47,10 @@ private:
 
     Window window;
     MOS_6502::CPU& cpu;
-    MOS_6502::CPU_Trace& trace;
     Memory& rom;
     Memory& ram;
+    MOS_6502::trace_type& traces;
+    MOS_6502::code_map_type& code_map;
     std::vector <MOS_6502::line_type> code;
     File_info* current_rom;
     std::vector <File_info> roms;

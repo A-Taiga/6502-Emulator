@@ -38,7 +38,7 @@ void MOS_6502::CPU::reset (void)
 }
 
 
-bool MOS_6502::CPU::check_flag (Flag flag)
+bool MOS_6502::CPU::check_flag (Flag flag) const
 {
     return SR & static_cast <byte> (flag);
 }
@@ -773,78 +773,28 @@ byte MOS_6502::CPU::get_SP () const {return SP;}
 const MOS_6502::Current& MOS_6502::CPU::get_current () const {return current;}
 const std::array<MOS_6502::Instruction, 256>& MOS_6502::CPU::get_instruction_table () {return instruction_table;}
 
-/* CPU TRACE */
-MOS_6502::CPU_Trace::CPU_Trace (MOS_6502::CPU& _cpu, const std::span <std::uint8_t> _rom)
-: cpu {_cpu}
-, rom {_rom}
-{}
 
-void MOS_6502::CPU_Trace::trace ()
-{
-
-/*
-    TODO:
-    Find a better way than dissasembling the multiple times
-    It's because when put into an array of dissasembled code,
-    they are not stored at their actual program indicies.
-*/
-
-    MOS_6502::line_type line;
-    MOS_6502::disassemble_line(line, rom, cpu.old_PC & 0x7FFF, 0x7000);
-    std::vector <std::string> temp =
-    {
-        std::get<1>(line).c_str(),
-        std::format (" {:02X} ", cpu.get_XR()),
-        std::format (" {:02X} ", cpu.get_YR()),
-        std::format (" {:02X} ", cpu.get_AC()),
-        std::format (" {:02X} ", cpu.get_SP()),
-        std::format (" {:04X} ", cpu.get_PC()),
-        std::to_string(cpu.check_flag(Flag::N)),
-        std::to_string(cpu.check_flag(Flag::V)),
-        std::to_string(cpu.check_flag(Flag::_)),
-        std::to_string(cpu.check_flag(Flag::B)),
-        std::to_string(cpu.check_flag(Flag::D)),
-        std::to_string(cpu.check_flag(Flag::I)),
-        std::to_string(cpu.check_flag(Flag::Z)),
-        std::to_string(cpu.check_flag(Flag::C)),
-    };
-
-    traces.push_back (std::move (temp));
-}
-
-void MOS_6502::CPU_Trace::reset (const std::span <std::uint8_t> _rom)
-{
-    traces = {};
-    rom = _rom;
-}
-
-std::vector<MOS_6502::CPU_Trace::trace_type>& MOS_6502::CPU_Trace::get_trace_v ()
-{
-    return traces;
-}
-
-std::vector <MOS_6502::line_type> MOS_6502::disassembler (const std::span<std::uint8_t>& memory, std::uint16_t offset)
+std::vector <MOS_6502::line_type> MOS_6502::disassemble (const std::span<std::uint8_t>& rom, std::uint16_t offset)
 {
     std::vector <std::tuple<std::uint16_t, std::string, bool>> result {};
     std::uint16_t rom_index = offset;
-    while (rom_index < memory.size())
+    while (rom_index < rom.size())
     {
         line_type line;
-        rom_index = disassemble_line(line, memory, rom_index, offset);
+        rom_index = disassemble_line(line, rom, rom_index);
         result.push_back (std::move(line));
     }
     return result;
 }
 
-std::uint16_t MOS_6502::disassemble_line (MOS_6502::line_type& result, const std::span<std::uint8_t>& memory, std::uint16_t rom_index, const std::uint16_t offset)
+std::uint16_t MOS_6502::disassemble_line (MOS_6502::line_type& result, const std::span<std::uint8_t>& rom, std::uint16_t rom_index)
 {
-    (void)offset;
-    const auto&         ins      = MOS_6502::CPU::instruction_table[static_cast<std::size_t>(memory[rom_index])];
+    const auto&         ins      = MOS_6502::CPU::instruction_table[static_cast<std::size_t>(rom[rom_index])];
     const std::uint16_t index    = rom_index;
     const char*         mnemonic = MOS_6502::mnemonic_map.at(ins.mnemonic);
-    const std::uint8_t  b0       = memory[rom_index];
-    const std::uint8_t  b1       = rom_index + 1 < memory.size() ? memory[rom_index+1] : 0;
-    const std::uint8_t  b2       = rom_index + 2 < memory.size() ? memory[rom_index+2] : 0;
+    const std::uint8_t  b0       = rom[rom_index];
+    const std::uint8_t  b1       = rom_index + 1 < rom.size() ? rom[rom_index+1] : 0;
+    const std::uint8_t  b2       = rom_index + 2 < rom.size() ? rom[rom_index+2] : 0;
 
     switch (ins.addr_mode)
     {
@@ -899,4 +849,41 @@ std::uint16_t MOS_6502::disassemble_line (MOS_6502::line_type& result, const std
             break;
     }
     return rom_index;
+}
+
+MOS_6502::code_map_type MOS_6502::code_mapper (const std::vector<line_type>& code)
+{
+    code_map_type result;
+    for (const auto& line : code)
+        result.emplace (std::get<0>(line), line);
+    return result;
+}
+
+bool MOS_6502::trace (trace_type& traces, const code_map_type& map, const MOS_6502::CPU &  cpu)
+{
+    if (!map.contains((cpu.old_PC & 0x7FFF)))
+        return false;
+
+    const auto& [addr, code, brk] = map.at(cpu.old_PC & 0x7FFF);
+
+    std::vector <std::string> temp = 
+    {
+        code,
+        std::format (" {:02X} ", cpu.get_XR()),
+        std::format (" {:02X} ", cpu.get_YR()),
+        std::format (" {:02X} ", cpu.get_AC()),
+        std::format (" {:02X} ", cpu.get_SP()),
+        std::format (" {:04X} ", cpu.get_PC()),
+        std::to_string(cpu.check_flag(Flag::N)),
+        std::to_string(cpu.check_flag(Flag::V)),
+        std::to_string(cpu.check_flag(Flag::_)),
+        std::to_string(cpu.check_flag(Flag::B)),
+        std::to_string(cpu.check_flag(Flag::D)),
+        std::to_string(cpu.check_flag(Flag::I)),
+        std::to_string(cpu.check_flag(Flag::Z)),
+        std::to_string(cpu.check_flag(Flag::C)),
+
+    };
+    traces.push_back (std::move(temp));
+    return true;
 }

@@ -6,6 +6,7 @@
 #include <functional>
 #include <span>
 #include <string>
+#include <unordered_map>
 
 
 /*
@@ -37,9 +38,6 @@ namespace MOS_6502
 
     static constexpr word stk_begin = 0x0100;
     static constexpr word reset_vector = 0xFFFC;
-
-    using line_type = std::tuple<std::uint16_t, std::string, bool>;
-
 
     enum class Mnemonic
     {
@@ -93,23 +91,6 @@ namespace MOS_6502
         int cycles;
     };
 
-    class CPU_Trace
-    {
-    public:
-        using trace_type = std::vector<std::string>;
-        CPU_Trace(CPU& _cpu, const std::span<std::uint8_t> _rom);
-        ~CPU_Trace (){};
-        void trace ();
-        void reset (const std::span<std::uint8_t> _rom);
-        std::size_t size() const {return traces.size();}
-        std::vector<trace_type>& get_trace_v ();
-
-    private:
-        CPU& cpu;
-        std::span <std::uint8_t> rom;
-        std::vector <trace_type> traces;
-    };
-
     inline const std::unordered_map <Mnemonic, const char*> mnemonic_map = 
     {
         {Mnemonic::BRK, "BRK"}, {Mnemonic::ORA, "ORA"}, {Mnemonic::ASL, "ASL"}, {Mnemonic::PHP, "PHP"}, {Mnemonic::BPL, "BPL"},
@@ -143,11 +124,6 @@ namespace MOS_6502
         {Mode::ZPY, "ZPY"},
     };
 
-
-    std::vector <line_type> disassembler (const std::span<std::uint8_t>& memory, std::uint16_t offset = 0);
-    std::uint16_t disassemble_line (line_type& result, const std::span<std::uint8_t>& memory, std::uint16_t rom_index, const std::uint16_t offset);
-
-
     class CPU
     {
     public:
@@ -159,7 +135,7 @@ namespace MOS_6502
         int update (void);
         void reset (void);
 
-        bool check_flag (Flag flag);
+        bool check_flag (Flag flag) const;
 
         word old_PC; // for tracing
     private:
@@ -245,6 +221,21 @@ namespace MOS_6502
         const Current& get_current () const;
         static const std::array<Instruction, 256>& get_instruction_table ();
     };
+}
+
+
+
+
+namespace MOS_6502
+{
+    using line_type     = std::tuple<std::uint16_t, std::string, bool>;
+    using trace_type    = std::vector<std::vector<std::string>>;
+    using code_map_type = std::unordered_map <std::size_t, const line_type&>;
+
+    std::vector <line_type> disassemble (const std::span<std::uint8_t>& rom, std::uint16_t offset = 0);
+    std::uint16_t           disassemble_line (line_type& result, const std::span<std::uint8_t>& rom, std::uint16_t rom_index);
+    code_map_type           code_mapper (const std::vector<line_type>& code);
+    bool                    trace (trace_type& traces, const code_map_type& map, const MOS_6502::CPU &  cpu);
 }
 
 #endif

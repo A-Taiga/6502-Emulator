@@ -27,6 +27,8 @@ namespace
     // idk how else to do this
     static auto roms_path = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().string() + "/roms/";
     static auto font_path = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().string() + "/imgui/misc/fonts/Cousine-Regular.ttf";
+
+    static std::string button_label = "PLAY";
 }
 
 void GUI::registers ()
@@ -65,8 +67,9 @@ void GUI::registers ()
 void GUI::code_window ()
 {
     ImGui::Begin("Code", 0);
-    if (ImGui::BeginTable("##code table", 1,  ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg))
+    if (ImGui::BeginTable("##code table", 2,  ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg))
     {
+        ImGui::TableSetupColumn("BRK", ImGuiTableColumnFlags_WidthFixed);
         ImGuiListClipper clipper;
         clipper.Begin(code.size(), ImGui::GetTextLineHeightWithSpacing());
 
@@ -76,6 +79,17 @@ void GUI::code_window ()
             {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
+                ImGui::PushID(row);
+                ImGui::PushStyleColor(ImGuiCol_CheckMark, IM_COL32(255, 0, 0, 255));
+                if (ImGui::RadioButton("##xx", std::get<2>(code[row])))
+                {
+                    auto& brk = std::get<2>(code[row]);
+                    brk = !brk;
+                }
+                ImGui::PopStyleColor();
+                ImGui::PopID();
+                ImGui::TableSetColumnIndex(1);
+
                 if (std::get<0>(code[row]) == (0x7FFF & cpu.get_PC())) // TODO let user set entry point of 0x7000
                     ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, IM_COL32(0, 255, 0, 100));
                 ImGui::Text("%s", std::get<1>(code[row]).c_str());
@@ -102,14 +116,14 @@ void GUI::trace_window ()
             ImGui::TableSetupColumn(c);
         ImGui::TableHeadersRow();
         ImGuiListClipper clipper;
-        clipper.Begin(trace.size());
+        clipper.Begin(traces.size());
         while (clipper.Step())
         {
             for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
             {
                 try 
                 {
-                    const auto& t = trace.get_trace_v().at(row);
+                    const auto& t = traces.at(row);
                     ImGui::TableNextRow();
                     for (int i = 0; i < (int)t.size(); ++i)
                     {
@@ -127,10 +141,10 @@ void GUI::trace_window ()
         }
 
         // scroll to bottom when running
-        if (trace.size() != prev_size)
+        if (traces.size() != prev_size)
         {
-            ImGui::SetScrollY(trace.size() * 255);
-            prev_size = trace.size();
+            ImGui::SetScrollY(traces.size() * 255);
+            prev_size = traces.size();
         }
         
         ImGui::EndTable();
@@ -158,9 +172,10 @@ void GUI::rom_select_box ()
     }
 }
 
+
 void GUI::action_bar ()
 {
-    static std::string button_label = "PLAY";
+
     ImGuiWindowClass window_class;
     window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
     ImGui::SetNextWindowClass(&window_class);
@@ -170,6 +185,8 @@ void GUI::action_bar ()
 
     ImGui::SameLine();
 
+
+    // TODO: probably make this thread safe
     if (ImGui::Button("Reset"))
     {
         rom.reset();
@@ -179,8 +196,9 @@ void GUI::action_bar ()
 
         if (rom.is_loaded())
         {
-            code = MOS_6502::disassembler(rom, 0x7000);  // TODO let user select offset 
-            trace.reset (rom);
+            code = MOS_6502::disassemble(rom, 0x7000);  // TODO let user select offset
+            code_map = MOS_6502::code_mapper(code);
+            traces = {};
         }
         else
             printf("ERROR\n");
@@ -216,12 +234,13 @@ void GUI::action_bar ()
     ImGui::End();
 }
 
-GUI::GUI (MOS_6502::CPU& _cpu, MOS_6502::CPU_Trace& _trace, Memory& _rom, Memory& _ram)
+GUI::GUI (MOS_6502::CPU& _cpu, Memory& _rom, Memory& _ram, MOS_6502::trace_type& _traces, MOS_6502::code_map_type& _code_map)
 : window {"6502 Emulator", 1920, 1080}
 , cpu {_cpu}
-, trace {_trace}
 , rom {_rom}
 , ram {_ram}
+, traces {_traces}
+, code_map {_code_map}
 , code {}
 , current_rom {nullptr}
 , roms {}
@@ -294,6 +313,7 @@ void GUI::run ()
             SDL_Delay (10);
             continue;
         }
+
 
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
