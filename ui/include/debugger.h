@@ -1,7 +1,6 @@
 #ifndef DEBUGGER_H
 #define DEBUGGER_H
 
-#include "mem.h"
 #include "window.h"
 #include <condition_variable>
 
@@ -12,11 +11,7 @@ namespace MOS_6502
     class CPU_Trace;
 }
 
-namespace Memory
-{
-    class ROM;
-    class RAM;
-}
+class Memory;
 
 struct File_info
 {
@@ -37,7 +32,7 @@ public:
 
 
     // GUI (Emulator_state& data);
-    GUI (MOS_6502::CPU& _cpu, MOS_6502::CPU_Trace& _trace, Memory::ROM& _rom, Memory::RAM& _ram);
+    GUI (MOS_6502::CPU& _cpu, MOS_6502::CPU_Trace& _trace, Memory& _rom, Memory& _ram);
     void run ();
     bool is_running() {return window.is_running();}
 
@@ -52,8 +47,8 @@ private:
     Window window;
     MOS_6502::CPU& cpu;
     MOS_6502::CPU_Trace& trace;
-    Memory::ROM& rom;
-    Memory::RAM& ram;
+    Memory& rom;
+    Memory& ram;
     std::vector <std::pair<std::uint16_t, std::string>> code;
     File_info* current_rom;
     std::vector <File_info> roms;

@@ -6,7 +6,6 @@
 #include <print>
 
 
-
 MOS_6502::CPU::CPU (read_cb read, write_cb write)
 : read{read}
 , write{write}
@@ -812,7 +811,7 @@ std::vector <std::pair<std::uint16_t, std::string>> MOS_6502::disassembler (cons
     std::vector <std::pair<std::uint16_t, std::string>> result {};
     std::uint16_t rom_index = offset;
 
-    while (rom_index < Memory::rom_size)
+    while (rom_index < memory.size())
     {
         std::pair<std::uint16_t, std::string> line;
         rom_index = disassemble_line(line, memory, rom_index);
@@ -824,7 +823,7 @@ std::vector <std::pair<std::uint16_t, std::string>> MOS_6502::disassembler (cons
 std::uint16_t MOS_6502::disassemble_line (std::pair<std::uint16_t, std::string>& result, const std::span<std::uint8_t>& memory, std::uint16_t rom_index)
 {
     const auto&         ins      = MOS_6502::CPU::instruction_table[static_cast<std::size_t>(memory[rom_index])];
-    const std::uint16_t index    = rom_index + Memory::rom_size;
+    const std::uint16_t index    = rom_index + memory.size();
     const char*         mnemonic = MOS_6502::mnemonic_map.at(ins.mnemonic);
     const std::uint8_t  b0       = memory[rom_index];
     const std::uint8_t  b1       = rom_index + 1 < memory.size() ? memory[rom_index+1] : 0;

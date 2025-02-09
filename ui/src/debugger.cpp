@@ -14,6 +14,7 @@
 #include "hex_editor.h"
 #include "imgui_internal.h"
 #include "mos6502.h"
+#include "mem.h"
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL_opengles2.h>
 #else
@@ -179,7 +180,7 @@ void GUI::action_bar ()
         trace.reset();
 
         if (rom.is_loaded())
-            code = MOS_6502::disassembler(rom.get_rom(), 0x7000);
+            code = MOS_6502::disassembler(rom, 0x7000);
         else
             printf("ERROR\n");
     }
@@ -213,13 +214,13 @@ void GUI::action_bar ()
     ImGui::End();
 }
 
-GUI::GUI (MOS_6502::CPU& _cpu, MOS_6502::CPU_Trace& _trace, Memory::ROM& _rom, Memory::RAM& _ram)
+GUI::GUI (MOS_6502::CPU& _cpu, MOS_6502::CPU_Trace& _trace, Memory& _rom, Memory& _ram)
 : window {"6502 Emulator", 1920, 1080}
 , cpu {_cpu}
 , trace {_trace}
 , rom {_rom}
 , ram {_ram}
-, code {MOS_6502::disassembler(rom.get_rom(), 0x7000)}
+, code {MOS_6502::disassembler(rom, 0x7000)}
 , current_rom {nullptr}
 , roms {}
 {
@@ -271,14 +272,14 @@ void GUI::run ()
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
     
 
-    const auto rom_n = rom.get_rom().size();
-    const auto ram_n = ram.get_ram().size();
+    const auto rom_n = rom.size();
+    const auto ram_n = ram.size();
 
-    Hex_Editor rom_data ("ROM", rom_n, 0, rom_n, sizeof(std::uint8_t), rom.get_rom().data());
-    Hex_Editor ram_data ("RAM", ram_n, 0, ram_n, sizeof(std::uint8_t), ram.get_ram().data());
+    Hex_Editor rom_data ("ROM", rom_n, 0, rom_n, sizeof(std::uint8_t), rom.data());
+    Hex_Editor ram_data ("RAM", ram_n, 0, ram_n, sizeof(std::uint8_t), ram.data());
 
-    Hex_Editor stack_page ("Stack page", ram_n, 0x0100, 256, sizeof(std::uint8_t), ram.get_ram().data());
-    Hex_Editor zero_page  ("Zero page", ram_n, 0x0, 256, sizeof(std::uint8_t), ram.get_ram().data());
+    Hex_Editor stack_page ("Stack page", ram_n, 0x0100, 256, sizeof(std::uint8_t), ram.data());
+    Hex_Editor zero_page  ("Zero page", ram_n, 0x0, 256, sizeof(std::uint8_t), ram.data());
     
     while (window.is_running())
     {

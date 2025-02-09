@@ -29,7 +29,9 @@ using byte = std::uint8_t;
 using word = std::uint16_t;
 
 
-namespace Memory{class ROM;}
+// namespace Memory{class ROM;}
+
+class Memory;
 
 namespace MOS_6502
 {
