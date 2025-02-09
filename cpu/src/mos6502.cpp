@@ -16,7 +16,6 @@ MOS_6502::CPU::CPU (read_cb read, write_cb write)
 int MOS_6502::CPU::update (void)
 {
     set_flag(Flag::_, true);
-    current.pc = PC;
     current.instruction = &instruction_table[read (PC++)];
     current.cycles = current.instruction->cycle_count;
     (this->*current.instruction->mode)();
@@ -775,7 +774,7 @@ MOS_6502::CPU_Trace::CPU_Trace (MOS_6502::CPU& _cpu, const std::span<std::uint8_
 void MOS_6502::CPU_Trace::trace ()
 {
     std::pair<std::uint16_t, std::string> line;
-    MOS_6502::disassemble_line(line, rom, 0x7FFF & cpu.get_current().pc, 0x7000);
+    MOS_6502::disassemble_line(line, rom, 0x7FFF & cpu.get_PC(), 0x7000);
     std::vector <std::string> temp = 
     {
         std::move(line.second),

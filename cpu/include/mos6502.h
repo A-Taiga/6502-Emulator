@@ -89,7 +89,6 @@ namespace MOS_6502
         word address;
         byte data;
         int cycles;
-        word pc;
     };
 
     class CPU_Trace
