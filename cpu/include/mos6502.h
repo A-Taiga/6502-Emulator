@@ -210,7 +210,7 @@ namespace MOS_6502
             {M::CPX, A::IMM, &_::CPX, &_::IMM, 2}, {M::SBC, A::XIZ, &_::SBC, &_::XIZ, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CPX, A::ZPG, &_::CPX, &_::ZPG, 3}, {M::SBC, A::ZPG, &_::SBC, &_::ZPG, 3}, {M::INC, A::ZPG, &_::INC, &_::ZPG, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::INX, A::IMP, &_::INX, &_::IMP, 2}, {M::SBC, A::IMM, &_::SBC, &_::IMM, 2}, {M::NOP, A::IMP, &_::NOP, &_::IMP, 2}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::CPX, A::ABS, &_::CPX, &_::ABS, 4}, {M::SBC, A::ABS, &_::SBC, &_::ABS, 4}, {M::INC, A::ABS, &_::INC, &_::ABS, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0},
             {M::BEQ, A::REL, &_::BEQ, &_::REL, 2}, {M::SBC, A::YIZ, &_::SBC, &_::YIZ, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::SBC, A::ZPX, &_::SBC, &_::ZPX, 4}, {M::INC, A::ZPX, &_::INC, &_::ZPX, 6}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::SED, A::IMP, &_::SED, &_::IMP, 2}, {M::SBC, A::ABY, &_::SBC, &_::ABY, 5}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::___, A::IMP, &_::___, &_::IMP, 0}, {M::SBC, A::ABX, &_::SBC, &_::ABX, 4}, {M::INC, A::ABX, &_::INC, &_::ABX, 7}, {M::___, A::IMP, &_::___, &_::IMP, 0},
         }};
-
+    
         /* GETTERS */
         word get_PC () const;
         byte get_AC () const;

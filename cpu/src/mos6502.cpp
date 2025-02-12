@@ -274,16 +274,12 @@ void MOS_6502::CPU::BIT (void)
 void MOS_6502::CPU::ROL (void)
 {
     current.data = current.instruction->mode == &CPU::ACC ? AC : read (current.address);
-    
-    set_flag (Flag::C, current.data & 0x80);
 
-    std::println("{:08b}", SR);
-    std::println("BEFORE: {:08b} {:04X}", current.data, current.data);
-    current.data <<= 1;
-    std::println("AFTER:  {:08b} {:04X}", current.data, current.data);
-    current.data |= (SR & 1);
-    std::println("RESULT: {:08b} {:04X}\n", current.data, current.data);
     
+    bool temp = current.data & 0x80;
+    current.data <<= 1;
+
+    set_flag (Flag::C, temp);
     set_flag (Flag::Z, current.data == 0x00);
     set_flag (Flag::N, current.data & 0x80);
     
@@ -429,12 +425,12 @@ void MOS_6502::CPU::ADC (void)
 void MOS_6502::CPU::ROR (void)
 {
     current.data = current.instruction->mode == &CPU::ACC ? AC : read (current.address);
-
-    set_flag (Flag::C, current.data & 0x01);
     
+    const bool temp = current.data & 0x01;
     current.data >>= 1;
-    current.data |= (static_cast <byte> (Flag::C) & SR) << 7;
+    current.data |= check_flag(Flag::C) ? 0x80 : 0x0;
     
+    set_flag (Flag::C, temp);
     set_flag (Flag::Z, current.data == 0x00);
     set_flag (Flag::N, current.data & 0x80);
 

@@ -11,6 +11,8 @@
 #include <chrono>
 #include <thread>
 
+
+
 void cpu_thread_handler (MOS_6502::CPU& cpu, GUI& gui, MOS_6502::trace_type& traces, const MOS_6502::code_map_type& map);
 
 int main()
