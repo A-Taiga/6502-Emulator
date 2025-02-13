@@ -26,6 +26,7 @@ int MOS_6502::CPU::update (void)
 
 void MOS_6502::CPU::reset (void)
 {
+
     PC = (read(reset_vector_high) << 8) | read(reset_vector_low);
     AC = 0;
     XR = 0;
@@ -61,24 +62,11 @@ byte MOS_6502::CPU::stack_pop (void)
     return result;
 }
 
-/*
-A hardware interrupt (maskable IRQ and non-maskable NMI), will cause the processor to put first the address currently 
-in the program counter onto the stack (in HB-LB order), followed by the value of the status register. 
-(The stack will now contain, seen from the bottom or from the most recently added byte, SR PC-L PC-H 
-with the stack pointer pointing to the address below the stored contents of status register.) Then, 
-the processor will divert its control flow to the address provided in the two word-size interrupt 
-vectors at $FFFA (IRQ) and $FFFE (NMI).
-A set interrupt disable flag will inhibit the execution of an IRQ, but not of a NMI, which will be executed anyways.
-The break instruction (BRK) behaves like a NMI, but will push the value of PC+2 onto 
-the stack to be used as the return address. Also, as with any software initiated 
-transfer of the status register to the stack, the break flag will be found set on the respective 
-value pushed onto the stack. Then, control is transferred to the address in the NMI-vector at $FFFE.
-In any way, the interrupt disable flag is set to inhibit any further IRQ as control is transferred 
-to the interrupt handler specified by the respective interrupt vector.
-*/
-
 void MOS_6502::CPU::IRQ (void)
 {
+    if (check_flag(Flag::I))
+        return;
+
     stack_push ((PC >> 8) & 0x00FF);
     stack_push (PC & 0x00FF);
     stack_push (SR | ~((std::uint8_t)Flag::B) | (std::uint8_t)Flag::_);
@@ -834,7 +822,7 @@ std::uint16_t MOS_6502::disassemble_line (MOS_6502::line_type& result, const std
     {
         case MOS_6502::Mode::IMP:
         case MOS_6502::Mode::ACC:
-            result = {index, std::format ("{:04X}: {:02X} {:>9}", index, b0, mnemonic).c_str(), false};
+            result = {index, std::format ("{:04X}: {:02X} {:>9} {:<5}", index, b0, mnemonic, "").c_str(), false};
             rom_index += 1;
             break;
         case MOS_6502::Mode::ABS:

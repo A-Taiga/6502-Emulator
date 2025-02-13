@@ -27,6 +27,18 @@ namespace
     // idk how else to do this
     static auto roms_path = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().string() + "/roms/";
     static auto font_path = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().string() + "/imgui/misc/fonts/Cousine-Regular.ttf";
+
+
+
+
+    static Hex_Editor rom_data ("ROM", 0, 0, 0, 0, nullptr);
+    static Hex_Editor ram_data ("RAM", 0, 0, 0, 0, nullptr);
+    static Hex_Editor stack_page ("Stack page", 0, 0, 0, 0, nullptr);
+    static Hex_Editor zero_page  ("Zero page", 0, 0, 0, 0, nullptr);
+
+
+    static std::size_t rom_n = 0;
+    static std::size_t ram_n = 0;
 }
 
 void GUI::registers ()
@@ -191,15 +203,24 @@ void GUI::action_bar ()
         ram.reset();
         rom.load(current_rom->file_path, current_rom->file_size);
         cpu.reset();
-
         if (rom.is_loaded())
         {
+
             code = MOS_6502::disassemble(rom, 0x7000);  // TODO let user select offset
             code_map = MOS_6502::code_mapper(code);
             traces = {};
         }
         else
             printf("ERROR\n");
+
+        rom_n = rom.size();
+        ram_n = ram.size();
+        
+        rom_data   = Hex_Editor("ROM", rom_n, 0, rom_n, sizeof(std::uint8_t), rom.data());
+        ram_data   = Hex_Editor("RAM", ram_n, 0, ram_n, sizeof(std::uint8_t), ram.data());
+
+        stack_page = Hex_Editor("Stack page", ram_n, 0x0100, 256, sizeof(std::uint8_t), ram.data());
+        zero_page  = Hex_Editor("Zero page",  ram_n, 0x0, 256, sizeof(std::uint8_t), ram.data());
     }
 
     ImGui::SameLine();
@@ -287,14 +308,14 @@ void GUI::run ()
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
     
 
-    const auto rom_n = rom.size();
-    const auto ram_n = ram.size();
+    rom_n = rom.size();
+    ram_n = ram.size();
 
-    Hex_Editor rom_data ("ROM", rom_n, 0, rom_n, sizeof(std::uint8_t), rom.data());
-    Hex_Editor ram_data ("RAM", ram_n, 0, ram_n, sizeof(std::uint8_t), ram.data());
+    rom_data = Hex_Editor("ROM", rom_n, 0, rom_n, sizeof(std::uint8_t), rom.data());
+    ram_data = Hex_Editor("RAM", ram_n, 0, ram_n, sizeof(std::uint8_t), ram.data());
 
-    Hex_Editor stack_page ("Stack page", ram_n, 0x0100, 256, sizeof(std::uint8_t), ram.data());
-    Hex_Editor zero_page  ("Zero page", ram_n, 0x0, 256, sizeof(std::uint8_t), ram.data());
+    stack_page = Hex_Editor ("Stack page", ram_n, 0x0100, 256, sizeof(std::uint8_t), ram.data());
+    zero_page  = Hex_Editor ("Zero page", ram_n, 0x0, 256, sizeof(std::uint8_t), ram.data());
     
     while (window.is_running())
     {

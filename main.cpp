@@ -41,15 +41,18 @@ int main()
 }
 
 
+
+
 void cpu_thread_handler (MOS_6502::CPU& cpu, GUI& gui, MOS_6502::trace_type& traces, const MOS_6502::code_map_type& map)
 {
+    auto timer = std::chrono::high_resolution_clock::now ();
+
     while (gui.is_running())
     {   
         {
             std::unique_lock <std::mutex> lock (gui.mu);
             gui.cv.wait(lock, [&gui](){return !gui.is_paused || gui.step;});
         }
-        
 
         auto begin = std::chrono::high_resolution_clock::now();
 
@@ -62,6 +65,14 @@ void cpu_thread_handler (MOS_6502::CPU& cpu, GUI& gui, MOS_6502::trace_type& tra
         if (target > (end - begin))
         {
             std::this_thread::sleep_for(target - (end - begin));
+        }
+
+        auto end_timer = std::chrono::high_resolution_clock::now();
+        if (end_timer - timer > std::chrono::seconds(1))
+        {
+            std::cout << "TIMER" << '\n';
+            cpu.IRQ();
+            timer = std::chrono::high_resolution_clock::now();
         }
         
 

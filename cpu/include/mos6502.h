@@ -37,10 +37,10 @@ namespace MOS_6502
 {
 
     static constexpr word stk_begin         = 0x0100;
-    static constexpr word reset_vector_low  = 0xFFFC;
-    static constexpr word reset_vector_high = 0xFFFD;
-    static constexpr word irq_vector_low    = 0xFFFE;
-    static constexpr word irq_vector_high   = 0xFFFF;
+    static constexpr word reset_vector_low  = 0xFFFD;
+    static constexpr word reset_vector_high = 0xFFFC;
+    static constexpr word irq_vector_low    = 0xFFFF;
+    static constexpr word irq_vector_high   = 0xFFFE;
 
     enum class Mnemonic
     {
@@ -161,7 +161,6 @@ namespace MOS_6502
         byte SR;    // status register
         byte SP;    // stack pointer
 
- 
 
         void set_flag   (const Flag, const bool);
         void stack_push (const byte val);

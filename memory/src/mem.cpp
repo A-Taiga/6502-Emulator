@@ -1,7 +1,7 @@
 #include "mem.h"
 #include <fstream>
 #include <iostream>
-
+#include <print>
 
 Memory::Memory (const std::uint16_t size)
 : mem (size, 0)
@@ -39,7 +39,6 @@ bool Memory::load (const std::string& path, const std::size_t size)
     return true;
 }
 
-
 std::uint8_t Memory::read (const std::uint16_t address) const
 {
     return mem[address];
@@ -52,7 +51,7 @@ void Memory::write (const std::uint16_t address, const std::uint8_t data)
 
 void Memory::reset ()
 {
-    std::ranges::fill(mem, 0);
+    std::ranges::fill (mem, 0);
 }
 
 std::uint8_t* Memory::data ()
