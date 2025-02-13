@@ -26,17 +26,14 @@ int MOS_6502::CPU::update (void)
 
 void MOS_6502::CPU::reset (void)
 {
-    set_flag (Flag::I, true);
-    set_flag (Flag::_, true);
-    PC = (read(reset_vector) << 8) | read(reset_vector+1);
+    PC = (read(reset_vector_high) << 8) | read(reset_vector_low);
     AC = 0;
     XR = 0;
     YR = 0;
-    SR = 0;
+    SR = 0x36;
     SP = 0xFF;
     current = {};
 }
-
 
 bool MOS_6502::CPU::check_flag (Flag flag) const
 {
@@ -53,17 +50,51 @@ void MOS_6502::CPU::set_flag(const Flag Flag, const bool condition)
 
 void MOS_6502::CPU::stack_push (const byte data)
 {
-    --SP;
     write (stk_begin + SP, data);
-    // ++SP;
+    --SP;
 }
 
 byte MOS_6502::CPU::stack_pop (void)
 {
-    // --SP;
-    const auto result = read (stk_begin + SP);
     ++SP;
+    const auto result = read (stk_begin + SP);
     return result;
+}
+
+/*
+A hardware interrupt (maskable IRQ and non-maskable NMI), will cause the processor to put first the address currently 
+in the program counter onto the stack (in HB-LB order), followed by the value of the status register. 
+(The stack will now contain, seen from the bottom or from the most recently added byte, SR PC-L PC-H 
+with the stack pointer pointing to the address below the stored contents of status register.) Then, 
+the processor will divert its control flow to the address provided in the two word-size interrupt 
+vectors at $FFFA (IRQ) and $FFFE (NMI).
+A set interrupt disable flag will inhibit the execution of an IRQ, but not of a NMI, which will be executed anyways.
+The break instruction (BRK) behaves like a NMI, but will push the value of PC+2 onto 
+the stack to be used as the return address. Also, as with any software initiated 
+transfer of the status register to the stack, the break flag will be found set on the respective 
+value pushed onto the stack. Then, control is transferred to the address in the NMI-vector at $FFFE.
+In any way, the interrupt disable flag is set to inhibit any further IRQ as control is transferred 
+to the interrupt handler specified by the respective interrupt vector.
+*/
+
+void MOS_6502::CPU::IRQ (void)
+{
+    stack_push ((PC >> 8) & 0x00FF);
+    stack_push (PC & 0x00FF);
+    stack_push (SR | ~((std::uint8_t)Flag::B) | (std::uint8_t)Flag::_);
+
+    set_flag(Flag::I, true);
+
+    const std::uint8_t low = read (MOS_6502::irq_vector_low);
+    const std::uint8_t high = read (MOS_6502::irq_vector_high);
+
+    PC = (high << 8) |  low;
+
+}
+
+void MOS_6502::CPU::NMI (void)
+{
+
 }
 
 
@@ -173,16 +204,12 @@ void MOS_6502::CPU::ZPY (void)
 // break
 void MOS_6502::CPU::BRK (void)
 {
-    return;
     ++PC;
 
     stack_push (PC & 0xFF00);
     stack_push (PC & 0x00FF);
 
-    set_flag (Flag::B, true);
-    stack_push (SR);
-    set_flag (Flag::B, false);
-
+    stack_push (SR | (std::uint8_t)Flag::B | (std::uint8_t)Flag::_);
     set_flag (Flag::I, true);
 
     PC = read (0xFFFE) | (read (0xFFFF) << 8);
@@ -213,11 +240,10 @@ void MOS_6502::CPU::ASL (void)
 // push processor status
 void MOS_6502::CPU::PHP (void)
 {
-    set_flag (Flag::B, true);
-    set_flag (Flag::_, true);
-    stack_push (SR);
-    set_flag (Flag::B, false);
-    set_flag (Flag::_, false);
+
+
+    stack_push (SR | (std::uint8_t)Flag::B | (std::uint8_t)Flag::_);
+
 }
 
 // branch if plus
@@ -298,7 +324,7 @@ void MOS_6502::CPU::PLP (void)
 // branch if minus
 void MOS_6502::CPU::BMI (void)
 {
-    if (!(static_cast <byte> (Flag::N) & SR))
+    if ((static_cast <byte> (Flag::N) & SR))
     {
         // branch taken so add cycle
         ++current.cycles;
@@ -319,14 +345,18 @@ void MOS_6502::CPU::SEC (void)
     set_flag(Flag::C, true);
 }
 
+
+	// status &= ~B;
+	// status &= ~U;
+
 // return from interrupt
 void MOS_6502::CPU::RTI (void)
 {
     SR = stack_pop();
 
     // these two flags are ignored when returning from the stack
-    SR &= ~static_cast <byte> (Flag::B);
-    SR &= ~static_cast <byte> (Flag::_);
+    SR &= ~(SR & static_cast <byte> (Flag::B));
+    SR &= ~(SR & static_cast <byte> (Flag::_));
 
     PC = stack_pop();
     PC |= stack_pop() << 8;
@@ -369,7 +399,7 @@ void MOS_6502::CPU::JMP (void)
 // branch if overflow clear
 void MOS_6502::CPU::BVC (void)
 {
-    if (!(static_cast <byte> (Flag::V) & SR))
+    if (!check_flag(Flag::V))
     {
         // branching requires an additional cycle
         ++current.cycles;
@@ -406,16 +436,23 @@ void MOS_6502::CPU::PLA (void)
     set_flag (Flag::N, AC & 0x80);
 }
 
+
+// TODO ADD DECIMAL MODE
 // add with carry
 void MOS_6502::CPU::ADC (void)
 {
     current.data = read (current.address);
 
     const word result = AC + current.data + (static_cast <byte> (Flag::C) & SR);
-    
+
+    if (check_flag(Flag::D))
+    {
+
+    }
+
     set_flag (Flag::C, (result & 0xFF00) != 0);
     set_flag (Flag::Z, result == 0);
-    set_flag (Flag::V, ~(result ^ AC) & (result ^ current.data) & 0x0080);
+    set_flag (Flag::V, (result ^ AC) & (result ^ current.data) & 0x80);
     set_flag (Flag::N, result & 0x0080);
     
     AC = result & 0x00FF;
@@ -689,6 +726,7 @@ void MOS_6502::CPU::CPX (void)
     set_flag (Flag::N, result & 0x80);
 }
 
+// TODO ADD DECIMAL MODE
 // subtract with carry
 void MOS_6502::CPU::SBC (void)
 {

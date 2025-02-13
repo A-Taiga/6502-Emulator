@@ -36,8 +36,11 @@ using word = std::uint16_t;
 namespace MOS_6502
 {
 
-    static constexpr word stk_begin = 0x0100;
-    static constexpr word reset_vector = 0xFFFC;
+    static constexpr word stk_begin         = 0x0100;
+    static constexpr word reset_vector_low  = 0xFFFC;
+    static constexpr word reset_vector_high = 0xFFFD;
+    static constexpr word irq_vector_low    = 0xFFFE;
+    static constexpr word irq_vector_high   = 0xFFFF;
 
     enum class Mnemonic
     {
@@ -132,12 +135,20 @@ namespace MOS_6502
         
         CPU (read_cb, write_cb);
 
+
+        void IRQ (void);
+        void NMI (void);
+
         int update (void);
         void reset (void);
 
         bool check_flag (Flag flag) const;
 
+
+
         word old_PC; // for tracing
+
+
     private:
 
         read_cb  read;
@@ -150,9 +161,12 @@ namespace MOS_6502
         byte SR;    // status register
         byte SP;    // stack pointer
 
+ 
+
         void set_flag   (const Flag, const bool);
         void stack_push (const byte val);
         byte stack_pop  (void);
+
 
         struct Current current;
 
