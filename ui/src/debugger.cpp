@@ -24,21 +24,15 @@
 
 namespace
 {
-    // idk how else to do this
+    // idk how else to do this...
     static auto roms_path = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().string() + "/roms/";
     static auto font_path = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().string() + "/imgui/misc/fonts/Cousine-Regular.ttf";
 
-
-
-
-    static Hex_Editor rom_data ("ROM", 0, 0, 0, 0, nullptr);
-    static Hex_Editor ram_data ("RAM", 0, 0, 0, 0, nullptr);
-    static Hex_Editor stack_page ("Stack page", 0, 0, 0, 0, nullptr);
-    static Hex_Editor zero_page  ("Zero page", 0, 0, 0, 0, nullptr);
-
-
-    static std::size_t rom_n = 0;
-    static std::size_t ram_n = 0;
+    static auto temp = std::array<std::uint8_t, UINT16_MAX>();
+    static Hex_Editor rom_data ("ROM", UINT16_MAX, 0, UINT16_MAX, sizeof(std::uint8_t), temp.data());
+    static Hex_Editor ram_data ("RAM",  UINT16_MAX, 0, UINT16_MAX, sizeof(std::uint8_t), temp.data());
+    static Hex_Editor stack_page ("Stack page", UINT16_MAX, 0, UINT16_MAX, sizeof(std::uint8_t), temp.data());
+    static Hex_Editor zero_page  ("Zero page",  UINT16_MAX, 0, UINT16_MAX, sizeof(std::uint8_t), temp.data());
 }
 
 void GUI::registers ()
@@ -212,15 +206,13 @@ void GUI::action_bar ()
         }
         else
             printf("ERROR\n");
-
-        rom_n = rom.size();
-        ram_n = ram.size();
         
-        rom_data   = Hex_Editor("ROM", rom_n, 0, rom_n, sizeof(std::uint8_t), rom.data());
-        ram_data   = Hex_Editor("RAM", ram_n, 0, ram_n, sizeof(std::uint8_t), ram.data());
+        rom_data   = Hex_Editor("ROM", rom.size(), 0, rom.size(), sizeof(std::uint8_t), rom.data());
+        ram_data   = Hex_Editor("RAM", ram.size(), 0, ram.size(), sizeof(std::uint8_t), ram.data());
 
-        stack_page = Hex_Editor("Stack page", ram_n, 0x0100, 256, sizeof(std::uint8_t), ram.data());
-        zero_page  = Hex_Editor("Zero page",  ram_n, 0x0, 256, sizeof(std::uint8_t), ram.data());
+        stack_page = Hex_Editor("Stack page", ram.size(), 0x0100, 256, sizeof(std::uint8_t), ram.data());
+        zero_page  = Hex_Editor("Zero page",  ram.size(), 0x0, 256, sizeof(std::uint8_t), ram.data());
+
     }
 
     ImGui::SameLine();
@@ -306,16 +298,6 @@ void GUI::run ()
     ImGui_ImplOpenGL3_Init(window.get_glsl_version ().c_str());
 
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-    
-
-    rom_n = rom.size();
-    ram_n = ram.size();
-
-    rom_data = Hex_Editor("ROM", rom_n, 0, rom_n, sizeof(std::uint8_t), rom.data());
-    ram_data = Hex_Editor("RAM", ram_n, 0, ram_n, sizeof(std::uint8_t), ram.data());
-
-    stack_page = Hex_Editor ("Stack page", ram_n, 0x0100, 256, sizeof(std::uint8_t), ram.data());
-    zero_page  = Hex_Editor ("Zero page", ram_n, 0x0, 256, sizeof(std::uint8_t), ram.data());
     
     while (window.is_running())
     {

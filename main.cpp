@@ -40,9 +40,6 @@ int main()
     return 0;
 }
 
-
-
-
 void cpu_thread_handler (MOS_6502::CPU& cpu, GUI& gui, MOS_6502::trace_type& traces, const MOS_6502::code_map_type& map)
 {
     auto timer = std::chrono::high_resolution_clock::now ();
@@ -70,7 +67,6 @@ void cpu_thread_handler (MOS_6502::CPU& cpu, GUI& gui, MOS_6502::trace_type& tra
         auto end_timer = std::chrono::high_resolution_clock::now();
         if (end_timer - timer > std::chrono::seconds(1))
         {
-            std::cout << "TIMER" << '\n';
             cpu.IRQ();
             timer = std::chrono::high_resolution_clock::now();
         }
