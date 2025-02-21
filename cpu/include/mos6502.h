@@ -34,12 +34,12 @@ namespace MOS_6502
     using word = std::uint16_t;
 
     static constexpr word stk_begin         = 0x0100;
-    static constexpr word nmi_vector_high   = 0xFFFB;
     static constexpr word nmi_vector_low    = 0xFFFA;
-    static constexpr word reset_vector_high = 0xFFFD;
+    static constexpr word nmi_vector_high   = 0xFFFB;
     static constexpr word reset_vector_low  = 0xFFFC;
-    static constexpr word irq_vector_high   = 0xFFFF;
+    static constexpr word reset_vector_high = 0xFFFD;
     static constexpr word irq_vector_low    = 0xFFFE;
+    static constexpr word irq_vector_high   = 0xFFFF;
 
     enum class Mnemonic
     {
