@@ -26,21 +26,20 @@ SP	stack pointer	(8 bit)
 
 */
 
-using byte = std::uint8_t;
-using word = std::uint16_t;
-
-
-// namespace Memory{class ROM;}
-
 
 namespace MOS_6502
 {
 
+    using byte = std::uint8_t;
+    using word = std::uint16_t;
+
     static constexpr word stk_begin         = 0x0100;
-    static constexpr word reset_vector_low  = 0xFFFD;
-    static constexpr word reset_vector_high = 0xFFFC;
-    static constexpr word irq_vector_low    = 0xFFFF;
-    static constexpr word irq_vector_high   = 0xFFFE;
+    static constexpr word nmi_vector_high   = 0xFFFB;
+    static constexpr word nmi_vector_low    = 0xFFFA;
+    static constexpr word reset_vector_high = 0xFFFD;
+    static constexpr word reset_vector_low  = 0xFFFC;
+    static constexpr word irq_vector_high   = 0xFFFF;
+    static constexpr word irq_vector_low    = 0xFFFE;
 
     enum class Mnemonic
     {
@@ -135,12 +134,11 @@ namespace MOS_6502
         
         CPU (read_cb, write_cb);
 
-
-        void IRQ (void);
-        void NMI (void);
-
+        /* these return amount of cycles */
+        int IRQ (void);
+        int NMI (void);
         int update (void);
-        void reset (void);
+        int reset (void);
 
         bool check_flag (Flag flag) const;
 

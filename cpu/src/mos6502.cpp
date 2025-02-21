@@ -24,7 +24,7 @@ int MOS_6502::CPU::update (void)
     return current.cycles;
 }
 
-void MOS_6502::CPU::reset (void)
+int MOS_6502::CPU::reset (void)
 {
 
     PC = (read(reset_vector_high) << 8) | read(reset_vector_low);
@@ -34,6 +34,7 @@ void MOS_6502::CPU::reset (void)
     SR = 0x36;
     SP = 0xFF;
     current = {};
+    return 8;
 }
 
 bool MOS_6502::CPU::check_flag (Flag flag) const
@@ -55,36 +56,48 @@ void MOS_6502::CPU::stack_push (const byte data)
     --SP;
 }
 
-byte MOS_6502::CPU::stack_pop (void)
+MOS_6502::byte MOS_6502::CPU::stack_pop (void)
 {
     ++SP;
     const auto result = read (stk_begin + SP);
     return result;
 }
 
-void MOS_6502::CPU::IRQ (void)
+int MOS_6502::CPU::IRQ (void)
 {
+    /* if irq is dissabled then return */
     if (check_flag(Flag::I))
-        return;
+        return 0;
 
+    /* push program counter to stack */
     stack_push ((PC >> 8) & 0x00FF);
     stack_push (PC & 0x00FF);
+
+    /* push status register to stack */
     stack_push (SR | ~((std::uint8_t)Flag::B) | (std::uint8_t)Flag::_);
 
     set_flag(Flag::I, true);
 
-    const std::uint8_t low = read (MOS_6502::irq_vector_low);
-    const std::uint8_t high = read (MOS_6502::irq_vector_high);
+    /* read the irq vector */
+    PC = (read (MOS_6502::irq_vector_high) << 8) | read (MOS_6502::irq_vector_low);;
 
-    PC = (high << 8) |  low;
-
+    return 7;
 }
 
-void MOS_6502::CPU::NMI (void)
+int MOS_6502::CPU::NMI (void)
 {
+    /* push program counter to stack */
+    stack_push ((PC >> 8) & 0x00FF);
+    stack_push (PC & 0x00FF);
 
+    /* push status register to stack */
+    stack_push (SR | ~((std::uint8_t)Flag::B) | (std::uint8_t)Flag::_);
+
+    /* read the nmi vector */
+    PC = (read (MOS_6502::nmi_vector_high) << 8) | read (MOS_6502::nmi_vector_low);;
+
+    return 8;
 }
-
 
 // accumulator
 void MOS_6502::CPU::ACC (void)
@@ -785,16 +798,15 @@ void MOS_6502::CPU::___ (void)
 }
 
 /* GETTERS */
-word MOS_6502::CPU::get_PC () const {return PC;}
-byte MOS_6502::CPU::get_AC () const {return AC;}
-byte MOS_6502::CPU::get_XR () const {return XR;}
-byte MOS_6502::CPU::get_YR () const {return YR;}
-byte MOS_6502::CPU::get_SR () const {return SR;}
-byte MOS_6502::CPU::get_SP () const {return SP;}
+MOS_6502::word MOS_6502::CPU::get_PC () const {return PC;}
+MOS_6502::byte MOS_6502::CPU::get_AC () const {return AC;}
+MOS_6502::byte MOS_6502::CPU::get_XR () const {return XR;}
+MOS_6502::byte MOS_6502::CPU::get_YR () const {return YR;}
+MOS_6502::byte MOS_6502::CPU::get_SR () const {return SR;}
+MOS_6502::byte MOS_6502::CPU::get_SP () const {return SP;}
 
 const MOS_6502::Current& MOS_6502::CPU::get_current () const {return current;}
 const std::array<MOS_6502::Instruction, 256>& MOS_6502::CPU::get_instruction_table () {return instruction_table;}
-
 
 std::vector <MOS_6502::line_type> MOS_6502::disassemble (const std::span<std::uint8_t>& rom, std::uint16_t offset)
 {
